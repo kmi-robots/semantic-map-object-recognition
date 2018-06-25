@@ -133,19 +133,6 @@ def extract_graphs(basep, all_concepts):
 
     return u_objs
 
-'''
-def map_objects(object_sl):
-    
-    object_voc={}
-
-    i=0
-    for o in object_sl:
-
-        object_voc[o] = i
-        i+=1
-
-    return object_voc
-'''
 
 def check_dictionary(onlist, vocabulary):
 
@@ -161,6 +148,27 @@ def check_dictionary(onlist, vocabulary):
 
 
     return classnos
+
+
+def convert(clno, imgw, imgh, xmin, xmax, ymin, ymax, w, h):
+
+    #Converts (x,y) -top left corner, width and height (taken from image resolution)
+    #to YOLO format, i.e., center in X, center in Y, width in X, width in Y
+    
+    dw = 1/int(imgw)
+    dh = 1./int(imgh)
+    x_center = (xmin + xmax)/2.0
+    y_center = (ymin + ymax)/2.0         
+
+
+    x_center = str(x_center*dw)
+    y_center = str(y_center*dh)
+    h = str(h*dh)
+    w = str(w*dw)
+    clno= str(clno)
+
+    return " ".join([clno, x_center, y_center, w, h])
+
 
 if __name__ == '__main__':
 
@@ -263,7 +271,22 @@ if __name__ == '__main__':
                         tgt = key.replace("'","").replace(" ","")
 
                         
-                    linec= line.replace(tobr+"]", str(object_voc[tgt]))
+                    linel= line.replace(tobr+"]", str(object_voc[tgt])).split(" ")
+                    classno= linel[0]
+                    x_tl = float(linel[1])
+                    y_tl = float(linel[2])
+                    w = float(linel[3])
+                    h = float(linel[4])
+                    
+                    xmin= x_tl
+                    xmax= x_tl + w
+                    ymin = y_tl - h
+                    ymax = y_tl
+                    img_w = int(800)
+                    img_h = int(600)                  
+  
+                    linec= convert(str(classno), img_w, img_h, xmin, xmax, ymin,ymax, w, h)
+
                     cleanf.write(linec)
             #sys.exit(0)
         
@@ -273,7 +296,7 @@ if __name__ == '__main__':
                 
 
 
-print("Complete...took %f seconds" % float(time.time() - start))
+    print("Complete...took %f seconds" % float(time.time() - start))
 
 
 #images ={}

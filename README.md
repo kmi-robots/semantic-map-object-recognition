@@ -1,6 +1,6 @@
 # semantic-map-object-recognition
 
-##Pre-requisites
+## Pre-requisites
 
  * visual_genome_python_driver
  * Download (https://visualgenome.org/api/v0/api_home.html) scene_graphs.json, synsets.json, image_data.json

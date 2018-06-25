@@ -6,6 +6,7 @@ from nltk.stem import WordNetLemmatizer
 import os
 import sys
 import argparse
+import shutil
 
 
 def parse_obj(obj_name):
@@ -25,7 +26,7 @@ def load_dict(path_to_concepts):
     with open(path_to_concepts) as conceptf:
 
         concepts= json.load(conceptf)
-        print(type(concepts))
+        #print(type(concepts))
 
 
     all_concepts=[]
@@ -98,7 +99,7 @@ def extract_graphs(basep, all_concepts):
                 
                     #Dump results in "YOLO-like" format
                     jout.write(str(obj["names"]) + " "+ str(x) +" "+ str(y) + " "+ str(width) + " "+ str(height)+"\n")     
-            #sys.exit(0)
+            
 
 
             for o in graph.objects:
@@ -132,6 +133,34 @@ def extract_graphs(basep, all_concepts):
 
     return u_objs
 
+'''
+def map_objects(object_sl):
+    
+    object_voc={}
+
+    i=0
+    for o in object_sl:
+
+        object_voc[o] = i
+        i+=1
+
+    return object_voc
+'''
+
+def check_dictionary(onlist, vocabulary):
+
+    classnos=[]
+
+    for term in onlist:
+
+        if term not in vocabulary: 
+
+            vocabulary[term] =len(vocabulary) 
+               
+        classnos.append(vocabulary[term])
+
+
+    return classnos
 
 if __name__ == '__main__':
 
@@ -151,14 +180,20 @@ if __name__ == '__main__':
     basep =args.slicepath  
     
     outdir= os.path.join(os.getcwd(),'data/out')
+    backup = os.path.join(os.getcwd(),'data/out-formatted')
     
+
     if not os.path.isdir(basep):
         os.mkdir(basep)    
 
-    if not os.path.isdir(out_path):
 
-        os.mkdir(out_path)
+    if not os.path.isdir(outdir):
 
+        os.mkdir(outdir)
+    
+    if not os.path.isdir(backup):
+
+        os.mkdir(backup)
     
     if args.slice:       
 
@@ -174,7 +209,6 @@ if __name__ == '__main__':
         #Requires scene_graphs.json to be sliced by image id beforehand
 
         #Get all scene graphs
-
         unique_objects = extract_graphs(basep, concept_list)
 
         #Write extracted objects locally for later
@@ -185,24 +219,61 @@ if __name__ == '__main__':
 
     if args.map:
         
+        #Find unique object list (if available) and parse from names to classno.
         outfiles = os.listdir(outdir)
+        
+        less_objects=[] 
 
+        object_voc={}
+        
         for filen in outfiles:
 
-            
-            with open(os.path.join(outdir,filen), 'w') as bboxf:
+            templ=[]
+
+            with open(os.path.join(outdir,filen), 'r') as bboxf:
         
-                bboxes = bboxf.readlines() 
-                print(bboxes)
-                sys.exit(0)
-            #Find unique object list (if available) and parse from names to classno.
-            map_objects()
+                bboxes = bboxf.readlines()
+                  
+                [templ.extend(str(line).replace("'", "").replace(" ","").split("[")[1].split("]")[0].split(",")) for line in bboxes]
+                templ= list(set(templ))
+                 
+                #print(templ)
+
+                listno = check_dictionary(templ, object_voc) 
+
+            with open(os.path.join(backup, filen), 'w') as cleanf:
+             
+                for line in bboxes:
+
+                    if line =="[]":
+
+                        continue
+                        #print(line)
+                     
+                    #sys.exit(0)
+                    tobr= line.split("]")[0]
+                    key = tobr.split("[")[1]
+
+                    try:
+                        #If more words, take the first one
+                        tgt = key.split(",")[0].replace("'", "").replace(" ","")
+
+                    except:
+                        #If it is just one word 
+                        tgt = key.replace("'","").replace(" ","")
+
+                        
+                    linec= line.replace(tobr+"]", str(object_voc[tgt]))
+                    cleanf.write(linec)
+            #sys.exit(0)
+        
+        print("Done formatting - Darknet will have to be setup on %i classes" % len(object_voc))
+        #less_objects= list(set(less_objects))
+        #obj_d = map_objects(less_objects)
+                
 
 
-
-
-
-
+print("Complete...took %f seconds" % float(time.time() - start))
 
 
 #images ={}
@@ -232,4 +303,3 @@ with open('/concepts_larger.json') as injson:
 
 '''
 
-print("Complete...took %f seconds" % float(time.time() - start))

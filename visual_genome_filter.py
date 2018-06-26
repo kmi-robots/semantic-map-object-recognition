@@ -140,6 +140,7 @@ def check_dictionary(onlist, vocabulary):
 
     for term in onlist:
 
+        term= term.replace("]","").replace("[","")
         if term not in vocabulary: 
 
             vocabulary[term] =len(vocabulary) 
@@ -233,16 +234,19 @@ if __name__ == '__main__':
         less_objects=[] 
 
         object_voc={}
-        
         for filen in outfiles:
 
+            print(filen)
             templ=[]
 
             with open(os.path.join(outdir,filen), 'r') as bboxf:
         
                 bboxes = bboxf.readlines()
-                  
-                [templ.extend(str(line).replace("'", "").replace(" ","").split("[")[1].split("]")[0].split(",")) for line in bboxes]
+               
+                for line in bboxes:
+    
+                    templ.extend(str(line).replace('"', "'").split("['")[1].split("'] ")[0].replace(" ","").replace("'", "").split(","))
+                    #sys.exit(0)              
                 templ= list(set(templ))
                  
                 #print(templ)
@@ -250,28 +254,30 @@ if __name__ == '__main__':
                 listno = check_dictionary(templ, object_voc) 
 
             with open(os.path.join(backup, filen), 'w') as cleanf:
-             
+            
+                 
                 for line in bboxes:
 
                     if line =="[]":
 
                         continue
                         #print(line)
-                     
+                    #print(line) 
                     #sys.exit(0)
-                    tobr= line.split("]")[0]
-                    key = tobr.split("[")[1]
+                    tobr= line.replace('"',"'").split("'] ")[0]
+                    key = tobr.replace('"',"'").split("['")[1]
 
                     try:
                         #If more words, take the first one
-                        tgt = key.split(",")[0].replace("'", "").replace(" ","")
+                        tgt = key.replace("'","").split(",")[0].replace(" ","")
 
                     except:
                         #If it is just one word 
                         tgt = key.replace("'","").replace(" ","")
 
-                        
-                    linel= line.replace(tobr+"]", str(object_voc[tgt])).split(" ")
+                    #print(tgt) 
+                    linel= line.replace('"',"'").replace(tobr+"']", str(object_voc[tgt.replace("[","").replace("]","")])).split(" ")
+                    #print(line)
                     classno= linel[0]
                     x_tl = float(linel[1])
                     y_tl = float(linel[2])
@@ -287,7 +293,7 @@ if __name__ == '__main__':
   
                     linec= convert(str(classno), img_w, img_h, xmin, xmax, ymin,ymax, w, h)
 
-                    cleanf.write(linec)
+                    cleanf.write(linec+"\n")
             #sys.exit(0)
         
         print("Done formatting - Darknet will have to be setup on %i classes" % len(object_voc))

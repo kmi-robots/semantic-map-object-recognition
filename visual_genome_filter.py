@@ -1,3 +1,4 @@
+from __future__ import division
 import visual_genome.utils as utils
 import json 
 import time
@@ -7,7 +8,7 @@ import os
 import sys
 import argparse
 import shutil
-
+from PIL import Image as PIL_Image
 
 def parse_obj(obj_name):
 
@@ -156,9 +157,20 @@ def convert(clno, imgw, imgh, xmin, xmax, ymin, ymax, w, h):
 
     #Converts (x,y) -top left corner, width and height (taken from image resolution)
     #to YOLO format, i.e., center in X, center in Y, width in X, width in Y
+
+    #max for YOLO is 416x416
+    yolo_width= 416
+    yolo_height= 416   
+ 
     
-    dw = 1/int(imgw)
+
+
+
+    dw= 1./int(imgw)
     dh = 1./int(imgh)
+
+    
+
     x_center = (xmin + xmax)/2.0
     y_center = (ymin + ymax)/2.0         
 
@@ -182,6 +194,10 @@ if __name__ == '__main__':
     parser.add_argument("--extract", required=False, action='store_true', default=False, help='Extracts bounding boxes from scene graphs, after filtering image set by ConceptNet keywords')
 
     parser.add_argument("--map", required=False, action='store_true', default=False, help='to enable mapping from object name to class no.')
+    parser.add_argument("--neww", required=False, default=416, help='new width of resized images')
+    
+    parser.add_argument("--newh", required=False, default=416, help='new height of resized images')
+    
     args =parser.parse_args()
     
     start = time.time()
@@ -289,23 +305,43 @@ if __name__ == '__main__':
 
                     #print(tgt) 
                     linel= line.replace('"',"'").replace(tobr+"']", str(object_voc[tgt.replace("[","").replace("]","")])).split(" ")
+                    
+
+                    #Resolution is different from image to image
+                    try:
+                        img = PIL_Image.open(open('/home/linuxadmin/visual_genome_python_driver/VG_100K/'+filen[:-3]+'jpg', 'r+b'))
+                        
+                    except FileNotFoundError:
+                        
+                        img= PIL_Image.open(open('/home/linuxadmin/visual_genome_python_driver/VG_100K_2/'+filen[:-3]+'jpg', 'r+b'))
+
+                    img_w, img_h = img.size                 
+  
                     #print(line)
                     classno= linel[0]
                     x_tl = float(linel[1])
                     y_tl = float(linel[2])
                     w = float(linel[3])
                     h = float(linel[4])
+                   
+                    #Adapt bounding boxes after resizing 
+                    new_iw = args.neww
+                    new_ih = args.newh
+
+                    x_tl = float(x_tl/img_w)*new_iw
+                    y_tl = float(y_tl/img_h)*new_ih
+                    w = float(w/img_w)*new_iw
+                    h = float(h/img_h)*new_ih
                     
                     xmin= x_tl
                     xmax= x_tl + w
                     ymin = y_tl - h
                     ymax = y_tl
-                    img_w = int(800)
-                    img_h = int(600)                  
-  
-                    linec= convert(str(classno), img_w, img_h, xmin, xmax, ymin,ymax, w, h)
+
+                    linec= convert(str(classno), new_iw, new_ih, xmin, xmax, ymin,ymax, w, h)
 
                     cleanf.write(linec+"\n")
+
             #sys.exit(0)
         
         print("Done formatting - Darknet will have to be setup on %i classes" % len(object_voc))

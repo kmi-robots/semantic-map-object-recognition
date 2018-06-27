@@ -98,11 +98,12 @@ def extract_graphs(basep, all_concepts):
                     height = obj["h"]
                 
                     #Dump results in "YOLO-like" format
-                    jout.write(str(obj["names"]) + " "+ str(x) +" "+ str(y) + " "+ str(width) + " "+ str(height)+"\n")     
+                    jout.write(str(obj["synsets"]) + " "+ str(x) +" "+ str(y) + " "+ str(width) + " "+ str(height)+"\n")     
             
 
 
             for o in graph.objects:
+
 
                 if len(str(o).split())> 1:
 
@@ -175,7 +176,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("concepts", help="Path to concepts_larger.json", default='data')
-    parser.add_argument("-slicepath", default='data/by-id', help='path to individual json files containing scene graphs')
+    parser.add_argument("-slicepath", default='data/by-id/', help='path to individual json files containing scene graphs')
     parser.add_argument("--slice", required=False, action='store_true', default=False, help='Run with this flag =True if scene_graphs.json has not be sliced by id yet')
 
     parser.add_argument("--extract", required=False, action='store_true', default=False, help='Extracts bounding boxes from scene graphs, after filtering image set by ConceptNet keywords')
@@ -232,11 +233,12 @@ if __name__ == '__main__':
         outfiles = os.listdir(outdir)
         
         less_objects=[] 
-
+        all_synsets=[]
         object_voc={}
+
         for filen in outfiles:
 
-            print(filen)
+            #print(filen)
             templ=[]
 
             with open(os.path.join(outdir,filen), 'r') as bboxf:
@@ -244,21 +246,31 @@ if __name__ == '__main__':
                 bboxes = bboxf.readlines()
                
                 for line in bboxes:
-    
-                    templ.extend(str(line).replace('"', "'").split("['")[1].split("'] ")[0].replace(" ","").replace("'", "").split(","))
-                    #sys.exit(0)              
+   
+                    if line[:2] =='[]':
+
+                        continue
+                    
+                    #print(line) 
+                    stringp= str(line).replace('"', "'").split("['")[1]
+                    stringp = stringp.split("'] ")[0].replace(" ","")
+                    stringp= stringp.replace("'", "").split(",")
+                    templ.extend(stringp)
+                    #sys.exit(0)    
+          
                 templ= list(set(templ))
                  
-                #print(templ)
+                all_synsets.extend(templ)
 
                 listno = check_dictionary(templ, object_voc) 
-
+            
+            
             with open(os.path.join(backup, filen), 'w') as cleanf:
             
                  
                 for line in bboxes:
 
-                    if line =="[]":
+                    if line[:2] =='[]':
 
                         continue
                         #print(line)
@@ -301,6 +313,12 @@ if __name__ == '__main__':
         #obj_d = map_objects(less_objects)
                 
 
+    all_synsets = list(set(all_synsets))
+
+    with open('data/class_list.txt', 'w') as cfile:
+
+        [cfile.write(str(synset)+"\n") for synset in all_synsets]
+    
 
     print("Complete...took %f seconds" % float(time.time() - start))
 

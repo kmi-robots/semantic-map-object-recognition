@@ -17,6 +17,11 @@ def contour_det(gray_img):
 
     return contours
    
+
+def canny_edge(gray_img):
+
+    return cv2.Canny(gray_img, 100, 105)
+
 def draw_cnt(contours, img, fname, outpath):
 
     for cnt in contours:
@@ -74,8 +79,13 @@ if __name__ == '__main__':
             #else:
             #gray = img_array            
 
-            contours = contour_det(gray)
+            edges = canny_edge(gray)
 
+            contours = contour_det(edges)
+            #cv2.imwrite('/mnt/c/Users/HP/Desktop/test.png', edges)
+            #print(type(edges))
+            #sys.exit(0)
+            
             draw_cnt(contours, img_array, f, args.outpath)
             #cv2.imwrite('/mnt/c/Users/HP/Desktop/test.png', gray)
             #cv2.imwrite('/mnt/c/Users/HP/Desktop/test_ng.png', img_array)

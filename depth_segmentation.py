@@ -22,6 +22,7 @@ def canny_edge(gray_img):
 
     return cv2.Canny(gray_img, 100, 105)
 
+
 def draw_cnt(contours, img, fname, outpath):
 
     for cnt in contours:
@@ -81,6 +82,7 @@ if __name__ == '__main__':
 
             edges = canny_edge(gray)
 
+            #Segment
             contours = contour_det(edges)
             #cv2.imwrite('/mnt/c/Users/HP/Desktop/test.png', edges)
             #print(type(edges))
@@ -97,7 +99,6 @@ if __name__ == '__main__':
             print("Problem while processing %s" % f) 
             print(str(e))
 
-        #Segment
 
         #Display, with segmentation
 

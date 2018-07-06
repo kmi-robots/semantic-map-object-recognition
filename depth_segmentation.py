@@ -6,6 +6,14 @@ from PIL import Image
 import numpy as np
 import sys
 
+def preproc(img):
+
+
+    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    edges = canny_edge(gray)
+
+    return edges
+
 def contour_det(gray_img):
 
     #Binarize 
@@ -73,15 +81,9 @@ if __name__ == '__main__':
 
             #img = cv2.imdecode(img_np, cv2.IMREAD_UNCHANGED)
 
-            #if img_array.shape ==3:
-            #Just flattening the channels, looks like no info loss
-                #print("test")
-            gray = cv2.cvtColor(img_array,cv2.COLOR_BGR2GRAY)
-            #else:
-            #gray = img_array            
 
-            edges = canny_edge(gray)
-
+            edged =preproc(img_array)
+     
             #Segment
             contours = contour_det(edges)
             #cv2.imwrite('/mnt/c/Users/HP/Desktop/test.png', edges)

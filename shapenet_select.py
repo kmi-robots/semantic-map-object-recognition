@@ -29,7 +29,12 @@ for q in queries:
     full_ids.extend([record["fullid"] for record in records])
      
      
-#Use the same id to retrieve texture image
+#print(len(results))
+#print(results[2])
+#print(ids)
+#print(len(ids))
+
+#Use the same id to retrieve image
 
 
 #Import openCV segmentation from other script
@@ -38,8 +43,4 @@ for q in queries:
 #Save results for later matching
 
 
-print(len(results))
-print(results[2])
-print(ids)
-print(len(ids))
 

@@ -2,19 +2,30 @@ import os
 import requests
 import json
 import sys
-
+from depth_segmentation import preproc, contour_det, draw_cnt
+import cv2
+import numpy as np
 
 SOLR_BASE='https://www.shapenet.org/solr/models3d/'
 n_rows = 1000
 out_format = 'json'
+input_p ='/mnt/c/Users/HP/Desktop/KMI/shapenet-object-proof/merged'
+output_p= '/mnt/c/Users/HP/Desktop/KMI/shapenet-object-proof/merged-out'
 
+
+'''
 #Hardcoded keyword list for object models
 #TODO: change to argparse 
 queries =['chair', 'mug', 'monitor', 'plant']
 
+objs = os.listdir(input_p)
+
 results=[]
 ids=[]
 full_ids=[]
+
+
+    
 
 #Querying Shapenet Solr Engine, given a list of keywords
 for q in queries:
@@ -26,19 +37,40 @@ for q in queries:
 
     ids.extend([record["id"] for record in records])
     
-    full_ids.extend([record["fullid"] for record in records])
+    full_ids.extend([record["fullId"] for record in records])
      
      
 #print(len(results))
 #print(results[2])
 #print(ids)
 #print(len(ids))
-
+'''
 #Use the same id to retrieve image
 
 
 #Import openCV segmentation from other script
 
+
+for o in objs:
+
+    img = cv2.imread(os.path.join(input_p,o), cv2.IMREAD_UNCHANGED)
+    edges = preproc(img)
+    kernel = np.ones((5,5),np.uint8)
+    dilation = cv2.dilate(edges,kernel,iterations = 1)
+
+    #write partial output
+    #Only external contours instead of full hierarchy here 
+    __, contours,hierarchy = cv2.findContours(dilation, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE) 
+    imgo = cv2.drawContours(dilation, contours, -1, (0,255,0), 3)
+    #mask = np.zeros(imgo.shape[:2], dtype="uint8") * 255
+    dil = cv2.dilate(imgo, kernel, iterations=1)
+    #cv2.drawContours(mask, contours, -1, (255, 255, 255), -1)
+    #imgm = cv2.bitwise_and(imgo, imgo, mask=mask)
+    
+    cv2.imwrite(os.path.join(output_p, o), dil)
+    #Contour detection adds too much noise here
+    #conts = contour_det(edges)
+    #draw_cnt(conts, img, o, output_p)
 
 #Save results for later matching
 

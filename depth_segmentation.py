@@ -21,7 +21,7 @@ def contour_det(gray_img):
     
     #Find contours 
     #retrieves all of the contours and reconstructs a full hierarchy of nested contours, no approx
-    __, contours,hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) 
+    __, contours,hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE) 
 
     return contours
    
@@ -33,14 +33,18 @@ def canny_edge(gray_img):
 
 def draw_cnt(contours, img, fname, outpath):
 
-    for cnt in contours:
+    #for cnt in contours:
         
         #Approximate polygons         
-        epsilon = 0.1*cv2.arcLength(cnt,True)
-        approx = cv2.approxPolyDP(cnt,epsilon,True)
+        #epsilon = 0.1*cv2.arcLength(cnt,True)
+        #approx = cv2.approxPolyDP(cnt,epsilon,True)
 
-        cv2.drawContours(img, [approx], -1, (0, 0, 255), 3)
-        cv2.imwrite(os.path.join(outpath, fname), img)
+    #cv2.drawContours(img, [approx], -1, (0, 0, 255), 3)
+    cv2.drawContours(img, contours, -1, (0, 0, 255), 3)
+    kernel = np.ones((5,5),np.uint8)
+    dilation = cv2.dilate(img,kernel,iterations = 1) 
+    
+    cv2.imwrite(os.path.join(outpath, fname), dilation)
 
     return
 
@@ -85,7 +89,7 @@ if __name__ == '__main__':
             edged =preproc(img_array)
      
             #Segment
-            contours = contour_det(edges)
+            contours = contour_det(edged)
             #cv2.imwrite('/mnt/c/Users/HP/Desktop/test.png', edges)
             #print(type(edges))
             #sys.exit(0)

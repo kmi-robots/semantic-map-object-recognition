@@ -12,9 +12,31 @@ import rosbag
 import subprocess, yaml
 from cv_bridge import CvBridge, CvBridgeError
 
-def preproc(img):
+def preproc(imgm, img_wd):
         
+
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/depth-asis.png',imgm)
     
+    
+    #for record in img:
+    i=0
+   
+    img_new =[] 
+
+    for row in img_wd:
+        
+        for j in range(len(row)):
+            if row[j] > 1.0:
+
+                img_new[i,j]=0.0    
+                #cutoff threshold
+            else:
+
+                img_new[i,j]= imgm[i,j]
+                #copy original value
+        i+=1 
+    
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/depth-masked.png',img_new)
     sys.exit(0)
 
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
@@ -200,24 +222,35 @@ if __name__ == '__main__':
 
     for img in img_mat:
 
-        #print(record.dtype) 
+        #print(img.shape) 
         #Trying to convert back to mm from uint16
-        width, height, channels = img.shape        
+        width, height = img.shape        
+
+        imgd = np.uint32(img)
+        imgd = imgd*0.001
+        
+        print(np.max(imgd))
+        print(np.min(imgd))
+        
         print("Resolution of your input images is "+str(width)+"x"+str(height))        
 
+        #print(img[100])        
+        
+        '''
         img =np.uint32(img)
         img = img*0.001
 
         print(np.max(img))
         print(np.min(img))
         sys.exit(0)   
+        '''
 
         try:    
 
             #img = cv2.imdecode(img_np, cv2.IMREAD_UNCHANGED)
 
-            edged =preproc(img_array)
-
+            edged =preproc(img, imgd)
+            sys.exit(0)
             '''
             kernel = np.ones((5,5),np.uint8)
             #Segment
@@ -240,7 +273,7 @@ if __name__ == '__main__':
 
         except Exception as e:
 
-            print("Problem while processing %s" % f) 
+            print("Problem while processing ") 
             print(str(e))
 
 

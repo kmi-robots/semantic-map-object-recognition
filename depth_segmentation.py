@@ -10,18 +10,12 @@ from pylab import arange, array, uint8
 from matplotlib import pyplot as plt
 import rosbag
 import subprocess, yaml
-
+from cv_bridge import CvBridge, CvBridgeError
 
 def preproc(img):
         
     
-    #img = array(img,dtype=float32)
-    print(img.dtype)
-    img =np.float16(img)
-    img = img*0.001
-
-    print(np.max(img))
-    print(np.min(img))
+    sys.exit(0)
 
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     
@@ -157,13 +151,30 @@ if __name__ == '__main__':
 
     start = time.time()
 
-    files = os.listdir(args.imgpath)
     img_mat =[]
 
-    #Read from image dir
-    if args.imgpath[-3:] != 'bag':
+    #Read from rosbag 
+    if args.imgpath[-3:] == 'bag':
 
+        print("Loading rosbag...")
+        
+        bag= rosbag.Bag(args.imgpath)
+
+        #topics = bag.get_type_and_topic_info()[1].keys()
+        #print(topics)
+        #info_dict = yaml.load(subprocess.Popen(['rosbag', 'info', '--yaml', path_to_bag], stdout=subprocess.PIPE).communicate()[0])
+        #print(info_dict) 
+        bridge = CvBridge()
+        img_mat =[bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough") for topic, msg, t in bag.read_messages()]
+        bag.close()
     
+        
+    else:  #or read from image dir
+
+        files = os.listdir(args.imgpath)
+        print("Reading from image folder...") 
+      
+
         for f in files:
         
             if f[-3:] == 'ini':
@@ -186,20 +197,21 @@ if __name__ == '__main__':
             
                 #Skip corrupted or zero-byte images
                 continue
-        
-    else:  #or read from rosbag
-    
-        bag= rosbag.Bag(path_to_bag)
 
-        #topics = bag.get_type_and_topic_info()[1].keys()
-        #print(topics)
-        #info_dict = yaml.load(subprocess.Popen(['rosbag', 'info', '--yaml', path_to_bag], stdout=subprocess.PIPE).communicate()[0])
-        #print(info_dict) 
-        img_mat =[msg for topic, msg, t in bag.read_messages()]
-        bag.close()
+    for img in img_mat:
 
-    for msg in img_mat:
-    
+        #print(record.dtype) 
+        #Trying to convert back to mm from uint16
+        width, height, channels = img.shape        
+        print("Resolution of your input images is "+str(width)+"x"+str(height))        
+
+        img =np.uint32(img)
+        img = img*0.001
+
+        print(np.max(img))
+        print(np.min(img))
+        sys.exit(0)   
+
         try:    
 
             #img = cv2.imdecode(img_np, cv2.IMREAD_UNCHANGED)

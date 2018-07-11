@@ -12,34 +12,88 @@ import rosbag
 import subprocess, yaml
 from cv_bridge import CvBridge, CvBridgeError
 
-def preproc(imgm, img_wd):
+def preproc(imgm, img_wd, tstamp):
         
 
-    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/depth-asis.png',imgm)
-    
-    
+    #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/depth-asis.png',imgm)
     #for record in img:
     i=0
-   
-    img_new =[] 
 
+    img_new = imgm.copy() 
+    img_new_l1 = imgm.copy()
+    img_new_l2 = imgm.copy()
+    img_new_l3 = imgm.copy()
+
+    img_new = np.uint32(img_new)
+    img_new = img_new*0.001
+
+    twth= np.percentile(img_new, 25)
+    fifth = np.percentile(img_new, 50)
+    sevth = np.percentile(img_new, 75)
+    
+    img_new_l1 = np.uint32(img_new_l1)
+    img_new_l1 = img_new_l1*0.001
+    #print(img_new_l1)
+    img_new_l1[img_new_l1 > twth] = 255
+    img_new_l1[img_new_l1 != 255] = 0
+    #print(img_new_l1)
+    
+    #sys.exit(0)    
+
+
+    img_new_l2 = np.uint32(img_new_l2)
+    img_new_l2 = img_new_l2*0.001
+    img_new_l2[img_new_l2 < twth] = 255
+    img_new_l2[img_new_l2 > fifth] = 255
+    img_new_l2[img_new_l2 != 255] = 0
+    
+    img_new_l3 = np.uint32(img_new_l3)
+    img_new_l3 = img_new_l3*0.001
+    img_new_l3[img_new_l3 < fifth] = 255
+    img_new_l3[img_new_l3 > sevth] = 255
+    img_new_l3[img_new_l3 != 255] = 0
+    '''
     for row in img_wd:
         
+
+        #print(img_wd[100,:])
         for j in range(len(row)):
-            if row[j] > 1.0:
 
-                img_new[i,j]=0.0    
+            if row[j] > 0.0 and row[j] < 1.0:
+
+                img_new[i,j] = 153         
+                
+ 
+            elif row[j] >1.0 and row[j]<2.0:
+            
+                img_new[i,j]= 178
+
+            elif row[j] >2.0:
+
+                #print("set to white")
+                img_new[i,j]= 255    
                 #cutoff threshold
-            else:
 
-                img_new[i,j]= imgm[i,j]
-                #copy original value
+
+                        
+        #sys.exit(0)
         i+=1 
-    
-    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/depth-masked.png',img_new)
+    '''
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/layers/depth-masked_l1%s.png' % tstamp,img_new_l1)
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/layers/depth-masked_l2%s.png' % tstamp,img_new_l2)
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/layers/depth-masked_l3%s.png' % tstamp,img_new_l3)
     sys.exit(0)
 
-    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    kernel = np.ones((10,10),np.uint8)
+    #dilation = cv2.dilate(img_new,kernel,iterations = 10)
+    op =  cv2.morphologyEx(img_new, cv2.MORPH_OPEN, kernel)
+    #closing =  cv2.morphologyEx(op, cv2.MORPH_CLOSE, kernel)
+
+    aligned =np.hstack((img_new,op))
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/masked/depth-masked_afterop_%s.png' % tstamp,aligned)
+    #sys.exit(0)
+    '''
+    gray = cv2.cvtColor(img_new,cv2.COLOR_BGR2GRAY)
     
     #gray = np.uint8(gray)   
     #ret, markers=  cv2.connectedComponents(gray)
@@ -64,6 +118,7 @@ def preproc(imgm, img_wd):
     y = (maxIntensity/phi)*(x/(maxIntensity/theta))**0.5
 
     '''
+    '''
     hist,bins = np.histogram(closing.flatten(),256,[0,256])
     cdf = hist.cumsum()
     cdf_normalized = cdf * hist.max()/ cdf.max()
@@ -73,10 +128,11 @@ def preproc(imgm, img_wd):
     plt.legend(('cdf','histogram'), loc = 'upper left')
     plt.show()
     '''
+    '''
     equ = cv2.equalizeHist(closing)
     res = np.hstack((closing,equ)) #stacking images side-by-side
     cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/res-aligned_'+f,res)
-
+    
     # Decrease intensity such that
     # dark pixels become much darker, 
     # bright pixels become slightly dark 
@@ -93,15 +149,20 @@ def preproc(imgm, img_wd):
     #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/contrasted'+f, closingc) 
     
     canny= cv2.Canny(op, 80, 85)
-
-    jet = cv2.applyColorMap(equ,cv2.DIST_L2,5)
-    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/jet_equ'+f, jet)
+    '''
+    img_new = op.astype(np.uint8)
+    #jet = cv2.applyColorMap(equ,cv2.DIST_L2,5)
+    jet = cv2.applyColorMap(img_new,cv2.DIST_L2,5)
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/jet/jet_equ%s.png' % tstamp, jet)
+    #sys.exit(0)
     #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/canny_'+f, canny) 
-    __, contours,hierarchy = cv2.findContours(closing, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) 
+    edges=[]
+    #print(img_new.shape)
+
+    __, contours,hierarchy = cv2.findContours(img_new, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE) 
     cv2.drawContours(jet, contours, -1, (0, 0, 255), 3)
 
-    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/jet_cont'+f, jet)
-    #sys.exit(0)
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/jet_cont%s.png' % tstamp, jet)
     #edges=gray
     #print(cv2.connectedComponents(gray, 4, cv2.CV_32S))
     #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/test',cv2.connectedComponents(gray, 4, cv2.CV_32S))
@@ -187,10 +248,12 @@ if __name__ == '__main__':
         #info_dict = yaml.load(subprocess.Popen(['rosbag', 'info', '--yaml', path_to_bag], stdout=subprocess.PIPE).communicate()[0])
         #print(info_dict) 
         bridge = CvBridge()
-        img_mat =[bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough") for topic, msg, t in bag.read_messages()]
+        img_mat =[(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)) for topic, msg, t in bag.read_messages()]
         bag.close()
-    
-        
+        print("Rosbag imported, took %f seconds" % float(time.time() -start))   
+        #print(img_mat[0])
+        #sys.exit(0)
+
     else:  #or read from image dir
 
         files = os.listdir(args.imgpath)
@@ -210,7 +273,7 @@ if __name__ == '__main__':
 
                  img_array = cv2.imread(os.path.join(args.imgpath,f), cv2.IMREAD_UNCHANGED)
         
-                 img_mat.append(img_array)
+                 img_mat.append((img_array,f))
 
             except Exception as e:
             
@@ -220,15 +283,15 @@ if __name__ == '__main__':
                 #Skip corrupted or zero-byte images
                 continue
 
-    for img in img_mat:
+    for img,stamp in img_mat:
 
         #print(img.shape) 
         #Trying to convert back to mm from uint16
-        width, height = img.shape        
+        height, width = img.shape        
 
         imgd = np.uint32(img)
         imgd = imgd*0.001
-        
+        #print(imgd[100,:])
         print(np.max(imgd))
         print(np.min(imgd))
         
@@ -249,7 +312,7 @@ if __name__ == '__main__':
 
             #img = cv2.imdecode(img_np, cv2.IMREAD_UNCHANGED)
 
-            edged =preproc(img, imgd)
+            edged =preproc(img, imgd, stamp)
             sys.exit(0)
             '''
             kernel = np.ones((5,5),np.uint8)
@@ -275,7 +338,7 @@ if __name__ == '__main__':
 
             print("Problem while processing ") 
             print(str(e))
-
+            sys.exit(0)
 
         #Display, with segmentation
 

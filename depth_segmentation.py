@@ -30,26 +30,33 @@ def preproc(imgm, img_wd, tstamp):
     twth= np.percentile(img_new, 25)
     fifth = np.percentile(img_new, 50)
     sevth = np.percentile(img_new, 75)
-    
+
+    print(twth)   
+    print(fifth)
+    print(sevth)
+ 
     img_new_l1 = np.uint32(img_new_l1)
     img_new_l1 = img_new_l1*0.001
-    #print(img_new_l1)
+    print(img_new_l1)
     img_new_l1[img_new_l1 > twth] = 255
     img_new_l1[img_new_l1 != 255] = 0
-    #print(img_new_l1)
+    print(img_new_l1)
     
     #sys.exit(0)    
 
 
     img_new_l2 = np.uint32(img_new_l2)
     img_new_l2 = img_new_l2*0.001
-    img_new_l2[img_new_l2 < twth] = 255
+    
+    #img_new_l2[img_new_l2 == twth] = 255
+    #img_new_l2[img_new_l2 != 255] = 0
+    img_new_l2[img_new_l2 <= twth] = 255
     img_new_l2[img_new_l2 > fifth] = 255
     img_new_l2[img_new_l2 != 255] = 0
     
     img_new_l3 = np.uint32(img_new_l3)
     img_new_l3 = img_new_l3*0.001
-    img_new_l3[img_new_l3 < fifth] = 255
+    img_new_l3[img_new_l3 <= fifth] = 255
     img_new_l3[img_new_l3 > sevth] = 255
     img_new_l3[img_new_l3 != 255] = 0
     '''

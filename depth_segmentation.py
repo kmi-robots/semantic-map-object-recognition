@@ -31,16 +31,16 @@ def preproc(imgm, img_wd, tstamp):
     fifth = np.percentile(img_new, 50)
     sevth = np.percentile(img_new, 75)
 
-    print(twth)   
-    print(fifth)
-    print(sevth)
+    #print(twth)   
+    #print(fifth)
+    #print(sevth)
  
     img_new_l1 = np.uint32(img_new_l1)
     img_new_l1 = img_new_l1*0.001
-    print(img_new_l1)
+    #print(img_new_l1)
     img_new_l1[img_new_l1 > twth] = 255
     img_new_l1[img_new_l1 != 255] = 0
-    print(img_new_l1)
+    #print(img_new_l1)
     
     #sys.exit(0)    
 
@@ -59,6 +59,7 @@ def preproc(imgm, img_wd, tstamp):
     img_new_l3[img_new_l3 <= fifth] = 255
     img_new_l3[img_new_l3 > sevth] = 255
     img_new_l3[img_new_l3 != 255] = 0
+    
     '''
     for row in img_wd:
         
@@ -89,15 +90,22 @@ def preproc(imgm, img_wd, tstamp):
     cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/layers/depth-masked_l1%s.png' % tstamp,img_new_l1)
     cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/layers/depth-masked_l2%s.png' % tstamp,img_new_l2)
     cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/layers/depth-masked_l3%s.png' % tstamp,img_new_l3)
-    sys.exit(0)
+    #sys.exit(0)
 
     kernel = np.ones((10,10),np.uint8)
     #dilation = cv2.dilate(img_new,kernel,iterations = 10)
-    op =  cv2.morphologyEx(img_new, cv2.MORPH_OPEN, kernel)
+    op1 =  cv2.morphologyEx(img_new_l1, cv2.MORPH_OPEN, kernel)
+    op2 =  cv2.morphologyEx(img_new_l2, cv2.MORPH_OPEN, kernel)
+    op3 =  cv2.morphologyEx(img_new_l3, cv2.MORPH_OPEN, kernel)
     #closing =  cv2.morphologyEx(op, cv2.MORPH_CLOSE, kernel)
 
-    aligned =np.hstack((img_new,op))
+    aligned =np.hstack((img_new_l1,op1))
     cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/masked/depth-masked_afterop_%s.png' % tstamp,aligned)
+    aligned2 =np.hstack((img_new_l2,op2))
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/masked/depth-masked_afterop_%s.png' % tstamp,aligned2)
+    aligned3 =np.hstack((img_new_l3,op3))
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/masked/depth-masked_afterop_%s.png' % tstamp,aligned3)
+    
     #sys.exit(0)
     '''
     gray = cv2.cvtColor(img_new,cv2.COLOR_BGR2GRAY)
@@ -157,22 +165,48 @@ def preproc(imgm, img_wd, tstamp):
     
     canny= cv2.Canny(op, 80, 85)
     '''
-    img_new = op.astype(np.uint8)
+    edges=[]
+    img_new = op1.astype(np.uint8)
     #jet = cv2.applyColorMap(equ,cv2.DIST_L2,5)
     jet = cv2.applyColorMap(img_new,cv2.DIST_L2,5)
     cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/jet/jet_equ%s.png' % tstamp, jet)
     #sys.exit(0)
     #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/canny_'+f, canny) 
-    edges=[]
     #print(img_new.shape)
 
-    __, contours,hierarchy = cv2.findContours(img_new, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE) 
+    __, contours,hierarchy = cv2.findContours(img_new, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) 
     cv2.drawContours(jet, contours, -1, (0, 0, 255), 3)
 
-    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/jet_cont%s.png' % tstamp, jet)
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/jet/jet_cont%s.png' % tstamp, jet)
+    
+    img_new2 = op2.astype(np.uint8)
+    #jet = cv2.applyColorMap(equ,cv2.DIST_L2,5)
+    jet2 = cv2.applyColorMap(img_new2,cv2.DIST_L2,5)
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/jet/jet_equ%s_2.png' % tstamp, jet2)
+    #sys.exit(0)
+    #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/canny_'+f, canny) 
+    #print(img_new.shape)
+
+    __, contours,hierarchy = cv2.findContours(img_new2, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) 
+    cv2.drawContours(jet2, contours, -1, (0, 0, 255), 3)
+
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/jet_cont%s_2.png' % tstamp, jet2)
     #edges=gray
     #print(cv2.connectedComponents(gray, 4, cv2.CV_32S))
     #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/test',cv2.connectedComponents(gray, 4, cv2.CV_32S))
+    
+    img_new3 = op3.astype(np.uint8)
+    #jet = cv2.applyColorMap(equ,cv2.DIST_L2,5)
+    jet3 = cv2.applyColorMap(img_new3,cv2.DIST_L2,5)
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/jet_equ%s_3.png' % tstamp, jet3)
+    #sys.exit(0)
+    #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/canny_'+f, canny) 
+    #print(img_new.shape)
+
+    __, contours,hierarchy = cv2.findContours(img_new3, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) 
+    cv2.drawContours(jet3, contours, -1, (0, 0, 255), 3)
+
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/jet_cont%s_3.png' % tstamp, jet3)
     
     return edges
 
@@ -320,7 +354,7 @@ if __name__ == '__main__':
             #img = cv2.imdecode(img_np, cv2.IMREAD_UNCHANGED)
 
             edged =preproc(img, imgd, stamp)
-            sys.exit(0)
+            #sys.exit(0)
             '''
             kernel = np.ones((5,5),np.uint8)
             #Segment

@@ -9,6 +9,8 @@ import numpy as np
 
 def findAndMatch(objs=os.listdir('/mnt/c/Users/HP/Desktop/KMI/shapenet-object-proof/merged'), comparout='/mnt/c/Users/HP/Desktop/KMI/test', contours2=None, img2=None, fname=None):
 
+    simdict ={}    
+
     for o in objs:
 
         img = cv2.imread(os.path.join(input_p,o), cv2.IMREAD_UNCHANGED)
@@ -32,32 +34,49 @@ def findAndMatch(objs=os.listdir('/mnt/c/Users/HP/Desktop/KMI/shapenet-object-pr
         #Contour detection adds too much noise here
         #conts = contour_det(edges)
         #draw_cnt(conts, img, o, output_p)
+
         if contours2 is None or img2 is None:
             continue
 
+        jet = cv2.applyColorMap(img2,cv2.DIST_L2,5) 
+        
         i=1
         for cnt2 in contours2:
          
           
-            cv2.drawContours(img2, contours2[0], -1, (0, 0, 255), 3)
+            cv2.drawContours(jet, contours2[0], -1, (0, 0, 255), 3)
             #cv2.drawContours(img2, contours2[1], -1, (255, 0, 0), 3)
             #cv2.drawContours(img2, contours2[2], -1, (0, 255, 0), 3)
             #print(len(contours2))   
             
-            cv2.imwrite(os.path.join(comparout,fname[:-4]+"_"+str(i)+fname[-4:]), img2)
-            for cnt in contours:
-        
-                
-                cv2.drawContours(img, [cnt], -1, (0, 0, 255), 3)
-
-                cv2.imwrite(os.path.join(comparout,o[:-4]+"_"+str(i)+o[-4:]), img)
-
-                
-                print("-----Comparison no. %i ----------" % i)    
-                print(cv2.matchShapes(cnt2, cnt,1,0.0))
+            cv2.imwrite(os.path.join(comparout,fname+"_"+str(i)+'.png'), jet)
+    
+            simdict["img_id"] = fname
+            simdict["imgcont_no"] = i
+            simdict["compared_obj"] = o[:-4]
             
+            if len(contours) >1 :
+                print("Too many contours!!")
                 sys.exit(0)
-                i+=1
+
+            #for cnt in contours:
+                
+            cv2.drawContours(img, contours[0], -1, (0, 0, 255), 3)
+
+            cv2.imwrite(os.path.join(comparout,o[:-4]+"_"+str(i)+o[-4:]), img)
+
+                 
+            print("-----Comparison no. %i ----------" % i)    
+            print(cv2.matchShapes(cnt2, contours[0],1,0.0))
+            
+             
+            simdict["similarity"] = cv2.matchShapes(cnt2, contours[0],1,0.0)
+
+
+            
+            i+=1
+
+    return simdict 
       
         
 SOLR_BASE='https://www.shapenet.org/solr/models3d/'

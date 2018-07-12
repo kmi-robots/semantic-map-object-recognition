@@ -10,6 +10,10 @@ import numpy as np
 def findAndMatch(objs=os.listdir('/mnt/c/Users/HP/Desktop/KMI/shapenet-object-proof/merged'), comparout='/mnt/c/Users/HP/Desktop/KMI/test', contours2=None, img2=None, fname=None):
 
     simdict ={}    
+    
+    simdict["img_id"] = fname
+    simdict['comparisons']=[]
+    glob_min =0.0
 
     for o in objs:
 
@@ -25,6 +29,7 @@ def findAndMatch(objs=os.listdir('/mnt/c/Users/HP/Desktop/KMI/shapenet-object-pr
         #Only external contours instead of full hierarchy here 
         __, contours,hierarchy = cv2.findContours(dilation, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE) 
         imgo = cv2.drawContours(dilation, contours, -1, (0,255,0), 3)
+
         #mask = np.zeros(imgo.shape[:2], dtype="uint8") * 255
         dil = cv2.dilate(imgo, kernel, iterations=1)
         #cv2.drawContours(mask, contours, -1, (255, 255, 255), -1)
@@ -40,7 +45,14 @@ def findAndMatch(objs=os.listdir('/mnt/c/Users/HP/Desktop/KMI/shapenet-object-pr
 
         jet = cv2.applyColorMap(img2,cv2.DIST_L2,5) 
         
+
+
+        comparison={}  
+        comparison["compared_obj"] = o[:-4]
+        comparison["similarities"] =[]
+
         i=1
+
         for cnt2 in contours2:
          
           
@@ -51,13 +63,12 @@ def findAndMatch(objs=os.listdir('/mnt/c/Users/HP/Desktop/KMI/shapenet-object-pr
             
             cv2.imwrite(os.path.join(comparout,fname+"_"+str(i)+'.png'), jet)
     
-            simdict["img_id"] = fname
-            simdict["imgcont_no"] = i
-            simdict["compared_obj"] = o[:-4]
             
+            '''
             if len(contours) >1 :
-                print("Too many contours!!")
+                print("Too many contours in object %s!!" % str(o))
                 sys.exit(0)
+            '''
 
             #for cnt in contours:
                 
@@ -70,11 +81,21 @@ def findAndMatch(objs=os.listdir('/mnt/c/Users/HP/Desktop/KMI/shapenet-object-pr
             print(cv2.matchShapes(cnt2, contours[0],1,0.0))
             
              
-            simdict["similarity"] = cv2.matchShapes(cnt2, contours[0],1,0.0)
+            comparison["similarities"].append((i, cv2.matchShapes(cnt2, contours[0],1,0.0)))
 
-
-            
             i+=1
+          
+        comparison["similarities"] = sorted(comparison["similarities"],key=lambda x:(x[1],x[0]))
+
+        curr_min = min(comparison["similarities"], key = lambda t: t[1])        
+        if curr_min > glob_min:
+            glob_min = curr_min
+            obj_min = o
+
+        simdict['comparisons'].append(comparison)
+
+    #Output most similar object 
+    simdict["min"]=(o, glob_min)
 
     return simdict 
       

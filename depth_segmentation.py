@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 import rosbag
 import subprocess, yaml
 from cv_bridge import CvBridge, CvBridgeError
+import json
 
 def preproc(imgm, img_wd, tstamp):
         
@@ -273,9 +274,20 @@ if __name__ == '__main__':
             img3 = params[5]
  
             #Trying to match each layer separately with shapenet   
-            findAndMatch(contours2=cont1, img2=img1, fname=stamp+'_l1')
-            findAndMatch(contours2=cont2, img2=img2, fname=stamp+'_l2')
-            findAndMatch(contours2=cont3, img2=img3, fname=stamp+'_l3')
+            simd1 = findAndMatch(contours2=cont1, img2=img1, fname=stamp+'_l1')
+
+            with open(os.path.join('/mnt/c/Users/HP/Desktop/KMI/similarities', stamp+'_l1.json'), 'w') as js1:
+                 json.dump(simd1, js1, indent=4)           
+
+            simd2 = findAndMatch(contours2=cont2, img2=img2, fname=stamp+'_l2')
+            with open(os.path.join('/mnt/c/Users/HP/Desktop/KMI/similarities', stamp+'_l2.json'), 'w') as js2:
+                 json.dump(simd2, js2, indent=4)           
+            
+            simd3 = findAndMatch(contours2=cont3, img2=img3, fname=stamp+'_l3')
+
+            with open(os.path.join('/mnt/c/Users/HP/Desktop/KMI/similarities', stamp+'_l3.json'), 'w') as js3:
+                 json.dump(simd3, js3, indent=4)           
+            
 
             sys.exit(0)
             

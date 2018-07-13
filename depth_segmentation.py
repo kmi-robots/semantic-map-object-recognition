@@ -12,20 +12,112 @@ import rosbag
 import subprocess, yaml
 from cv_bridge import CvBridge, CvBridgeError
 import json
+from PIL import Image
+
+
+def get_histogram(img_array, stampid):
+
+    #Compute histogram of values row by row
+    '''
+    hist, bin_edges = np.apply_along_axis(lambda x: np.histogram(x, bins='auto'), 0, img_array)
+    #print(hist)
+    #print(bin_edges)
+    #print(type(hist))
+    plt.bar(bin_edges[:-1], hist,width=np.diff(bin_edges))
+    '''
+    
+    cm = plt.cm.get_cmap('gray')
+    print(cm)
+    # Plot histogram.
+    n, bins, patches = plt.hist(img_array.ravel(), 'auto', [0,10], color='green', edgecolor='black', linewidth=1)
+    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+
+    # scale values to interval [0,1]
+    col = bin_centers - min(bin_centers)
+    col /= max(col)
+    
+    for c, p in zip(col, patches):
+        plt.setp(p, 'facecolor', cm(c)) 
+        print(str(cm(c)[:3]))
+
+    '''
+    #print(img_array.dtype)
+    #hist = cv2.calcHist([img_array], [0], None, [256], [0,256])
+    plt.hist(img_array.ravel(),'auto',[0,10], cmap='gray') 
+    #plt.plot(hist, color = 'b')
+    '''
+    plt.xlim([0,10])
+    #plt.show()    
+    if os.path.isfile(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stampid+'.png')):
+        print("skipping")
+        return
+
+    plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stampid+'.png'))
+    #plt.show()
+    plt.clf()
+
+    cm = plt.cm.get_cmap('gray')
+
+    # Plot histogram.
+    n, bins, patches = plt.hist(img_array.ravel(), 'auto', [1,10], color='green', edgecolor='black', linewidth=1)
+    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+
+    # scale values to interval [0,1]
+    col = bin_centers - min(bin_centers)
+    col /= max(col)
+    
+    for c, p in zip(col, patches):
+        plt.setp(p, 'facecolor', cm(c)) 
+
+    '''
+    #print(img_array.dtype)
+    #hist = cv2.calcHist([img_array], [0], None, [256], [0,256])
+    plt.hist(img_array.ravel(),'auto',[0,10], cmap='gray') 
+    #plt.plot(hist, color = 'b')
+    '''
+    #print(n)
+    #sys.exit(0)
+    plt.xlim([1,10])
+    plt.ylim([1,30000])
+    #plt.show()    
+    plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stampid+'_noout.png'))
+    plt.clf()
+    return os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stampid+'.png')
 
 def preproc(imgm, img_wd, tstamp):
         
-
-    #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/depth-asis.png',imgm)
 
     img_new = imgm.copy() 
     img_new_l1 = imgm.copy()
     img_new_l2 = imgm.copy()
     img_new_l3 = imgm.copy()
 
+
+    #print(imgm.dtype)
+    #Obtaining depth values in mm
     img_new = np.uint32(img_new)
     img_new = img_new*0.001
 
+    #print(np.may_share_memory(img_new, imgm))
+
+    #get_histogram(imgm, tstamp) 
+    #path = get_histogram(np.float32(img_new), tstamp) 
+    #path = get_histogram(np.float32(img_new), tstamp) 
+    #sys.exit(0)
+    #plot =cv2.imread(path)
+    #print(imgm.dtype)
+    #plot =cv2.cvtColor(plot, cv2.COLOR_BGR2GRAY)
+    #imgm =cv2.cvtColor(imgm, cv2.COLOR_BGR2GRAY)
+ 
+    #print(plot.shape)
+    #print(plot.dtype)
+    #both = np.hstack((plot, imgm.astype(np.uint8)))   #.astype(np.uint8)))
+    
+    #new_im.save('test.jpg')    
+    #substitute prior plot with both aligned 
+    #cv2.imwrite(path, both)
+    #sys.exit(0)
+    '''
     twth= np.percentile(img_new, 25)
     fifth = np.percentile(img_new, 50)
     sevth = np.percentile(img_new, 75)
@@ -122,6 +214,8 @@ def preproc(imgm, img_wd, tstamp):
     cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/jet_cont%s_3.png' % tstamp, jet3)
     
     return [contours1, contours2, contours3, img_new, img_new2, img_new3]
+    '''
+    return
 
 def contour_det(gray_img):
 
@@ -196,13 +290,17 @@ if __name__ == '__main__':
         print("Loading rosbag...")
         
         bag= rosbag.Bag(args.imgpath)
-
+        #print(bag.get_message_count())
+        #sys.exit(0)
         #topics = bag.get_type_and_topic_info()[1].keys()
         #print(topics)
         #info_dict = yaml.load(subprocess.Popen(['rosbag', 'info', '--yaml', path_to_bag], stdout=subprocess.PIPE).communicate()[0])
         #print(info_dict) 
         bridge = CvBridge()
-        img_mat =[(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)) for topic, msg, t in bag.read_messages()]
+        
+        img_mat =[(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages()]
+        
+        #print(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough").dtype)
         bag.close()
         print("Rosbag imported, took %f seconds" % float(time.time() -start))   
         #print(img_mat[0])
@@ -235,11 +333,24 @@ if __name__ == '__main__':
                 print(str(e))
             
                 #Skip corrupted or zero-byte images
-                continue
+
+                continue    
+
+
+    #np.save("./rosdepth_with_stamps.npy", img_mat)
+    img_mat = np.load('./rosdepth_with_stamps.npy')
+    #sys.exit(0)
 
     for img,stamp in img_mat:
 
+        print(stamp)
+        print(img.dtype)
+        sys.exit(0)
+        cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/depth-asis.png',img)
         #print(img.shape) 
+        #print(img.dtype)
+
+
         #Trying to convert back to mm from uint16
         height, width = img.shape        
 
@@ -249,6 +360,7 @@ if __name__ == '__main__':
         print(np.max(imgd))
         print(np.min(imgd))
         
+                
         print("Resolution of your input images is "+str(width)+"x"+str(height))        
 
         #print(img[100])        
@@ -265,7 +377,28 @@ if __name__ == '__main__':
         try:    
 
             #img = cv2.imdecode(img_np, cv2.IMREAD_UNCHANGED)
-            params = preproc(img, imgd, stamp)
+            #params = preproc(img, imgd, stamp)
+
+            print(stamp)
+            
+            cv_image_norm = cv2.normalize(img, img, 0, 1, cv2.NORM_MINMAX)
+    
+            cv_image_norm = cv_image_norm.astype(np.uint8)
+            print(cv_image_norm.shape)     
+           
+            get_histogram(np.float32(imgd), stamp)
+
+            
+            hst = cv2.imread(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stamp+'_noout.png'))
+            plot =cv2.cvtColor(hst, cv2.COLOR_BGR2GRAY)
+            print(plot.shape)
+
+            aligned = np.hstack((cv_image_norm, plot))
+            cv2.imwrite(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp', stamp+'.png'), aligned)
+
+            sys.exit(0)
+
+            '''
             cont1 = params[0] 
             cont2 = params[1] 
             cont3 = params[2] 
@@ -289,8 +422,10 @@ if __name__ == '__main__':
                  json.dump(simd3, js3, indent=4)           
             
 
-            sys.exit(0)
+            #sys.exit(0)
             
+            '''
+
             '''
             kernel = np.ones((5,5),np.uint8)
             #Segment
@@ -306,7 +441,7 @@ if __name__ == '__main__':
 
             print("Problem while processing ") 
             print(str(e))
-            sys.exit(0)
+            #sys.exit(0)
 
         #Display, with segmentation
 

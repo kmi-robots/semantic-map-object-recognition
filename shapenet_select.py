@@ -13,7 +13,7 @@ def findAndMatch(objs=os.listdir('/mnt/c/Users/HP/Desktop/KMI/shapenet-object-pr
     
     simdict["img_id"] = fname
     simdict['comparisons']=[]
-    glob_min =0.0
+    glob_min =1000.0
 
     for o in objs:
 
@@ -87,12 +87,17 @@ def findAndMatch(objs=os.listdir('/mnt/c/Users/HP/Desktop/KMI/shapenet-object-pr
           
         comparison["similarities"] = sorted(comparison["similarities"],key=lambda x:(x[1],x[0]))
 
-        curr_min = min(comparison["similarities"], key = lambda t: t[1])        
-        if curr_min > glob_min:
+        iterat, curr_min = min(comparison["similarities"], key = lambda t: t[1])  
+        #print(curr_min) 
+        #print(type(curr_min))
+        #sys.exit(0)
+      
+        if curr_min < glob_min:
             glob_min = curr_min
             obj_min = o
 
         simdict['comparisons'].append(comparison)
+
 
     #Output most similar object 
     simdict["min"]=(o, glob_min)

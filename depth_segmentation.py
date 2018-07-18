@@ -13,6 +13,9 @@ import subprocess, yaml
 from cv_bridge import CvBridge, CvBridgeError
 import json
 from PIL import Image
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+
 
 
 def get_histogram(img_array, stampid):
@@ -82,6 +85,7 @@ def get_histogram(img_array, stampid):
     #plt.show()    
     plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stampid+'_noout.png'))
     plt.clf()
+
     return os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stampid+'.png')
 
 def preproc(imgm, img_wd, tstamp):
@@ -247,6 +251,58 @@ def canny_edge(gray_img):
 
     return cv2.Canny(gray_img, 100, 105)
 
+def rosimg_fordisplay(img_array, img_d, stampid):
+
+    #Define same colormap as the histograms 
+    cm = plt.cm.get_cmap('gray')
+
+    n, bins, patches = plt.hist(img_d.ravel(), 'auto', [0,10], color='green', edgecolor='black', linewidth=1)
+
+    #Cutoff values will be based on bin edges
+    thresholds = bins
+    
+    '''
+    for i, th in enumerate(thresholds):
+ 
+        if i!=0:
+
+
+        else:
+            img_d[img_d < th] = 
+    '''
+    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+    # scale values to interval [0,1]
+    col = bin_centers - min(bin_centers)
+    col /= max(col)
+    
+    
+    for i, (c,p) in enumerate(zip(col, patches)):
+        
+        r, g, b = cm(c)[:3]
+        gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
+        #print(gray)
+        #sys.exit(0)
+        if i!=0:
+
+            
+            n= i-1 
+            #print(gray)
+            #print(thresholds[n])  
+            #print(thresholds[i]) 
+            if thresholds[n]!=0.0:
+                img_d[np.logical_and(img_d>= thresholds[n], img_d <thresholds[i])] = gray
+
+            #np.where(np.logical_and(img_d>= thresholds[n], img_d <thresholds[i]), gray, imgd)
+            #plt.setp(p, 'facecolor', cm(c)) 
+            #print(str(cm(c)[:3]))
+        #else:
+            
+            #sys.exit(0) 
+            #print(thresholds[i])                      
+            #img_d[img_d <= thresholds[i]] = gray
+
+    return img_d
+
 
 def draw_cnt(contours, img, fname, outpath):
 
@@ -273,10 +329,18 @@ def draw_cnt(contours, img, fname, outpath):
 
     return conts_new
 
+def clustering(image, K):
+
+    cluster_model = KMeans(init='k-means++', n_clusters=K)    
+    cluster_model.fit(image)
+    
+    return (cluster_model.labels_, cluster_model.cluster_centers_)
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("imgpath", help="Provide path to your depth images/ or rosbag")
+    parser.add_argument("imgpath", help="Provide path to your depth images/ or rosbag/ or npy file")
     parser.add_argument("outpath", help="Provide path to output imgs with drawn contours")
     args =parser.parse_args()
 
@@ -284,8 +348,17 @@ if __name__ == '__main__':
 
     img_mat =[]
 
+    #Read from pre-outputted npy file
+    print(args.imgpath[-3:])
+    if args.imgpath[-3:] == 'npy':
+ 
+        
+        #np.save("./rosdepth_with_stamps.npy", img_mat)
+        img_mat = np.load(args.imgpath)
+        #sys.exit(0)
+
     #Read from rosbag 
-    if args.imgpath[-3:] == 'bag':
+    elif args.imgpath[-3:] == 'bag':
 
         print("Loading rosbag...")
         
@@ -337,16 +410,13 @@ if __name__ == '__main__':
                 continue    
 
 
-    #np.save("./rosdepth_with_stamps.npy", img_mat)
-    img_mat = np.load('./rosdepth_with_stamps.npy')
-    #sys.exit(0)
 
-    for img,stamp in img_mat:
+    for k, (img,stamp) in enumerate(img_mat):
 
         print(stamp)
         print(img.dtype)
-        sys.exit(0)
-        cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/depth-asis.png',img)
+        #sys.exit(0)
+        #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/depth-asis.png',img)
         #print(img.shape) 
         #print(img.dtype)
 
@@ -373,78 +443,122 @@ if __name__ == '__main__':
         print(np.min(img))
         sys.exit(0)   
         '''
+        
+        if not os.path.isfile(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp', stamp+'.png')):
+            #print("skip")
+            #continue
 
-        try:    
+            try:    
 
-            #img = cv2.imdecode(img_np, cv2.IMREAD_UNCHANGED)
-            #params = preproc(img, imgd, stamp)
+                #img = cv2.imdecode(img_np, cv2.IMREAD_UNCHANGED)
+                #params = preproc(img, imgd, stamp)
 
-            print(stamp)
+                #print(stamp)
             
-            cv_image_norm = cv2.normalize(img, img, 0, 1, cv2.NORM_MINMAX)
+                '''
+                cv_image_norm = cv2.normalize(img, img, 0, 1, cv2.NORM_MINMAX)
     
-            cv_image_norm = cv_image_norm.astype(np.uint8)
-            print(cv_image_norm.shape)     
+                cv_image_norm = cv_image_norm.astype(np.uint8)
+                #print(cv_image_norm.shape)     
+                '''
+
+                #Uncomment to create histograms for the first time
+                #get_histogram(np.float32(imgd), stamp)
            
-            get_histogram(np.float32(imgd), stamp)
-
+                #print(np.float32(imgd)) 
+                sliced_image = rosimg_fordisplay(img, np.float32(imgd),stamp)
+                #print(sliced_image)
+                
+                
+                plt.imshow(sliced_image, cmap = plt.get_cmap('gray'))
+                #plt.show()
+                plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp', stamp+'.png'))
+                plt.clf()
+                #cv2.imwrite( sliced_image)
             
-            hst = cv2.imread(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stamp+'_noout.png'))
-            plot =cv2.cvtColor(hst, cv2.COLOR_BGR2GRAY)
-            print(plot.shape)
-
-            aligned = np.hstack((cv_image_norm, plot))
-            cv2.imwrite(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp', stamp+'.png'), aligned)
-
-            sys.exit(0)
-
-            '''
-            cont1 = params[0] 
-            cont2 = params[1] 
-            cont3 = params[2] 
-            img1 = params[3]
-            img2 = params[4] 
-            img3 = params[5]
+                '''
+                cont1 = params[0] 
+                cont2 = params[1] 
+                cont3 = params[2] 
+                img1 = params[3]
+                img2 = params[4] 
+                img3 = params[5]
  
-            #Trying to match each layer separately with shapenet   
-            simd1 = findAndMatch(contours2=cont1, img2=img1, fname=stamp+'_l1')
+                #Trying to match each layer separately with shapenet   
+                simd1 = findAndMatch(contours2=cont1, img2=img1, fname=stamp+'_l1')
 
-            with open(os.path.join('/mnt/c/Users/HP/Desktop/KMI/similarities', stamp+'_l1.json'), 'w') as js1:
-                 json.dump(simd1, js1, indent=4)           
+                with open(os.path.join('/mnt/c/Users/HP/Desktop/KMI/similarities', stamp+'_l1.json'), 'w') as js1:
+                    json.dump(simd1, js1, indent=4)           
 
-            simd2 = findAndMatch(contours2=cont2, img2=img2, fname=stamp+'_l2')
-            with open(os.path.join('/mnt/c/Users/HP/Desktop/KMI/similarities', stamp+'_l2.json'), 'w') as js2:
-                 json.dump(simd2, js2, indent=4)           
+                simd2 = findAndMatch(contours2=cont2, img2=img2, fname=stamp+'_l2')
+                with open(os.path.join('/mnt/c/Users/HP/Desktop/KMI/similarities', stamp+'_l2.json'), 'w') as js2:
+                    json.dump(simd2, js2, indent=4)           
             
-            simd3 = findAndMatch(contours2=cont3, img2=img3, fname=stamp+'_l3')
+                simd3 = findAndMatch(contours2=cont3, img2=img3, fname=stamp+'_l3')
 
-            with open(os.path.join('/mnt/c/Users/HP/Desktop/KMI/similarities', stamp+'_l3.json'), 'w') as js3:
-                 json.dump(simd3, js3, indent=4)           
+                with open(os.path.join('/mnt/c/Users/HP/Desktop/KMI/similarities', stamp+'_l3.json'), 'w') as js3:
+                    json.dump(simd3, js3, indent=4)           
             
 
-            #sys.exit(0)
+                #sys.exit(0)
             
-            '''
+                '''
 
-            '''
-            kernel = np.ones((5,5),np.uint8)
-            #Segment
-            contours = contour_det(edged)
+                '''
+                kernel = np.ones((5,5),np.uint8)
+                #Segment
+                contours = contour_det(edged)
             
-            poly_contours = draw_cnt(contours, img_array, f, args.outpath)
-            #cv2.imwrite('/mnt/c/Users/HP/Desktop/test.png', gray)
-            #cv2.imwrite('/mnt/c/Users/HP/Desktop/test_ng.png', img_array)
-            '''
-            #sys.exit(0) 
+                poly_contours = draw_cnt(contours, img_array, f, args.outpath)
+                #cv2.imwrite('/mnt/c/Users/HP/Desktop/test.png', gray)
+                #cv2.imwrite('/mnt/c/Users/HP/Desktop/test_ng.png', img_array)
+                '''
+                #sys.exit(0) 
 
-        except Exception as e:
+            except Exception as e:
 
-            print("Problem while processing ") 
-            print(str(e))
-            #sys.exit(0)
+                print("Problem while processing ") 
+                print(str(e))
+                #sys.exit(0)
 
         #Display, with segmentation
 
+        img_orig = cv2.imread(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp', stamp+'.png'))
+
+        hst = cv2.imread(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stamp+'_noout.png'))
+        #plot =cv2.cvtColor(hst, cv2.COLOR_BGR2GRAY)
+            
+        #print(plot.shape)
+        #print(img_orig.shape)
+
+        K=5
+        labels, centroids = clustering(img, K)
+        
+        print(labels)
+        print(centroids)
+        
+        sliced_image = rosimg_fordisplay(img, np.float32(imgd),stamp)
+         
+        plt.imshow(sliced_image, cmap = plt.get_cmap('gray'))        
+        plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_orig%s.png' % stamp))
+        plt.clf()
+        
+        print(sliced_image.dtype)    
+   
+        sliced_image = cv2.imread(os.path.join('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_orig%s.png' % stamp))
+        sliced_image =cv2.cvtColor(sliced_image, cv2.COLOR_BGR2GRAY)
+        __, contours,hierarchy = cv2.findContours(sliced_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+        cv2.drawContours(sliced_image, contours, -1, (0, 0, 255), 3)
+
+        cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_cont%s.png' % stamp, sliced_image)
+        
+        sys.exit(0)
+
+        #Uncomment for image, histogram aligned output
+        #aligned = np.hstack((img_orig, hst))
+        #cv2.imwrite(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp', stamp+'.png'), aligned)
+        
           
 
     #Dump to compressed output for future re-use

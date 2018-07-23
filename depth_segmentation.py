@@ -275,7 +275,7 @@ def rosimg_fordisplay(img_array, img_d, stampid):
     col = bin_centers - min(bin_centers)
     col /= max(col)
     
-    
+    print(img_d)
     for i, (c,p) in enumerate(zip(col, patches)):
         
         r, g, b = cm(c)[:3]
@@ -292,6 +292,7 @@ def rosimg_fordisplay(img_array, img_d, stampid):
             if thresholds[n]!=0.0:
                 img_d[np.logical_and(img_d>= thresholds[n], img_d <thresholds[i])] = gray
 
+
             #np.where(np.logical_and(img_d>= thresholds[n], img_d <thresholds[i]), gray, imgd)
             #plt.setp(p, 'facecolor', cm(c)) 
             #print(str(cm(c)[:3]))
@@ -301,6 +302,7 @@ def rosimg_fordisplay(img_array, img_d, stampid):
             #print(thresholds[i])                      
             #img_d[img_d <= thresholds[i]] = gray
 
+    
     return img_d
 
 
@@ -444,7 +446,7 @@ if __name__ == '__main__':
         sys.exit(0)   
         '''
         
-        if not os.path.isfile(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp', stamp+'.png')):
+        if not os.path.isfile(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp-00', stamp+'.png')):
             #print("skip")
             #continue
 
@@ -470,12 +472,13 @@ if __name__ == '__main__':
                 #print(sliced_image)
                 
                 
-                plt.imshow(sliced_image, cmap = plt.get_cmap('gray'))
+                plt.imshow(sliced_image, cmap = plt.get_cmap('tab20b'))
+                
                 #plt.show()
-                plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp', stamp+'.png'))
+                plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp-00', stamp+'.png'))
                 plt.clf()
                 #cv2.imwrite( sliced_image)
-            
+                #sys.exit(0)
                 '''
                 cont1 = params[0] 
                 cont2 = params[1] 
@@ -522,7 +525,7 @@ if __name__ == '__main__':
                 #sys.exit(0)
 
         #Display, with segmentation
-
+        '''
         img_orig = cv2.imread(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp', stamp+'.png'))
 
         hst = cv2.imread(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stamp+'_noout.png'))
@@ -554,7 +557,7 @@ if __name__ == '__main__':
         cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_cont%s.png' % stamp, sliced_image)
         
         sys.exit(0)
-
+        '''
         #Uncomment for image, histogram aligned output
         #aligned = np.hstack((img_orig, hst))
         #cv2.imwrite(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp', stamp+'.png'), aligned)

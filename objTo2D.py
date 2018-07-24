@@ -113,13 +113,9 @@ logging.info('Rendering complete, took %.3f sec' %(rend_stop-rend_start))
 if not os.path.isdir('./faces'):
 
     os.mkdir('./faces')
+
 vis.show("./faces/test.png")
-if not os.path.isdir('./faces'):
 
-    os.mkdir('./faces')
-if not os.path.isdir('./faces'):
-
-    os.mkdir('./faces')
 #Output all views to subfolder
 '''
 for f, rgb in enumerate(rgb_l):

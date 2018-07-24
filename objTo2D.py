@@ -19,14 +19,14 @@ logging.getLogger().setLevel(logging.INFO)
 # Read 3D model
 read_start= time.time()
 
-mesh = meshpy.ObjFile('model_normalized.obj').read()
+mesh = meshpy.ObjFile('model_plane.obj').read()
 read_stop = time.time()
 logging.info('Read took %.3f sec' %(read_stop-read_start))
 
 sub_start= time.time()
-stable_poses = mesh.stable_poses()
 mesh = mesh.subdivide() #min_tri_length=0.01)
 mesh.compute_vertex_normals()
+stable_poses = mesh.stable_poses()
 sub_end = time.time()
 logging.info('Pose division took %.3f sec' %(sub_end-sub_start))
 
@@ -83,13 +83,21 @@ for k, stable_pose in enumerate(stable_poses):
     T_obj_world = mesh.get_T_surface_obj(stable_pose.T_obj_table).as_frames('obj', 'world')
 
     virtual_camera = meshpy.VirtualCamera(ci)
+
+    # create material props
+    mat_props = meshpy.MaterialProperties(color=(249,241,21),
+                                       ambient=0.5,
+                                       diffuse=1.0,
+                                       specular=1,
+                                       shininess=0)
+
     scene_objs = {'object': meshpy.SceneObject(mesh, T_obj_world.inverse())}
     
     for name, scene_obj in scene_objs.iteritems():
         virtual_camera.add_to_scene(name, scene_obj)
         
     # camera pose
-    cam_dist = 0.3
+    cam_dist = 2.0
     T_camera_world = autolab_core.RigidTransform(rotation=np.array([[0, 1, 0],
                                                        [1, 0, 0],
                                                        [0, 0, -1]]),
@@ -99,7 +107,7 @@ for k, stable_pose in enumerate(stable_poses):
         
     T_obj_camera = T_camera_world.inverse() * T_obj_world
 
-    renders = virtual_camera.wrapped_images(mesh, [T_obj_camera], RenderMode.COLOR,debug=False)
+    renders = virtual_camera.wrapped_images(mesh, [T_obj_camera], RenderMode.COLOR, mat_props= mat_props, debug=False)
 
 
 

@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     #Hardcoded: list of synsets of interest
     #from taxonomy.json
-    syns = ['03001627','03797390', '03085013', '03211117','03991062','04256520','04004475','03642806','03636649', '03337140', '02871439']
+    syns = ['03001627','03797390', '03085013', '03211117','03991062','04256520','04004475','03642806','03636649', '03337140']     #'02871439']
     out_name= './2D-views'
 
     if not os.path.isdir(out_name):
@@ -37,12 +37,18 @@ if __name__ == '__main__':
         os.mkdir(out_name)
 
     synpaths = [os.path.join(args.datadir, syn) for syn in syns]
-    
+
+    #print(synpaths)    
+
+    fullp=[]
     for path in synpaths: 
     
         levtwo = os.listdir(path)
-        fullp = [os.path.join(path, p) for p in levtwo]
+        
+        fullp.extend([os.path.join(path, p) for p in levtwo])
     
+    #print(fullp)
+    #sys.exit(0)
     for pt in fullp:
 
         read_start= time.time()
@@ -62,7 +68,7 @@ if __name__ == '__main__':
         
         except Exception as e:
 
-        
+            print(str(e))   
             #logging.error(str(e)) 
             
             continue       

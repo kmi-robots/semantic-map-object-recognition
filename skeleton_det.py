@@ -15,6 +15,13 @@ import json
 from PIL import Image
 import logging
 
+
+def chunks(l):
+    
+    for i in range(0, len(l)-1):
+
+        yield l[i:i+2]
+
 #1. Background subtraction
 def backgr_sub(depth_image):
     
@@ -65,6 +72,64 @@ def backgr_sub(depth_image):
     plt.close()
     plt.clf()
     '''
+    print(n)
+    print(bins)
+    #intervals= range(1,11)
+    #Initialize counts to 0
+    #counts = [(0, i,i+1) for i in intervals if i<10]
+
+    area_dict ={}    
+    #count_dict['counts']= []
+    #Group bin edges in couples     
+    cbins = chunks(bins)
+    #print(bins)
+
+    for i, edge in enumerate(cbins):
+
+        if i==0:
+   
+            #Initialize
+            start_p = edge[0] 
+            end_p  = start_p + 1    
+
+            area_dict[(start_p, end_p)]= 0
+
+        if n[i] ==0.:
+   
+            #Skip empty bins
+            continue
+
+        if edge[0]<= end_p: #and edge[1] <= end_p:
+
+            #Increase tot bin area in that interval
+            area_dict[(start_p, end_p)] += (edge[1]-edge[0])*n[i]
+                                    
+        else:
+        #elif edge[0]> end_p:
+            #Update interval boundaries
+            start_p = edge[0]
+            end_p = start_p +1
+ 
+            #And increase tot area with first one
+            area_dict[(start_p, end_p)] = (edge[1]-edge[0])*n[i]
+
+                    
+    #print(area_dict)
+
+    area_ord = sorted(area_dict.iteritems(), key=lambda (k,v): (v,k), reverse=True)
+    
+    #print(area_ord[:3])
+    (left, right), _ = area_ord[2]  
+    #print(right)
+    
+
+    #sys.exit(0)
+    #If depth greater than third upper bound
+    #Then white out
+    
+
+    '''
+    #Older attempt: max peak
     print(n.max())
     max_ind = n.tolist().index(n.max())
     print(max_ind)
@@ -80,8 +145,9 @@ def backgr_sub(depth_image):
 
     print(depth_image)
     #"White out" if above threshold, i.e., shift to 10 m
-    
     depth_image[depth_image > right_e] = 10.0  
+    '''
+    depth_image[np.logical_or(depth_image > right, depth_image==0.0)] = 10.0  
     
     
     print(depth_image)
@@ -170,7 +236,7 @@ if __name__ == '__main__':
         #print(info_dict) 
         bridge = CvBridge()
         
-        img_mat =[(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages()]
+        img_mat =[(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages()]
 
         #print(len(img_mat))
 
@@ -241,12 +307,13 @@ if __name__ == '__main__':
         plt.imshow(imgd, cmap = plt.get_cmap('gray'))
         plt.show()
         plt.clf()
-        
-
+        sys.exit(0)
+        #Uncomment to plot version with small blob removal
+        '''
         plt.imshow(denoised_i, cmap = plt.get_cmap('gray'))
         plt.show()
         plt.clf()
-        
+        '''
         #sys.exit(0)        
         
         logging.info("Resolution of your input images is "+str(width)+"x"+str(height))        

@@ -51,11 +51,11 @@ def get_histogram(img_array, stampid):
     '''
     plt.xlim([0,10])
     #plt.show()    
-    if os.path.isfile(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stampid+'.png')):
+    if os.path.isfile(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-newstamp', stampid+'.png')):
         print("skipping")
         return
 
-    plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stampid+'.png'))
+    plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-newstamp', stampid+'.png'))
     #plt.show()
     plt.clf()
 
@@ -83,10 +83,10 @@ def get_histogram(img_array, stampid):
     plt.xlim([1,10])
     plt.ylim([1,30000])
     #plt.show()    
-    plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stampid+'_noout.png'))
+    plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-newstamp', stampid+'_noout.png'))
     plt.clf()
 
-    return os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stampid+'.png')
+    return os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-newstamp', stampid+'.png')
 
 def preproc(imgm, img_wd, tstamp):
         
@@ -373,7 +373,7 @@ if __name__ == '__main__':
         #print(info_dict) 
         bridge = CvBridge()
         
-        img_mat =[(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages()]
+        img_mat =[(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages()]
         
         #print(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough").dtype)
         bag.close()
@@ -421,8 +421,16 @@ if __name__ == '__main__':
         #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/depth-asis.png',img)
         #print(img.shape) 
         #print(img.dtype)
+        '''
+        if k>0:
+            
+            img_o, old_stamp = img_mat[k-1]
 
-
+            print("%f nanoseconds have passed from prior epoch" % (float(stamp) - float(old_stamp)))
+            
+        if k ==19:
+            sys.exit(0)
+        '''
         #Trying to convert back to mm from uint16
         height, width = img.shape        
 
@@ -446,7 +454,7 @@ if __name__ == '__main__':
         sys.exit(0)   
         '''
         
-        if not os.path.isfile(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp-00', stamp+'.png')):
+        if not os.path.isfile(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-newstamp', stamp+'.png')):
             #print("skip")
             #continue
 
@@ -465,17 +473,18 @@ if __name__ == '__main__':
                 '''
 
                 #Uncomment to create histograms for the first time
-                #get_histogram(np.float32(imgd), stamp)
+                get_histogram(np.float32(imgd), stamp)
            
                 #print(np.float32(imgd)) 
                 sliced_image = rosimg_fordisplay(img, np.float32(imgd),stamp)
                 #print(sliced_image)
                 
                 
-                plt.imshow(sliced_image, cmap = plt.get_cmap('tab20b'))
+                plt.imshow(sliced_image, cmap = plt.get_cmap('gray'))   #tab20b'))
                 
                 #plt.show()
-                plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp-00', stamp+'.png'))
+                #sys.exit(0)
+                plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-newstamp', stamp+'.png'))
                 plt.clf()
                 #cv2.imwrite( sliced_image)
                 #sys.exit(0)
@@ -525,15 +534,16 @@ if __name__ == '__main__':
                 #sys.exit(0)
 
         #Display, with segmentation
-        '''
-        img_orig = cv2.imread(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp', stamp+'.png'))
+        
+        img_orig = cv2.imread(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-newstamp', stamp+'.png'))
 
-        hst = cv2.imread(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms', stamp+'_noout.png'))
+        hst = cv2.imread(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-newstamp', stamp+'_noout.png'))
         #plot =cv2.cvtColor(hst, cv2.COLOR_BGR2GRAY)
             
         #print(plot.shape)
         #print(img_orig.shape)
 
+        '''
         K=5
         labels, centroids = clustering(img, K)
         
@@ -558,9 +568,10 @@ if __name__ == '__main__':
         
         sys.exit(0)
         '''
+
         #Uncomment for image, histogram aligned output
-        #aligned = np.hstack((img_orig, hst))
-        #cv2.imwrite(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-comp', stamp+'.png'), aligned)
+        aligned = np.hstack((img_orig, hst))
+        cv2.imwrite(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-newstamp-aligned', stamp+'.png'), aligned)
         
           
 

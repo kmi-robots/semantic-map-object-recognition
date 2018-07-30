@@ -47,9 +47,11 @@ if __name__ == '__main__':
         
         fullp.extend([os.path.join(path, p) for p in levtwo])
     
-    #print(fullp)
+    #print(len(synpaths))
     #sys.exit(0)
+
     for pt in fullp:
+
 
         read_start= time.time()
 
@@ -62,7 +64,10 @@ if __name__ == '__main__':
         
         if not os.path.isdir(os.path.join(out_name,synset,f_id)):
             os.mkdir(os.path.join(out_name,synset,f_id))
+        else:
 
+            logging.info('Skipping')
+            continue
         try:
             mesh = meshpy.ObjFile(os.path.join(pt,'models/model_normalized.obj')).read()
         

@@ -51,6 +51,21 @@ def backgr_sub(depth_image):
 
     n, bins, patches = plt.hist(depth_image.ravel(), 'auto', [1,10], color='green', edgecolor='black', linewidth=1)
 
+    '''
+    #Sub-sample n, keeping bins the same
+    #TAking only 30% of pixels
+    #print(type(n))
+    #print(n)
+
+    for i, value in enumerate(n):
+    
+        n[i]= float(0.3*value)
+    
+    #print(type(n))
+    #print(n)
+    #sys.exit(0)    
+    '''
+
     bin_centers = 0.5 * (bins[:-1] + bins[1:])
 
     cm = plt.cm.get_cmap('gray')
@@ -72,8 +87,8 @@ def backgr_sub(depth_image):
     plt.close()
     plt.clf()
     '''
-    print(n)
-    print(bins)
+    #print(n)
+    #print(bins)
     #intervals= range(1,11)
     #Initialize counts to 0
     #counts = [(0, i,i+1) for i in intervals if i<10]
@@ -119,9 +134,12 @@ def backgr_sub(depth_image):
     area_ord = sorted(area_dict.iteritems(), key=lambda (k,v): (v,k), reverse=True)
     
     #print(area_ord[:3])
-    (left, right), _ = area_ord[2]  
+
+    try:
+        (left, right), _ = area_ord[2]  
     #print(right)
-    
+    except:
+        (left,right), _ = area_ord[len(area_ord) -1]
 
     #sys.exit(0)
     #If depth greater than third upper bound
@@ -282,6 +300,8 @@ if __name__ == '__main__':
 
     for k, (img,stamp) in enumerate(img_mat):
 
+        #if os.path.isfile(os.path.join('/mnt/c/Users/HP/Desktop/KMI/clean','%s.png') % stamp):
+        #continue
         print(stamp)
         print(img.dtype)
         #sys.exit(0)
@@ -302,12 +322,15 @@ if __name__ == '__main__':
         #print(imgd)
         
         imgd, denoised_i= backgr_sub(np.float32(imgd))
-
+        
+        sys.exit(0)
         #imgd = imgd.astype(np.uint8)        
         plt.imshow(imgd, cmap = plt.get_cmap('gray'))
-        plt.show()
+        plt.axis('off')
+        plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/clean','%s.png') % stamp, bbox_inches='tight')
+        #plt.show()
         plt.clf()
-        sys.exit(0)
+        #sys.exit(0)
         #Uncomment to plot version with small blob removal
         '''
         plt.imshow(denoised_i, cmap = plt.get_cmap('gray'))

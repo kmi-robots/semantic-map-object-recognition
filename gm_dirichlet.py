@@ -29,7 +29,42 @@ def chunks(l):
 
         yield l[i:i+2]
 
+def get_histogram(img_array, stampid, outpath):
+
+    #Compute histogram of values 
     
+    cm = plt.cm.get_cmap('gray')
+    #print(cm)
+    # Plot histogram.
+    n, bins, patches = plt.hist(img_array.ravel(), 'auto', [1,10], color='green', edgecolor='black', linewidth=1)
+    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+
+    # scale values to interval [0,1]
+    col = bin_centers - min(bin_centers)
+    col /= max(col)
+    
+    for c, p in zip(col, patches):
+        plt.setp(p, 'facecolor', cm(c)) 
+        #print(str(cm(c)[:3]))
+
+    
+    plt.xlim([1,10])
+    #plt.show()
+    '''    
+    if os.path.isfile(os.path.join(outpath,'hist_%s.png' % stampid)):
+
+        print("skipping")
+        return
+    '''
+    plt.title('Histogram of Depth Values')
+    plt.savefig(os.path.join(outpath,'hist_%s.png' % stampid))
+    #Clean up histogram, for next plot types
+    plt.clf()
+
+    return n, bins
+
+
+
 def plot_results(X, Y_, means, covariances, index, title):
     splot = plt.subplot()
 
@@ -39,7 +74,7 @@ def plot_results(X, Y_, means, covariances, index, title):
         v = 2. * np.sqrt(2.) * np.sqrt(v)
         u = w[0] / linalg.norm(w[0])
         
-        print(u.shape)
+        #print(u.shape)
         # as the DP will not use every component it has access to
         # unless it needs it, we shouldn't plot the redundant
         # components.
@@ -67,11 +102,12 @@ def BGM_Dirichlet(imgd, outpath, stamp, sample_ratio =0.3):
     #imgd = np.reshape(imgd,(imgd.shape[0]*imgd.shape[1], 1))    
     #print(imgd)
 
-    n, bins, patches = plt.hist(imgd.ravel(), 'auto', [1,10], color='green', edgecolor='black', linewidth=1)
-    cbins = chunks(bins)
-    #Clean up histogram, ellipses will be plotted next
-    plt.clf()
+    #n, bins, patches = plt.hist(imgd.ravel(), 'auto', [1,10], color='green', edgecolor='black', linewidth=1)
+    
+    n, bins = get_histogram(imgd, stamp, outpath)
 
+    cbins = chunks(bins)
+    
     by_value =[]
     pixel_count=0
 
@@ -186,14 +222,26 @@ if  __name__ == '__main__':
             
                     
         bag_paths = [os.path.join(args.imgpath, name) for name in os.listdir(args.imgpath)]
+        img_mat=[]
+        rgb_mat=[]
 
         for bpath in bag_paths:    
 
             try:
+                
+                bag= rosbag.Bag(bpath)
+                bridge = CvBridge()
+        
+                img_mat.extend([(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages() if topic=='/camera/depth/image_raw'])
+                
+                rgb_mat.extend([(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages() if topic=='/camera/rgb/image_raw'])
 
+
+
+                bag.close()
             except Exception as e:
             
-                logging.info("Problem while opening img %s" % f)
+                logging.info("Problem while opening img %s" % bpath)
                 print(str(e))
             
                 #Skip corrupted or zero-byte images
@@ -201,17 +249,18 @@ if  __name__ == '__main__':
                 continue    
 
     #backgr_sub('./video-depth.avi')
-
-
+    
     for k, (img,stamp) in enumerate(img_mat):
 
         #if os.path.isfile(os.path.join('/mnt/c/Users/HP/Desktop/KMI/clean','%s.png') % stamp):
         #continue
-        print(stamp)
-        print(img.dtype)
-        #sys.exit(0)
+        orig_rgb, _ = rgb_mat[k]
+        #print(orig_rgb.dtype)
+
+        #print(stamp)
+        #print(img.dtype)
         #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/depth-asis.png',img)
-        #print(img.shape) 
+        #:wq
         #print(img.dtype)
 
         #For depth images
@@ -221,16 +270,31 @@ if  __name__ == '__main__':
         imgd = np.uint32(img)
         imgd = imgd*0.001
         #print(imgd[100,:])
-        print(np.max(imgd))
-        print(np.min(imgd))
+        #print(np.max(imgd))
+        #print(np.min(imgd))
         
         #print(imgd)
-        BGM_Dirichlet(imgd, args.outpath,stamp)
+        BGM_Dirichlet(imgd, args.outpath,stamp, sample_ratio=0.3)
 
-        sys.exit(0)
+        #Read histogram and cluster plot from file
+        histogram = cv2.imread(os.path.join(args.outpath, 'hist_%s.png' % stamp))
+        clusterplt = cv2.imread(os.path.join(args.outpath, 'bgmm_%s.png' % stamp))
         
+        img= cv2.cvtColor(img.astype(uint8), cv2.COLOR_GRAY2BGR)
+        
+        #print(histogram.shape)
+        #print(img.shape)
+        #print(clusterplt.dtype)
+        #Stack to previous two
+        upper = np.hstack((img, histogram))       
+        lower = np.hstack((orig_rgb, clusterplt)) 
+       
+        full = np.vstack((upper, lower))
+        cv2.imwrite(os.path.join(args.outpath,'final_%s.png' % stamp), full)
+ 
         logging.info("Resolution of your input images is "+str(width)+"x"+str(height))        
 
+        #sys.exit(0)
     
     
     logging.info("Complete...took %f seconds" % float(time.time() - start))

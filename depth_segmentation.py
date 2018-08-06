@@ -362,6 +362,7 @@ if __name__ == '__main__':
     #Read from rosbag 
     elif args.imgpath[-3:] == 'bag':
 
+
         print("Loading rosbag...")
         
         bag= rosbag.Bag(args.imgpath)
@@ -481,10 +482,10 @@ if __name__ == '__main__':
                 
                 
                 plt.imshow(sliced_image, cmap = plt.get_cmap('gray'))   #tab20b'))
-                
+                plt.axis('off')                
                 #plt.show()
                 #sys.exit(0)
-                plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-newstamp', stamp+'.png'))
+                plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/histograms-newstamp', stamp+'.png'), bbox_inches='tight')
                 plt.clf()
                 #cv2.imwrite( sliced_image)
                 #sys.exit(0)

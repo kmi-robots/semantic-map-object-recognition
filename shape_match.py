@@ -15,7 +15,7 @@ import json
 from PIL import Image
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-
+import random as rng
 
 
 def preproc(imgm, img_wd, tstamp):
@@ -151,9 +151,111 @@ def preproc(imgm, img_wd, tstamp):
     '''
     return
 
+def watershed(bin_img, stamp):
+
+    #Invert
+    bin_img = cv2.bitwise_not(bin_img)
+
+    #Distance transform
+    dist = cv2.distanceTransform(bin_img, cv2.DIST_L1, 5)
+
+    
+    # Normalize the distance image for range = {0.0, 1.0}
+    # so we can visualize and threshold it
+    #cv2.normalize(dist, dist, 0, 1.0, cv2.NORM_MINMAX)
+
+    #Equalize (for contrast)
+    dist = cv2.equalizeHist(dist.astype(np.uint8))
+
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/DTransform/%s' %f , dist)
+    
+    '''
+    # Threshold to obtain the peaks
+    # This will be the markers for the foreground objects
+    #_, dist = cv2.threshold(dist, 10.0, 1.0, cv2.THRESH_BINARY)
+    dist = cv2.adaptiveThreshold(dist,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
+    # Dilate a bit the dist image
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_cont/thresh_%s.png', dist)
+    kernel1 = np.ones((3,3), dtype=np.uint8)
+    dist = cv2.dilate(dist, kernel1)
 
 
+    # Create the CV_8U version of the distance image
+    # It is needed for findContours()
+    dist_8u = dist.astype('uint8')
+    # Find total markers
+    _, contours, _ = cv2.findContours(dist_8u, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Create the marker image for the watershed algorithm
+    markers = np.zeros(dist.shape, dtype=np.int32)
+    # Draw the foreground markers
+    for i in range(len(contours)):
+        cv2.drawContours(markers, contours, i, (i+1), -1)
+    # Draw the background marker
+    cv2.circle(markers, (5,5), 3, (255,255,255), -1)
+
+    
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_cont/markers_%s.png', markers*10000)
+    # Perform the watershed algorithm
+
+    bin_img = cv2.cvtColor(bin_img, cv2.COLOR_GRAY2RGB)
+    
+    cv2.watershed(bin_img, markers)
+    #mark = np.zeros(markers.shape, dtype=np.uint8)
+    mark = markers.astype('uint8')
+
+    # Generate random colors
+    colors = []
+    for contour in contours:
+        colors.append((rng.randint(0,256), rng.randint(0,256), rng.randint(0,256)))
+    
+    # Create the result image
+    dst = np.zeros((markers.shape[0], markers.shape[1], 3), dtype=np.uint8)
+    # Fill labeled objects with random colors
+    for i in range(markers.shape[0]):
+        for j in range(markers.shape[1]):
+            index = markers[i,j]
+            if index > 0 and index <= len(contours):
+                dst[i,j,:] = colors[index-1]
+
+    cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_cont/watershed_%s.png', dst)
+    
+    sys.exit(0)
+    
+    # noise removal
+    kernel = np.ones((3,3),np.uint8)
+
+    opening = cv2.morphologyEx(bin_img,cv2.MORPH_OPEN,kernel, iterations = 2)
+
+
+    # sure background area
+    sure_bg = cv2.dilate(opening,kernel,iterations=3)
+
+    # Finding sure foreground area
+    dist_transform = cv2.distanceTransform(opening,cv2.DIST_L2,5)
+    ret, sure_fg = cv2.threshold(dist_transform,0.7*dist_transform.max(),255,0)
+
+    # Finding unknown region
+    sure_fg = np.uint8(sure_fg)
+    unknown = cv2.subtract(sure_bg,sure_fg)
+
+    # Marker labeling
+    ret, markers = cv2.connectedComponents(sure_fg)
+
+    # Add one to all labels so that sure background is not 0, but 1
+    markers = markers+1
+
+    # Now, mark the region of unknown with zero
+    markers[unknown==255] = 0
+
+    img =cv2.cvtColor(bin_img, cv2.COLOR_GRAY2RGB)
+    markers = cv2.watershed(img,markers)
+    img[markers == -1] = [255,0,0]
+
+    return opening, sure_bg, dist_transform, sure_fg, img
+
+    '''
 if __name__ == '__main__':
+
 
     parser = argparse.ArgumentParser()
     parser.add_argument("imgpath", help="Provide path to your depth images/ or rosbag/ or npy file")
@@ -180,12 +282,29 @@ if __name__ == '__main__':
             img_bin = cv2.imread(os.path.join(args.imgpath,f), cv2.IMREAD_UNCHANGED)
         
             img_bin =cv2.cvtColor(img_bin, cv2.COLOR_BGR2GRAY)
+            #remove margins
+            img_bin = img_bin[24:24+370, 41:41+470]
+            cv2.waitKey(0)
+
+            watershed(img_bin, f)
+            #opened, sure_bg, dist_transform, sure_fg, marked = watershed(img_bin)
+            '''
             __, contours,hierarchy = cv2.findContours(img_bin.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
+            img_bin =cv2.cvtColor(img_bin, cv2.COLOR_GRAY2RGB)
             cv2.drawContours(img_bin, contours, -1, (0, 0, 255), 3)
-
-            cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_cont/%s' % f, img_bin)
-
+            '''
+            '''
+            cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_cont/%s' % f, marked)
+            
+            cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_cont/op_%s' % f, opened)
+            cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_cont/bg_%s' % f, sure_bg)
+            cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_cont/dt_%s' % f, dist_transform)
+            
+            cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/cont/_cont/fg_%s' % f, sure_fg)
+            
+            sys.exit(0)
+            '''
         except Exception as e:
             
             print("Problem while processing img %s" % f)

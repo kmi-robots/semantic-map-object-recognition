@@ -18,9 +18,10 @@ from sklearn.mixture import BayesianGaussianMixture
 import itertools
 from scipy import linalg
 import matplotlib as mpl
+import random
+import math
 
-color_iter = itertools.cycle(['navy', 'c', 'cornflowerblue', 'gold','darkorange'])
-
+color_iter = itertools.cycle(plt.cm.rainbow(np.linspace(0,1,10)))
 
 def chunks(l):
     
@@ -28,255 +29,109 @@ def chunks(l):
 
         yield l[i:i+2]
 
-#1. Background subtraction
-def backgr_sub(depth_image):
     
-    '''
-    capture = cv2.VideoCapture(depth_video)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
-    subtr = cv2.bgsegm.createBackgroundSubtractorGMG()
+def plot_results(X, Y_, means, covariances, index, title):
+    splot = plt.subplot()
 
-    while(1):
-        ret, frame = capture.read()
-        fgmask = subtr.apply(frame)
-        #Applying morphological opening to the output 
-        #for auxiliary noise removal
-        fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
-        cv2.imshow('frame',fgmask)
-        k = cv2.waitKey(30) & 0xff
-        if k == 27:
-            break
-    
-    capture.release()
-    cv2.destroyAllWindows()
-    '''
-    
-    #Removing anything greater than max peak in depth histogram    
-    #Excluding 0.0, i.e., no values
-    #cm = plt.cm.get_cmap('gray')
+    for i, (mean, covar, color) in enumerate(zip(means, covariances, color_iter)):
 
-    n, bins, patches = plt.hist(depth_image.ravel(), 'auto', [1,10], color='green', edgecolor='black', linewidth=1)
-
-    bin_centers = 0.5 * (bins[:-1] + bins[1:])
-
-    cm = plt.cm.get_cmap('gray')
-    
-    # scale values to interval [0,1]
-    col = bin_centers - min(bin_centers)
-    col /= max(col)
-
-    '''
-    for c, p in zip(col, patches):
-
-        plt.setp(p, 'facecolor', cm(c))
-
-        #print(str(cm(c)[:3]))
-
-    plt.xlim([1,10])
-    plt.ylim([1,30000]) 
-    plt.show()
-    plt.close()
-    plt.clf()
-    '''
-    print(n)
-    print(bins)
-    #intervals= range(1,11)
-    #Initialize counts to 0
-    #counts = [(0, i,i+1) for i in intervals if i<10]
-
-    area_dict ={}    
-    #count_dict['counts']= []
-    #Group bin edges in couples     
-    cbins = chunks(bins)
-    #print(bins)
-
-    for i, edge in enumerate(cbins):
-
-        if i==0:
-   
-            #Initialize
-            start_p = edge[0] 
-            end_p  = start_p + 1    
-
-            area_dict[(start_p, end_p)]= 0
-
-        if n[i] ==0.:
-   
-            #Skip empty bins
+        v, w = linalg.eigh(covar)
+        v = 2. * np.sqrt(2.) * np.sqrt(v)
+        u = w[0] / linalg.norm(w[0])
+        
+        print(u.shape)
+        # as the DP will not use every component it has access to
+        # unless it needs it, we shouldn't plot the redundant
+        # components.
+        if not np.any(Y_ == i):
             continue
-
-        if edge[0]<= end_p: #and edge[1] <= end_p:
-
-            #Increase tot bin area in that interval
-            area_dict[(start_p, end_p)] += (edge[1]-edge[0])*n[i]
-                                    
-        else:
-        #elif edge[0]> end_p:
-            #Update interval boundaries
-            start_p = edge[0]
-            end_p = start_p +1
- 
-            #And increase tot area with first one
-            area_dict[(start_p, end_p)] = (edge[1]-edge[0])*n[i]
-
-                    
-    #print(area_dict)
-
-    area_ord = sorted(area_dict.iteritems(), key=lambda (k,v): (v,k), reverse=True)
-    
-    #print(area_ord[:3])
-
-    try:
-        (left, right), _ = area_ord[2]  
-    #print(right)
-    except:
-        (left,right), _ = area_ord[len(area_ord) -1]
-
-    #sys.exit(0)
-    #If depth greater than third upper bound
-    #Then white out
-    
-
-    '''
-    #Older attempt: max peak
-    print(n.max())
-    max_ind = n.tolist().index(n.max())
-    print(max_ind)
-    print(n)
-    print(bins)
-    #sys.exit(0)
-    #Edges of max bin
-    left_e = bins[max_ind+1]
-    right_e = bins[max_ind+2] 
-
-    print(left_e)
-    print(right_e)
-
-    print(depth_image)
-    #"White out" if above threshold, i.e., shift to 10 m
-    depth_image[depth_image > right_e] = 10.0  
-    '''
-    depth_image[np.logical_or(depth_image > right, depth_image==0.0)] = 10.0  
-    
-    
-    print(depth_image)
-    #sys.exit(0)
-    #From depth values to coloring:
-    thresholds = bins    
-    
-    for i, (c,p) in enumerate(zip(col, patches)):
+        plt.scatter(X[Y_ == i, 0], X[Y_ == i, 1], .8, color=color)
         
-        r, g, b = cm(c)[:3]
-        gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
-        #print(gray)
-        #sys.exit(0)
-        if i!=0:
+        # Plot an ellipse to show the Gaussian component
+        angle = np.arctan(u[1] / u[0])
+        angle = 180. * angle / np.pi  # convert to degrees
+        ell = mpl.patches.Ellipse(mean, v[0], v[1], 180. + angle, color=color)
+        ell.set_clip_box(splot.bbox)
+        ell.set_alpha(0.5)
+        splot.add_artist(ell)
+        
+    plt.xticks(())
+    plt.yticks(())
+    plt.title(title)
 
+
+
+def BGM_Dirichlet(imgd, outpath, stamp, sample_ratio =0.3):   
+
+    #Image resize for sub-sampling
+    #imgd = np.reshape(imgd,(imgd.shape[0]*imgd.shape[1], 1))    
+    #print(imgd)
+
+    n, bins, patches = plt.hist(imgd.ravel(), 'auto', [1,10], color='green', edgecolor='black', linewidth=1)
+    cbins = chunks(bins)
+    #Clean up histogram, ellipses will be plotted next
+    plt.clf()
+
+    by_value =[]
+    pixel_count=0
+
+    for k, (left, right) in enumerate(cbins):
+        
+        values=[]
+
+        #If non-empty bin
+        if n[k] !=0.0:
             
-            k= i-1 
-            if thresholds[k]!=0.0:
-                depth_image[np.logical_and(depth_image>= thresholds[k], depth_image <thresholds[i])] = gray
+            
+            #Xs= np.where(np.logical_and(imgd>left, imgd<right))[0]
+            
+            #Ys= np.where(np.logical_and(imgd>left, imgd<right))[1]
+           
+            pixel_2 = np.where(np.logical_and(imgd>left, imgd<right))[0]
+            #pixel_2 = np.fromiter((math.sqrt(x**2+y**2) for x,y in np.column_stack((Xs, Ys))), float)       
+            #print(pixel_2) 
+            
+            values =np.column_stack((imgd[np.logical_and(imgd>left, imgd<right)], pixel_2)).tolist()
+                         
 
-    denoised = small_blob_rem(depth_image)
+            #And randomly take only 30% of those
+            k= int(len(values)*sample_ratio)
 
-    return depth_image, denoised
+            values = random.sample(values, k)
+            
+            by_value.extend(values)
+            
+         
+        pixel_count+=len(values)
 
-
-
-def small_blob_rem(imgd):
-
-    #find all your connected components (white blobs in your image)
-    nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(imgd.astype(np.uint8), connectivity=8)
-    #connectedComponentswithStats yields every seperated component with information on each of them, such as size
-    #the following part is just taking out the background which is also considered a component, but most of the time we don't want that.
-    sizes = stats[1:, -1]; nb_components = nb_components - 1
-
-    # minimum size of particles we want to keep (number of pixels)
-    #here, it's a fixed value, but you can set it as you want, eg the mean of the sizes or whatever
-    min_size = 50  
-
-    #your answer image
-    #img2 = np.zeros((output.shape))
-    img2= imgd.copy()
-    #for every component in the image, you keep it only if it's above min_size
-    for i in range(0, nb_components):
-
-       if sizes[i] >= min_size:
-           print('Remove')
-           img2[output == i + 1] = 0.2989 * 255 + 0.5870 * 255 + 0.1140 * 255
-
-    return img2
-
-
-def draw_ellipse(position, covariance, ax=None, **kwargs):
+    pixel_zh = np.where(imgd==0.0)[0]
+    #ZXs= np.where(imgd==0.0)[0]
+    #ZYs= np.where(imgd==0.0)[1]
+    #pixel_zh = np.fromiter((math.sqrt(x**2+y**2) for x,y in np.column_stack((ZXs, ZYs))), float)  
     
-    """Draw an ellipse with a given position and covariance"""
-    ax = ax or plt.gca()
+    zeros = np.column_stack((imgd[imgd == 0.0], pixel_zh)).tolist()
     
-    #Only to test check below
-    #covariance=np.zeros(shape=(2,2))
-    #print(covariance.shape)
+    h = int(len(zeros)*sample_ratio)
+    zeros = random.sample(zeros, h)
 
-    # Convert covariance to principal axes
-    if covariance.shape == (2, 2):
-        U, s, Vt = np.linalg.svd(covariance)
-        angle = np.degrees(np.arctan2(U[1, 0], U[0, 0]))
-        print(s.shape)
-        width, height = 2 * np.sqrt(s)
+    by_value.extend(zeros)
     
-    else:
-        angle = 0
-        
-        width, height = 2 * np.sqrt(covariance)
-    
-    # Draw the Ellipse
-    for nsig in range(1, 4):
-
-        ax.add_patch(mpl.patches.Ellipse(position, nsig * width, nsig * height,
-                             angle, **kwargs))
-
-
-def plot_results(gmm, X, label=True, ax=None):
-
-    ax = ax or plt.gca()
-    labels= gmm.fit(X).predict(X)
-
-    print(X.shape)
-    if label:
-
-        ax.scatter(X, X, c=labels, s=40, cmap='viridis', zorder=2) #ax.scatter(X[:, 0], X[:, 1], c=labels, s=40, cmap='viridis', zorder=2)
-
-    '''
-    else:
-        ax.scatter(X[:, 0], X[:, 1], s=40, zorder=2)
-    '''
-    ax.axis('equal')
-
-    #print(gmm.covariances_.shape)
-    #To draw ellipses and better visualize cluster centers
-    
-    '''
-    w_factor = 0.2 / gmm.weights_.max()
-    for pos, covar, w in zip(gmm.means_, gmm.covariances_, gmm.weights_):
-        #print(covar.shape)
-        draw_ellipse(pos, covar, alpha=w * w_factor)
-    '''
-    
-
-def BGM_Dirichlet(imgd):
-
+    imgd = np.asarray(by_value).reshape(-1, 2)
+    #print(imgd)
+    #sys.exit(0)
     #Reshape MxN depth matrix to have a list of pixels instead
-    imgd = np.reshape(imgd,(imgd.shape[0]*imgd.shape[1], 1))
+    #imgd = np.reshape(imgd,(imgd.shape[0]*imgd.shape[1], 1))
 
     #print(imgd.shape)
-    bgmm = BayesianGaussianMixture(n_components=30, covariance_type='full', weight_concentration_prior_type='dirichlet_process')
+    bgmm = BayesianGaussianMixture(n_components=10, covariance_type='full', max_iter=1000 ,n_init= 10, weight_concentration_prior_type='dirichlet_process').fit(imgd)
 
-    plot_results(bgmm, imgd)    
-    #labels = bgmm.predict(imgd)
-    #plt.scatter(imgd[:, 0], imgd[:, 1], c=labels, s=40, cmap='viridis')
-    plt.show()
+    plot_results(imgd, bgmm.predict(imgd), bgmm.means_, bgmm.covariances_, 0,
+             'Gaussian Mixture')
+    
+    #And save resulting plot under given path
+    plt.savefig(os.path.join(outpath, 'bgmm_%s.png' %stamp))
     plt.clf()
-
+   
     
 
 
@@ -327,25 +182,14 @@ if  __name__ == '__main__':
         #print(img_mat[0])
         #sys.exit(0)
 
-    else:  #or read from image dir
+    else:  #or read all bags in a dir
+            
+                    
+        bag_paths = [os.path.join(args.imgpath, name) for name in os.listdir(args.imgpath)]
 
-        files = os.listdir(args.imgpath)
-        logging.info("Reading from image folder...")       
-
-        for f in files:
-        
-            if f[-3:] == 'ini':
-                #Skip config files, if any
-                continue
-        
+        for bpath in bag_paths:    
 
             try:
-            #img_array1 = Image.open(os.path.join(args.imgpath,f))   #.convert('L')
-            #img_np = np.asarray(img_array1)
-
-                 img_array = cv2.imread(os.path.join(args.imgpath,f), cv2.IMREAD_UNCHANGED)
-        
-                 img_mat.append((img_array,f))
 
             except Exception as e:
             
@@ -381,24 +225,9 @@ if  __name__ == '__main__':
         print(np.min(imgd))
         
         #print(imgd)
-        BGM_Dirichlet(imgd)
+        BGM_Dirichlet(imgd, args.outpath,stamp)
 
         sys.exit(0)
-        imgd, denoised_i= backgr_sub(np.float32(imgd))
-        #imgd = imgd.astype(np.uint8)        
-        plt.imshow(imgd, cmap = plt.get_cmap('gray'))
-        plt.axis('off')
-        plt.savefig(os.path.join('/mnt/c/Users/HP/Desktop/KMI/clean','%s.png') % stamp, bbox_inches='tight')
-        #plt.show()
-        plt.clf()
-        #sys.exit(0)
-        #Uncomment to plot version with small blob removal
-        '''
-        plt.imshow(denoised_i, cmap = plt.get_cmap('gray'))
-        plt.show()
-        plt.clf()
-        '''
-        #sys.exit(0)        
         
         logging.info("Resolution of your input images is "+str(width)+"x"+str(height))        
 

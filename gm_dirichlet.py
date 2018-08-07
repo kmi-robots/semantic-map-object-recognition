@@ -20,6 +20,7 @@ from scipy import linalg
 import matplotlib as mpl
 import random
 import math
+import genpy
 
 color_iter = itertools.cycle(plt.cm.rainbow(np.linspace(0,1,10)))
 
@@ -29,14 +30,27 @@ def chunks(l):
 
         yield l[i:i+2]
 
+
 def get_histogram(img_array, stampid, outpath):
 
     #Compute histogram of values 
-    
-    cm = plt.cm.get_cmap('gray')
+    cm = plt.cm.get_cmap('plasma')
     #print(cm)
     # Plot histogram.
-    n, bins, patches = plt.hist(img_array.ravel(), 'auto', [1,10], color='green', edgecolor='black', linewidth=1)
+    n, bins, patches = plt.hist(img_array.ravel(), 'auto', [0,10], color='green', edgecolor='black', linewidth=1)
+
+    plt.clf()
+    return n, bins, patches
+
+
+def get_histogram_plot(img_array, stampid, outpath):
+
+    #Compute histogram of values 
+    cm = plt.cm.get_cmap('plasma')
+    
+    # Plot histogram.
+    #n, bins, patches = get_histogram(img_array, stampid, outpath)
+    n, bins, patches = plt.hist(img_array.ravel(), 'auto', [0,10], color='green', edgecolor='black', linewidth=1)
     bin_centers = 0.5 * (bins[:-1] + bins[1:])
 
     # scale values to interval [0,1]
@@ -44,25 +58,16 @@ def get_histogram(img_array, stampid, outpath):
     col /= max(col)
     
     for c, p in zip(col, patches):
+        
         plt.setp(p, 'facecolor', cm(c)) 
-        #print(str(cm(c)[:3]))
-
     
-    plt.xlim([1,10])
-    #plt.show()
-    '''    
-    if os.path.isfile(os.path.join(outpath,'hist_%s.png' % stampid)):
-
-        print("skipping")
-        return
-    '''
+    plt.xlim([0,10])
     plt.title('Histogram of Depth Values')
     plt.savefig(os.path.join(outpath,'hist_%s.png' % stampid))
     #Clean up histogram, for next plot types
     plt.clf()
 
-    return n, bins
-
+    return n, bins, patches
 
 
 def plot_results(X, Y_, means, covariances, index, title):
@@ -93,6 +98,7 @@ def plot_results(X, Y_, means, covariances, index, title):
     plt.xticks(())
     plt.yticks(())
     plt.title(title)
+    #plt.clf()
 
 
 
@@ -104,7 +110,7 @@ def BGM_Dirichlet(imgd, outpath, stamp, sample_ratio =0.3):
 
     #n, bins, patches = plt.hist(imgd.ravel(), 'auto', [1,10], color='green', edgecolor='black', linewidth=1)
     
-    n, bins = get_histogram(imgd, stamp, outpath)
+    n, bins, _ = get_histogram(imgd, stamp, outpath)
 
     cbins = chunks(bins)
     
@@ -153,12 +159,7 @@ def BGM_Dirichlet(imgd, outpath, stamp, sample_ratio =0.3):
     by_value.extend(zeros)
     
     imgd = np.asarray(by_value).reshape(-1, 2)
-    #print(imgd)
-    #sys.exit(0)
-    #Reshape MxN depth matrix to have a list of pixels instead
-    #imgd = np.reshape(imgd,(imgd.shape[0]*imgd.shape[1], 1))
-
-    #print(imgd.shape)
+    
     bgmm = BayesianGaussianMixture(n_components=10, covariance_type='full', max_iter=1000 ,n_init= 10, weight_concentration_prior_type='dirichlet_process').fit(imgd)
 
     plot_results(imgd, bgmm.predict(imgd), bgmm.means_, bgmm.covariances_, 0,
@@ -166,9 +167,37 @@ def BGM_Dirichlet(imgd, outpath, stamp, sample_ratio =0.3):
     
     #And save resulting plot under given path
     plt.savefig(os.path.join(outpath, 'bgmm_%s.png' %stamp))
-    plt.clf()
-   
     
+   
+def rosimg_fordisplay(img_d, stampid, outpath):
+
+    #Define same colormap as the histograms 
+    cm = plt.cm.get_cmap('plasma')
+
+    n, bins, patches = get_histogram(imgd, stampid, outpath)
+    #Cutoff values will be based on bin edges
+    thresholds = bins
+    
+    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+    # scale values to interval [0,1]
+    col = bin_centers - min(bin_centers)
+    col /= max(col)
+    
+    #print(img_d)
+    for i, (c,p) in enumerate(zip(col, patches)):
+         
+        r, g, b = cm(c)[:3]
+        #gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
+        color = r* 65536 + g*256 + b
+        if i!=0:
+            
+            n= i-1
+ 
+            #if thresholds[n]!=0.0:
+    
+            img_d[np.logical_and(img_d>= thresholds[n], img_d <thresholds[i])] = color #gray
+    
+    return img_d    
 
 
 if  __name__ == '__main__':
@@ -198,47 +227,65 @@ if  __name__ == '__main__':
         logging.info("Loading rosbag...")
         
         bag= rosbag.Bag(args.imgpath)
-        #print(bag.get_message_count())
-        #sys.exit(0)
-        #topics = bag.get_type_and_topic_info()[1].keys()
-        #print(topics)
-        #info_dict = yaml.load(subprocess.Popen(['rosbag', 'info', '--yaml', path_to_bag], stdout=subprocess.PIPE).communicate()[0])
-        #print(info_dict) 
         bridge = CvBridge()
         
         img_mat =[(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages()]
 
-        #print(len(img_mat))
-
-        #sys.exit(0)        
-        #print(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough").dtype)
         bag.close()
         
         logging.info("Rosbag imported, took %f seconds" % float(time.time() -start))   
-        #print(img_mat[0])
-        #sys.exit(0)
 
     else:  #or read all bags in a dir
             
-                    
+        
         bag_paths = [os.path.join(args.imgpath, name) for name in os.listdir(args.imgpath)]
         img_mat=[]
         rgb_mat=[]
 
         for bpath in bag_paths:    
 
+            if bpath[-8:] == 'orig.bag':
+                continue
             try:
                 
                 bag= rosbag.Bag(bpath)
                 bridge = CvBridge()
-        
-                img_mat.extend([(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages() if topic=='/camera/depth/image_raw'])
+
+                copy_iter =  list(bag.read_messages(topics=['/camera/rgb/image_raw', '/camera/depth/image_raw']))
+                #full_dlist = [(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs), t) for topic, msg, t in bag.read_messages(topics=['/camera/depth/image_raw'])]
+                for idx, (topic, msg, t) in enumerate(list(bag.read_messages(topics=['/camera/rgb/image_raw', '/camera/depth/image_raw']))):
                 
-                rgb_mat.extend([(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages() if topic=='/camera/rgb/image_raw'])
+                                        
+                    if topic =='/camera/rgb/image_raw':
+                        #RGB frame found
+                        start_rgb = t 
+                        rgb_msg = msg 
+                        curr_i = idx
+                        rgb_mat.extend([(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs))])                         
 
+                        try:
+                            lookup = copy_iter[curr_i:curr_i+5]
+                        except:
+                            #end of list reached
+                            lookup = copy_iter[curr_i:len(copy_iter)-1]
 
-
+                        
+                        for topic2, msg2, t2 in lookup:
+                            
+                            
+                            if topic2 == '/camera/depth/image_raw':
+                                #Closest next depth frame found
+                                img_mat.extend([(bridge.imgmsg_to_cv2(msg2, desired_encoding="passthrough"), str(msg2.header.stamp.secs)+str(msg2.header.stamp.nsecs))])                         
+                                break                                 
+    
+                                        
+                #full_dlist = [(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages(topics=['/camera/depth/image_raw'])]
+                #img_mat.extend(full_dlist[0::2])    
+                
+                #rgb_mat.extend([(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages() if topic=='/camera/rgb/image_raw'])
+                
                 bag.close()
+
             except Exception as e:
             
                 logging.info("Problem while opening img %s" % bpath)
@@ -249,22 +296,18 @@ if  __name__ == '__main__':
                 continue    
 
     #backgr_sub('./video-depth.avi')
-    
+
+    print(len(img_mat))
+   
+    print(len(rgb_mat))
+
     for k, (img,stamp) in enumerate(img_mat):
 
+        print(stamp)
         #if os.path.isfile(os.path.join('/mnt/c/Users/HP/Desktop/KMI/clean','%s.png') % stamp):
         #continue
         orig_rgb, _ = rgb_mat[k]
         #print(orig_rgb.dtype)
-
-        #print(stamp)
-        #print(img.dtype)
-        #cv2.imwrite('/mnt/c/Users/HP/Desktop/KMI/out-canny/depth-asis.png',img)
-        #:wq
-        #print(img.dtype)
-
-        #For depth images
-        #Trying to convert back to mm from uint16
         height, width = img.shape        
 
         imgd = np.uint32(img)
@@ -272,21 +315,30 @@ if  __name__ == '__main__':
         #print(imgd[100,:])
         #print(np.max(imgd))
         #print(np.min(imgd))
+        get_histogram_plot(imgd, stamp, args.outpath)
         
         #print(imgd)
-        BGM_Dirichlet(imgd, args.outpath,stamp, sample_ratio=0.3)
+        BGM_Dirichlet(imgd, args.outpath,stamp, sample_ratio=0.1)
 
         #Read histogram and cluster plot from file
         histogram = cv2.imread(os.path.join(args.outpath, 'hist_%s.png' % stamp))
         clusterplt = cv2.imread(os.path.join(args.outpath, 'bgmm_%s.png' % stamp))
         
-        img= cv2.cvtColor(img.astype(uint8), cv2.COLOR_GRAY2BGR)
+        sliced_image = rosimg_fordisplay(imgd, stamp, args.outpath)     
+
+        plt.imshow(sliced_image, cmap = plt.get_cmap('plasma'))        
+        plt.savefig(os.path.join(args.outpath, '_orig%s.png' % stamp))
+        plt.clf()
         
-        #print(histogram.shape)
-        #print(img.shape)
-        #print(clusterplt.dtype)
+   
+        sliced_image = cv2.imread(os.path.join(args.outpath, '_orig%s.png' % stamp))
+        #sliced_image =cv2.cvtColor(sliced_image, cv2.COLOR_BGR2GRAY)
+        
         #Stack to previous two
-        upper = np.hstack((img, histogram))       
+        #histogram =cv2.cvtColor(histogram, cv2.COLOR_BGR2GRAY)
+        #print(histogram.shape)
+
+        upper = np.hstack((sliced_image, histogram))       
         lower = np.hstack((orig_rgb, clusterplt)) 
        
         full = np.vstack((upper, lower))

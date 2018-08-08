@@ -12,6 +12,7 @@ import rosbag
 import subprocess, yaml
 from cv_bridge import CvBridge, CvBridgeError
 import json
+import PIL
 from PIL import Image
 import logging
 from sklearn.mixture import BayesianGaussianMixture
@@ -145,21 +146,33 @@ def rosimg_fordisplay(img_d, stampid, outpath):
     
     return img_d    
 
+def PILresize(imgpath, basewidth=416):
 
-def draw_bboxes(rgb_image, thr=0.1):
+    img = Image.open(imgpath)
+    wpercent = (basewidth / float(img.size[0]))
+    hsize = int((float(img.size[1]) * float(wpercent)))
+    
+    return img.resize((basewidth, hsize), PIL.Image.ANTIALIAS)
+    
+
+
+def find_bboxes(rgb_image, thr=0.1):
 
     #Object detection threshold defaults to 0.1 here
     img = lightnet.Image(rgb_image.astype(np.float32)) 
     boxes = model(img, thresh= thr)
 
-    boxs_coord = [(x,y,w,h) for cat,name, conf, (x,y,w,h) in boxes]  
+    boxs_coord = [(int(x),int(y),int(w),int(h)) for cat,name, conf, (x,y,w,h) in boxes]  
 
     return boxs_coord
 
-def crop_img(rgb_image, boxs_coord):
+def crop_img(rgb_image, boxs_coord, depthi):
+
+    #Crop also the depth img for consistency
+    return [(rgb_image[y:y+h, x:x+w], depthi[y:y+h, x:x+w]) for (x,y,w,h) in boxs_coord]
 
 
-    return
+
 
 if  __name__ == '__main__':
 
@@ -264,12 +277,31 @@ if  __name__ == '__main__':
 
         rgb_img, rstamp = rgb_mat[k]
 
+        out = os.path.join(args.outpath, '%s.png' % stamp)
+        cv2.imwrite(out, rgb_img)
+ 
+        #Resize image to 416 x related height to work with YOLO  
+        #Not efficient (writes to disk) but possibly more robust to different resolutions
+        rgb_res = PILresize(out)     
+        rgb_res.save(out)
+        rgb_res = cv2.imread(out)
+        
         #Resize image to 416x312 to work with YOLO  
-        rgb_res = cv2.resize(rgb_img, dsize=(416, 312), interpolation=cv2.INTER_CUBIC)
+        #rgb_res = cv2.resize(rgb_img, dsize=(416, 416), interpolation=cv2.INTER_CUBIC)
 
         #Using Lightnet to extract bounding boxes 
-        bboxes = draw_bboxes(rgb_res)
+        bboxes = find_bboxes(rgb_res)
 
+        #Divide image up based on bboxes coordinates 
+        obj_list = crop_img(rgb_res, bboxes, img.astype(np.float32))
+
+        #Do pre-processing steps within each bounding box        
+        for obj, dimg in obj_list:
+            
+            cv2.imwrite('/mnt/c/Users/HP/Desktop/test_crop.png', obj)
+
+            cv2.imwrite('/mnt/c/Users/HP/Desktop/depth_crop.png', dimg)
+ 
         sys.exit(0)
 
 

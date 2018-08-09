@@ -216,7 +216,7 @@ def convert_boxes(box_list, shape, resolution):
 def crop_img(rgb_image, boxs_coord, depthi):
 
     #Crop also the depth img for consistency
-    return [(rgb_image[y:y+h, x:x+w], depthi[y:y+h, x:x+w]) for (x,y,w,h) in boxs_coord]
+    return [(rgb_image[y1:y2, x1:x2], depthi[y1:y2, x1:x2]) for (x1,y1,x2,y2) in boxs_coord]
 
 
 
@@ -350,13 +350,16 @@ if  __name__ == '__main__':
         obj_list = crop_img(rgb_img, n_bboxes, img.astype(np.float32))
         #Repeat the same on depth matrix too
 
+        #for box in n_bboxes:
+
+        
         #Do pre-processing steps within each bounding box        
         for obj, dimg in obj_list:
             
             cv2.imwrite('/mnt/c/Users/HP/Desktop/test_crop.png', obj)
 
             cv2.imwrite('/mnt/c/Users/HP/Desktop/depth_crop.png', dimg)
- 
+        
         sys.exit(0)
 
 

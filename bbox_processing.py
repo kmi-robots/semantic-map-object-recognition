@@ -162,9 +162,56 @@ def find_bboxes(rgb_image, thr=0.1):
     img = lightnet.Image(rgb_image.astype(np.float32)) 
     boxes = model(img, thresh= thr)
 
+    print(boxes)
+    #Coordinates in YOLO are relative to center coordinates
     boxs_coord = [(int(x),int(y),int(w),int(h)) for cat,name, conf, (x,y,w,h) in boxes]  
 
+    print(boxs_coord)
     return boxs_coord
+
+
+def convert_boxes(box_list, shape, resolution):
+
+    ow, oh, _ = shape
+    tgt_w, tgt_h = resolution
+
+    new_bx = []
+
+    for x,y,w,h in box_list:
+
+        print("Original: (%s, %s, %s, %s)" % (x,y,w,h))
+        
+        #Make them absolute from relative 
+        x_ = x*tgt_w 
+        y_ = y*tgt_h
+        w_ = w*tgt_w
+        h_ = h*tgt_h
+        
+        #print("Scaled: (%s, %s, %s, %s)" % (x_,y_,w_,h_))
+        #And change coord system for later cropping
+        x1 = (x_ - w_/2)/ow
+        y1 = (y_ - h_/2)/oh
+        x2 = (x_ + w_/2)/ow
+        y2 = (y_ + h_/2)/oh
+
+        #Add check taken from draw_detections method in Darknet's image.c
+        if x1 < 0:
+            x1= 0
+        if x2 > ow-1:
+            x2 = ow -1
+
+        if y1 < 0:
+            y1 = 0
+
+        if y2 > oh -1: 
+
+            y2 = oh -1 
+
+        print("For ROI: (%s, %s, %s, %s)" % (x1,y1,x2,y2))
+        new_bx.append((x1,y1,x2,y2))
+
+    return new_bx 
+
 
 def crop_img(rgb_image, boxs_coord, depthi):
 
@@ -276,24 +323,32 @@ if  __name__ == '__main__':
     for k, (img,stamp) in enumerate(img_mat):
 
         rgb_img, rstamp = rgb_mat[k]
-
+       
+        tgt_res = (416, 312)
+        
         out = os.path.join(args.outpath, '%s.png' % stamp)
         cv2.imwrite(out, rgb_img)
  
         #Resize image to 416 x related height to work with YOLO  
         #Not efficient (writes to disk) but possibly more robust to different resolutions
-        rgb_res = PILresize(out)     
-        rgb_res.save(out)
-        rgb_res = cv2.imread(out)
-        
-        #Resize image to 416x312 to work with YOLO  
-        #rgb_res = cv2.resize(rgb_img, dsize=(416, 416), interpolation=cv2.INTER_CUBIC)
+        #rgb_res = PILresize(out)     
+        #rgb_res.save(out)
+        #rgb_res = cv2.imread(out)
+        rgb_res= rgb_img.copy() 
+        #Resize image to 416x312 to work with YOLO bbox detection 
+        rgb_res = cv2.resize(rgb_res, dsize=tgt_res, interpolation=cv2.INTER_CUBIC)
 
         #Using Lightnet to extract bounding boxes 
         bboxes = find_bboxes(rgb_res)
 
+        #Convert boxes back to original image resolution
+        #And from YOLO format (center coord) to ROI format (top-left/bottom-right)
+        n_bboxes = convert_boxes(bboxes, rgb_img.shape, tgt_res)        
+
+
         #Divide image up based on bboxes coordinates 
-        obj_list = crop_img(rgb_res, bboxes, img.astype(np.float32))
+        obj_list = crop_img(rgb_img, n_bboxes, img.astype(np.float32))
+        #Repeat the same on depth matrix too
 
         #Do pre-processing steps within each bounding box        
         for obj, dimg in obj_list:

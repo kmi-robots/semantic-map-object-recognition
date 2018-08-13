@@ -400,6 +400,7 @@ if  __name__ == '__main__':
         bag_paths = [os.path.join(args.imgpath, name) for name in os.listdir(args.imgpath)]
         img_mat=[]
         rgb_mat=[]
+        grid_mat = []
 
         for bpath in bag_paths:    
 
@@ -411,37 +412,51 @@ if  __name__ == '__main__':
                 bag= rosbag.Bag(bpath)
                 bridge = CvBridge()
 
-                copy_iter =  list(bag.read_messages(topics=['/camera/rgb/image_raw', '/camera/depth/image_raw']))
+                copy_iter =  list(bag.read_messages(topics=['/camera/rgb/image_raw', '/camera/depth/image_raw', '/camera/depth_registered/sw_registered/image_rect_raw']))
                 #full_dlist = [(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs), t) for topic, msg, t in bag.read_messages(topics=['/camera/depth/image_raw'])]
-                for idx, (topic, msg, t) in enumerate(list(bag.read_messages(topics=['/camera/rgb/image_raw', '/camera/depth/image_raw']))):
+                for idx, (topic, msg, t) in enumerate(list(bag.read_messages(topics=['/camera/rgb/image_raw', '/camera/depth/image_raw', '/camera/depth_registered/sw_registered/image_rect_raw']))):
                 
-                                        
+                    #print(topic)                                    
                     if topic =='/camera/rgb/image_raw':
+                        
                         #RGB frame found
                         start_rgb = t 
                         rgb_msg = msg 
                         curr_i = idx
                         rgb_mat.extend([(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs))])                         
 
+                        #print(str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs))
                         try:
                             lookup = copy_iter[curr_i:curr_i+5]
                         except:
                             #end of list reached
                             lookup = copy_iter[curr_i:len(copy_iter)-1]
 
-                        
+                        for topic2, msg2, t2 in lookup:
+                      
+                            if topic2 == '/camera/depth_registered/sw_registered/image_rect_raw':
+                                           
+                                #Look for grid image when present
+                                #Also keep link with timestamp of rgb (not all RGBs have grid associated with it)
+                                #print(str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs))
+
+                                grid_mat.extend([(bridge.imgmsg_to_cv2(msg2, desired_encoding="32FC1"), str(msg2.header.stamp.secs)+str(msg2.header.stamp.nsecs), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs))])   
+                                break                            
+            
                         for topic2, msg2, t2 in lookup:
                             
-                            
                             if topic2 == '/camera/depth/image_raw':
+                                
                                 #Closest next depth frame found
-                                img_mat.extend([(bridge.imgmsg_to_cv2(msg2, desired_encoding="passthrough"), str(msg2.header.stamp.secs)+str(msg2.header.stamp.nsecs))])                         
+                                img_mat.extend([(bridge.imgmsg_to_cv2(msg2, desired_encoding="passthrough"), str(msg2.header.stamp.secs)+str(msg2.header.stamp.nsecs))])   
+
+
                                 break                                 
     
-                                        
-                
+                            
+                                                                        
                 bag.close()
-                
+
             except Exception as e:
             
                 logging.info("Problem while opening img %s" % bpath)
@@ -450,8 +465,14 @@ if  __name__ == '__main__':
                 #Skip corrupted or zero-byte images
 
                 continue    
-            
-    
+    '''
+    print(len(grid_mat))
+    print(len(rgb_mat))
+    print(len(img_mat))
+    sys.exit(0)
+    '''
+
+
     #Consistency check
     if abs(len(img_mat) - len(rgb_mat)) > 1:
 
@@ -539,30 +560,65 @@ if  __name__ == '__main__':
         #cv2.imwrite(out, rgb_res[y_top:y_btm, x_top:x_btm])
         #sys.exit(0)
 
+        #for grid_img, st, st2 in grid_mat:
+        #    print(st2)
+            
+        try:
+            grid_img = [grid_img for grid_img, st, st2 in grid_mat if st2==rstamp][0]
+
+        except:
+
+            grid_img = None
+
+        print(grid_img)
+        #print(img)   
+        
         for no, (x_top, y_top, x_btm, y_btm)  in enumerate(max_bound(n_bboxes)):
             
             nimgd = imgd.copy()            
+       
             #print("(%s, %s, %s, %s)" % (x_top,y_top,x_btm,y_btm))
             cv2.rectangle(rgb_img,(x_top, y_top),(x_btm,y_btm),(0,255,0),3) 
             #nimgd = imgd[130:140, 130:200]
             #nrgb = rgb_res[130:140, 130:200]
+       
             nimgd = imgd[y_top:y_btm,x_top:x_btm]
             nrgb = rgb_res[y_top:y_btm, x_top:x_btm]
-            
+
             #print(str(x_btm - x_top))            
             #print(str(y_btm - y_top))
             #print(imgd.size)
             #print(rgb_res)
             #print(rgb_res.shape)
             #sys.exit(0)
+            logging.info('Starting pixel-level clustering')
             new_rgb = BGM_Dirichlet(nimgd, nrgb)        
+            
+            #Check if grid viz is present
+            if grid_img is not None:
+ 
+                logging.info('Slicing grid image too')
+                ngrid = grid_img[y_top:y_btm, x_top:x_btm]
+                grid_array = np.array(ngrid, dtype = np.dtype('f8'))
+                #grid_array = np.array(ngrid, dtype = np.dtype('f8'))
+                #Normalize in the [0, 255] space
+                grid_norm = cv2.normalize(grid_array, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
+                #print(grid_norm.shape) 
+                #And go from 1 channel to 3
+                grid_norm = cv2.cvtColor(grid_norm, cv2.COLOR_GRAY2BGR)                 
+                #print(grid_norm.shape) 
+                #cv2.imwrite(out.split('.png')[0]+'_grid_%s.png' % str(no) , grid_norm)
+                
+                #Overlay to the existing RGB (clustering-segmented)
+                new_rgb= cv2.addWeighted(ngrid, 0.3, new_rgb, 1, 0, new_rgb)
+            
             cv2.imwrite(out.split('.png')[0]+'_%s.png' % str(no) , new_rgb)
             #cv2.imwrite(out.split('.png')[0]+'_clust.png', new_rgb)
             #sys.exit(0)
 
-        sys.exit(0)
 
         
+        sys.exit(0)
         '''       
         #Do pre-processing steps within each bounding box        
         for obj, dimg in obj_list:

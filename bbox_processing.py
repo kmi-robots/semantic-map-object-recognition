@@ -95,23 +95,51 @@ def BGM_Dirichlet(imgd, rgb_image, sample_ratio =1.0):
     #print(imgd.shape)    
     #print(im_idx.shape)
 
-    bgmm = BayesianGaussianMixture(n_components=10, covariance_type='full', max_iter=1000 ,n_init= 10, weight_concentration_prior_type='dirichlet_process').fit(imgd)
+    try:
+        bgmm = BayesianGaussianMixture(n_components=10, covariance_type='full', max_iter=1000 ,n_init= 10, weight_concentration_prior_type='dirichlet_process').fit(imgd)
 
+    except ValueError:
+        #Not enough pixels in the box
+        return
     #print(rgb_image.shape)
 
-    cm = plt.cm.get_cmap('rainbow')
+    #cm = plt.cm.get_cmap('jet')
+    clusterm = np.zeros(rgb_image.shape, rgb_image.dtype)
+
+    #print(str(set(bgmm.predict(imgd))))
+    #print(len(bgmm.predict(imgd)))
+
     for index, cluster_no in enumerate(bgmm.predict(imgd)):
         
         #Retrieve x and y in the original matrix 
         depth, height, width = by_mvalue[index]
-        
+
+        #print(rgb_image[0,1])        
         #Color based on cluster 
-        r,g,b = cm(cluster_no)[:3]
+        r,g,b = plt.cm.get_cmap('Set3')(cluster_no, bytes=True)[:3]#.to_rgba(bytes=True)[:3]
+      
+        #print(r,g,b)
+        #print(cm(cluster_no)[:3])
+       
+        #print(clusterm[int(height), int(width)])
+        #print(r)
 
+        clusterm[int(height), int(width)]= np.array([r,g,b], dtype=np.uint8) #[r,g,b] #cm(cluster_no)[:3] #(r,g,b)
+
+        #print(clusterm[int(height), int(width)])
+       
+        #clusterm[int(height), int(width)][1]=g
+        #clusterm[int(height), int(width)][2]=b 
         #On the original RGB matrix
-        rgb_image[int(height)][int(width)] = np.array([r,g,b], dtype=np.uint8)
+        
+        #print(clusterm[int(height), int(width)])
 
-    return rgb_image
+        #rgb_image[int(height)][int(width)] = np.array([r,g,b], dtype=np.uint8)
+
+    #cmask = cv2.bitwise_and(redImg.astype(np.uint8), redImg, mask=cv2.cvtColor(imgd, cv2.COLOR_BGR2GRAY))
+    #new_i = cv2.addWeighted(redMask, 1, rgb_img, 1, 0, rgb_img)
+    
+    return clusterm
 
 def PILresize(imgpath, basewidth=416):
 
@@ -484,11 +512,13 @@ if  __name__ == '__main__':
         '''
 
         #cv2.imwrite(out, new_i)
-        for x_top, y_top, x_btm, y_btm in n_bboxes:
+        for no, (x_top, y_top, x_btm, y_btm) in enumerate(n_bboxes):
 
             nimgd = imgd.copy()            
             #print("(%s, %s, %s, %s)" % (x_top,y_top,x_btm,y_btm))
             cv2.rectangle(rgb_img,(x_top, y_top),(x_btm,y_btm),(0,255,0),3) 
+            #nimgd = imgd[130:140, 130:200]
+            #nrgb = rgb_res[130:140, 130:200]
             nimgd = imgd[y_top:y_btm,x_top:x_btm]
             nrgb = rgb_res[y_top:y_btm, x_top:x_btm]
             
@@ -499,8 +529,8 @@ if  __name__ == '__main__':
             #print(rgb_res.shape)
             #sys.exit(0)
             new_rgb = BGM_Dirichlet(nimgd, nrgb)        
-            cv2.imwrite(out, new_rgb)
-            sys.exit(0)
+            cv2.imwrite(out.split('.png')[0]+'_%s.png' % str(no) , new_rgb)
+            #sys.exit(0)
 
         sys.exit(0)
 

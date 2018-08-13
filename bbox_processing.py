@@ -91,7 +91,6 @@ def BGM_Dirichlet(imgd, rgb_image, sample_ratio =1.0):
     imgd = np.asarray(by_value).reshape(-1, 2)
     im_idx = np.asarray(by_mvalue).reshape(-1, 3)
     
-    
     #print(imgd.shape)    
     #print(im_idx.shape)
 
@@ -216,6 +215,22 @@ def crop_img(rgb_image, boxs_coord, depthi):
     #Crop also the depth img for consistency
     return [(rgb_image[y1:y2, x1:x2], depthi[y1:y2, x1:x2]) for (x1,y1,x2,y2) in boxs_coord]
 
+
+def max_bound(coord_list):
+
+    areas=[]
+  
+    for coord in coord_list:
+        
+        w = coord[2] - coord[0]
+        h = coord[3] - coord[1]
+        a = w*h
+        areas.append(a)
+
+    max_a = max(areas)
+    
+    return [coord_list[k] for k, a in enumerate(areas) if a == max_a]
+    
 
 def rosimg_fordisplay(img_d):
 
@@ -512,8 +527,20 @@ if  __name__ == '__main__':
         '''
 
         #cv2.imwrite(out, new_i)
-        for no, (x_top, y_top, x_btm, y_btm) in enumerate(n_bboxes):
 
+        #Find bounding box with max area
+        #(Assuming it is a good proxy of closest foreground objects)
+        #for no, (x_top, y_top, x_btm, y_btm) in enumerate(n_bboxes):
+        #print(max_bound(n_bboxes))
+        
+        #x_top, y_top, x_btm, y_btm = max_bound(n_bboxes)[0]
+        #print(x_top, y_top, x_btm, y_btm)
+ 
+        #cv2.imwrite(out, rgb_res[y_top:y_btm, x_top:x_btm])
+        #sys.exit(0)
+
+        for no, (x_top, y_top, x_btm, y_btm)  in enumerate(max_bound(n_bboxes)):
+            
             nimgd = imgd.copy()            
             #print("(%s, %s, %s, %s)" % (x_top,y_top,x_btm,y_btm))
             cv2.rectangle(rgb_img,(x_top, y_top),(x_btm,y_btm),(0,255,0),3) 
@@ -530,6 +557,7 @@ if  __name__ == '__main__':
             #sys.exit(0)
             new_rgb = BGM_Dirichlet(nimgd, nrgb)        
             cv2.imwrite(out.split('.png')[0]+'_%s.png' % str(no) , new_rgb)
+            #cv2.imwrite(out.split('.png')[0]+'_clust.png', new_rgb)
             #sys.exit(0)
 
         sys.exit(0)

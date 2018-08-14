@@ -23,6 +23,9 @@ import random
 import math
 import genpy
 import lightnet
+from skimage.future import graph
+
+
 
 color_iter = itertools.cycle(plt.cm.rainbow(np.linspace(0,1,10)))
 model = lightnet.load('yolo')
@@ -105,6 +108,8 @@ def BGM_Dirichlet(imgd, rgb_image, sample_ratio =1.0):
     #cm = plt.cm.get_cmap('jet')
     clusterm = np.zeros(rgb_image.shape, rgb_image.dtype)
 
+    labels = np.zeros(rgb_image.shape[:2], rgb_image.dtype)
+    print(labels.shape)
     #print(str(set(bgmm.predict(imgd))))
     #print(len(bgmm.predict(imgd)))
 
@@ -124,7 +129,8 @@ def BGM_Dirichlet(imgd, rgb_image, sample_ratio =1.0):
         #print(r)
 
         clusterm[int(height), int(width)]= np.array([r,g,b], dtype=np.uint8) #[r,g,b] #cm(cluster_no)[:3] #(r,g,b)
-
+        labels[int(height), int(width)]= cluster_no
+ 
         #print(clusterm[int(height), int(width)])
        
         #clusterm[int(height), int(width)][1]=g
@@ -138,7 +144,7 @@ def BGM_Dirichlet(imgd, rgb_image, sample_ratio =1.0):
     #cmask = cv2.bitwise_and(redImg.astype(np.uint8), redImg, mask=cv2.cvtColor(imgd, cv2.COLOR_BGR2GRAY))
     #new_i = cv2.addWeighted(redMask, 1, rgb_img, 1, 0, rgb_img)
     
-    return clusterm
+    return clusterm, labels
 
 def PILresize(imgpath, basewidth=416):
 
@@ -416,7 +422,7 @@ if  __name__ == '__main__':
                 #full_dlist = [(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs), t) for topic, msg, t in bag.read_messages(topics=['/camera/depth/image_raw'])]
                 for idx, (topic, msg, t) in enumerate(list(bag.read_messages(topics=['/camera/rgb/image_raw', '/camera/depth/image_raw', '/camera/depth_registered/sw_registered/image_rect_raw']))):
                 
-                    #print(topic)                                    
+                    print(topic)                                    
                     if topic =='/camera/rgb/image_raw':
                         
                         #RGB frame found
@@ -469,10 +475,11 @@ if  __name__ == '__main__':
     print(len(grid_mat))
     print(len(rgb_mat))
     print(len(img_mat))
-    sys.exit(0)
+    
+
     '''
 
-
+    #sys.exit(0)
     #Consistency check
     if abs(len(img_mat) - len(rgb_mat)) > 1:
 
@@ -488,7 +495,6 @@ if  __name__ == '__main__':
         
         out = os.path.join(args.outpath, '%s.png' % stamp)
  
-
         #Resize image to 416 x related height to work with YOLO  
         #Not efficient (writes to disk) but possibly more robust to different resolutions
         #rgb_res = PILresize(out)     
@@ -563,16 +569,21 @@ if  __name__ == '__main__':
         #for grid_img, st, st2 in grid_mat:
         #    print(st2)
             
+        '''
         try:
             grid_img = [grid_img for grid_img, st, st2 in grid_mat if st2==rstamp][0]
 
-        except:
-
+        except Exception as e:
+            print(str(e))
             grid_img = None
 
+        print(rstamp)
+        print(stamp)
         print(grid_img)
         #print(img)   
         
+        sys.exit(0)
+        '''
         for no, (x_top, y_top, x_btm, y_btm)  in enumerate(max_bound(n_bboxes)):
             
             nimgd = imgd.copy()            
@@ -592,8 +603,9 @@ if  __name__ == '__main__':
             #print(rgb_res.shape)
             #sys.exit(0)
             logging.info('Starting pixel-level clustering')
-            new_rgb = BGM_Dirichlet(nimgd, nrgb)        
-            
+            new_rgb, label_matrix  = BGM_Dirichlet(nimgd, nrgb)     
+   
+            ''' 
             #Check if grid viz is present
             if grid_img is not None:
  
@@ -611,9 +623,16 @@ if  __name__ == '__main__':
                 
                 #Overlay to the existing RGB (clustering-segmented)
                 new_rgb= cv2.addWeighted(ngrid, 0.3, new_rgb, 1, 0, new_rgb)
+            '''
             
             cv2.imwrite(out.split('.png')[0]+'_%s.png' % str(no) , new_rgb)
-            #cv2.imwrite(out.split('.png')[0]+'_clust.png', new_rgb)
+
+            rag = graph.rag_mean_color(nrgb, label_matrix)
+            viz = graph.show_rag(label_matrix, rag, nrgb, img_cmap= 'gray', edge_cmap='viridis')
+            cbar = plt.colorbar(viz)
+            plt.show()
+            plt.clf()
+            #cv2.imwrite(out.split('.png')[0]+'_rag.png', viz)
             #sys.exit(0)
 
 

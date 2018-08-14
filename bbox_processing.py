@@ -24,7 +24,7 @@ import math
 import genpy
 import lightnet
 from skimage.future import graph
-
+from skimage import color, filters, segmentation
 
 
 color_iter = itertools.cycle(plt.cm.rainbow(np.linspace(0,1,10)))
@@ -365,7 +365,107 @@ def mask_binarize(depth_image):
 
     return depth_image.astype(np.uint8)
 
+
+def merge_clust(graph, src, dst):
+
+    '''
+    Function used for merging similar areas derived from the RAG
+    After applying the predifined similarity threshold
+
+    Skimage always calls it through (graph, src, dst) so it has to be in that format
+    
+    Trial without extra computation (i.e., only based on threshold)
+
+    This method computes the mean color of `dst`.
+
+    Parameters
+    ----------
+    graph : RAG
+        The graph under consideration.
+    src, dst : int
+        The vertices in `graph` to be merged.
+    '''
+    
+    graph.node[dst]['total color'] += graph.node[src]['total color']
+    graph.node[dst]['pixel count'] += graph.node[src]['pixel count']
+    graph.node[dst]['mean color'] = (graph.node[dst]['total color'] / graph.node[dst]['pixel count'])
+    
+    
+    
+def weight_merging(graph, src, dst, n):
+
+    '''
+    Function to compute the new weights for the nodes which are 
+    adjacent to the merged node, to update. 
+
+    The method expects that the mean color of `dst` is already computed.
+
+    Parameters
+    ----------
+    graph : RAG
+        The graph under consideration.
+    src, dst : int
+        The vertices in `graph` to be merged.
+    n : int
+        A neighbor of `src` or `dst` or both.
+
+    Returns
+    -------
+    data : dict
+        A dictionary with the `"weight"` attribute set as the absolute
+        difference of the mean color between node `dst` and `n`.
+    '''
+
+    diff = graph.node[dst]['mean color'] - graph.node[n]['mean color']
+    diff = np.linalg.norm(diff)
+    return {'weight': diff}
+
+
+def weight_boundary(graph, src, dst, n):
+    """
+    Handle merging of nodes of a region boundary region adjacency graph.
+
+    This function computes the `"weight"` and the count `"count"`
+    attributes of the edge between `n` and the node formed after
+    merging `src` and `dst`.
+
+
+    Parameters
+    ----------
+    graph : RAG
+        The graph under consideration.
+    src, dst : int
+        The vertices in `graph` to be merged.
+    n : int
+        A neighbor of `src` or `dst` or both.
+
+    Returns
+    -------
+    data : dict
+        A dictionary with the "weight" and "count" attributes to be
+        assigned for the merged node.
+
+    """
+    default = {'weight': 0.0, 'count': 0}
+
+    count_src = graph[src].get(n, default)['count']
+    count_dst = graph[dst].get(n, default)['count']
+
+    weight_src = graph[src].get(n, default)['weight']
+    weight_dst = graph[dst].get(n, default)['weight']
+
+    count = count_src + count_dst
+    return {
+        'count': count,
+        'weight': (count_src * weight_src + count_dst * weight_dst)/count
+    }
+
+def merge_boundary(graph, src, dst):
+    pass
+
+
 if  __name__ == '__main__':
+
 
     logging.getLogger().setLevel(logging.INFO)
     
@@ -422,7 +522,7 @@ if  __name__ == '__main__':
                 #full_dlist = [(bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"), str(msg.header.stamp.secs)+str(msg.header.stamp.nsecs), t) for topic, msg, t in bag.read_messages(topics=['/camera/depth/image_raw'])]
                 for idx, (topic, msg, t) in enumerate(list(bag.read_messages(topics=['/camera/rgb/image_raw', '/camera/depth/image_raw', '/camera/depth_registered/sw_registered/image_rect_raw']))):
                 
-                    print(topic)                                    
+                    #print(topic)                                    
                     if topic =='/camera/rgb/image_raw':
                         
                         #RGB frame found
@@ -627,15 +727,46 @@ if  __name__ == '__main__':
             
             cv2.imwrite(out.split('.png')[0]+'_%s.png' % str(no) , new_rgb)
 
-            rag = graph.rag_mean_color(nrgb, label_matrix)
+           
+            #rag = graph.rag_mean_color(nrgb, label_matrix)
+            edge_map = filters.sobel(color.rgb2gray(nrgb))
+            rag = graph.rag_boundary(label_matrix, edge_map)
+
+            plt.clf() #In case there were histograms from before
             viz = graph.show_rag(label_matrix, rag, nrgb, img_cmap= 'gray', edge_cmap='viridis')
+
+            #Save resulting viz locally
             cbar = plt.colorbar(viz)
-            plt.show()
+            plt.savefig(out.split('.png')[0]+'_rag.png', bbox_inches='tight')
             plt.clf()
-            #cv2.imwrite(out.split('.png')[0]+'_rag.png', viz)
+            
+            #sys.exit(0)
+            new_labels = graph.merge_hierarchical(label_matrix, rag, thresh=0.02, rag_copy=False,
+                                   in_place_merge=True,
+                                   merge_func=merge_boundary,
+                                   weight_func=weight_boundary)
+            #new_labels = graph.cut_threshold(label_matrix, rag, thresh=30, in_place=True)
+            #new_labels = graph.merge_hierarchical(label_matrix, rag, thresh=50, rag_copy=False,                
+                           #in_place_merge=True, merge_func=merge_clust, weight_func=weight_merging) 
+            #cv2.imwrite(out.split('.png')[0]+'_rag.png', viz) 
             #sys.exit(0)
 
+            #nviz = graph.show_rag(new_labels, rag, nrgb, img_cmap= 'gray', edge_cmap='viridis')
 
+
+            #Save resulting viz locally
+            
+            #cbar = plt.colorbar(nviz)
+            #plt.savefig(out.split('.png')[0]+'_new_rag.png', bbox_inches='tight')
+
+            #plt.clf()
+
+            #PAstel-like coloring with averages, alternative option for overlay is possible too
+            final = color.label2rgb(new_labels, nrgb, kind='avg')
+
+            #final = segmentation.mark_boundaries(final, new_labels, (0, 0, 0))
+            #Saving final segmented image
+            cv2.imwrite(out.split('.png')[0]+'final_%s.png' % str(no) , final)
         
         sys.exit(0)
         '''       

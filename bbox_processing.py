@@ -98,7 +98,7 @@ def BGM_Dirichlet(imgd, rgb_image, sample_ratio =1.0):
     #print(im_idx.shape)
 
     try:
-        bgmm = BayesianGaussianMixture(n_components=10, covariance_type='full', max_iter=1000 ,n_init= 10, weight_concentration_prior_type='dirichlet_process').fit(imgd)
+        bgmm = BayesianGaussianMixture(n_components=3, covariance_type='full', max_iter=1000 ,n_init= 10, weight_concentration_prior_type='dirichlet_process').fit(imgd)
 
     except ValueError:
         #Not enough pixels in the box
@@ -143,6 +143,83 @@ def BGM_Dirichlet(imgd, rgb_image, sample_ratio =1.0):
 
     #cmask = cv2.bitwise_and(redImg.astype(np.uint8), redImg, mask=cv2.cvtColor(imgd, cv2.COLOR_BGR2GRAY))
     #new_i = cv2.addWeighted(redMask, 1, rgb_img, 1, 0, rgb_img)
+    
+    return clusterm, labels
+
+def BGM_Dir_depthonly(imgd, rgb_image, sample_ratio =1.0):   
+
+    n, bins, patches = plt.hist(imgd.ravel(), 'auto', [1,10], color='green', edgecolor='black', linewidth=1)
+
+    cbins = chunks(bins)
+    
+    by_value =[]
+    pixel_count=0
+    by_mvalue= []
+
+    for k, (left, right) in enumerate(cbins):
+        
+        values=[]
+        mvalues=[]
+        
+        #If non-empty bin
+        if n[k] !=0.0:
+            
+            pixel_2 = np.where(np.logical_and(imgd>left, imgd<right))[0]
+            pixel_w = np.where(np.logical_and(imgd>left, imgd<right))[1]
+           
+            values = imgd[np.logical_and(imgd>left, imgd<right)].tolist()
+            #Keeps track of widths also
+            mvalues = np.column_stack((imgd[np.logical_and(imgd>left, imgd<right)], pixel_2, pixel_w)).tolist()
+             
+            
+            by_value.extend(values)
+            by_mvalue.extend(mvalues)
+         
+        pixel_count+=len(values)
+
+    print(len(by_value))
+
+    pixel_zh = np.where(imgd==0.0)[0]
+    pixel_zw = np.where(imgd==0.0)[1]
+    
+    zeros = imgd[imgd == 0.0].tolist()
+    
+    #Keeps track of widths also
+    mzeros = np.column_stack((imgd[imgd == 0.0], pixel_zh, pixel_zw)).tolist()
+    
+
+    by_value.extend(zeros)
+    by_mvalue.extend(mzeros)    
+
+    imgd = np.asarray(by_value).reshape(-1, 1)
+    im_idx = np.asarray(by_mvalue).reshape(-1, 3)
+    
+    #print(imgd)
+
+    try:
+        bgmm = BayesianGaussianMixture(n_components=3, covariance_type='full', max_iter=1000 ,n_init= 10, weight_concentration_prior_type='dirichlet_process').fit(imgd)
+
+    except ValueError:
+        #Not enough pixels in the box
+        return
+
+    clusterm = np.zeros(rgb_image.shape, rgb_image.dtype)
+
+    labels = np.zeros(rgb_image.shape[:2], rgb_image.dtype)
+    print(labels.shape)
+
+    for index, cluster_no in enumerate(bgmm.predict(imgd)):
+        
+        #Retrieve x and y in the original matrix 
+        depth, height, width = by_mvalue[index]
+
+        #Color based on cluster 
+        r,g,b = plt.cm.get_cmap('Set3')(cluster_no, bytes=True)[:3]#.to_rgba(bytes=True)[:3]
+      
+
+        clusterm[int(height), int(width)]= np.array([r,g,b], dtype=np.uint8) #[r,g,b] #cm(cluster_no)[:3] #(r,g,b)
+        labels[int(height), int(width)]= cluster_no
+ 
     
     return clusterm, labels
 
@@ -253,10 +330,13 @@ def rosimg_fordisplay(img_d):
     col /= max(col)
     
     #print(img_d)
+
+    new_d = np.zeros((img_d.shape[0],img_d.shape[1],3), img_d.dtype)
     for i, (c,p) in enumerate(zip(col, patches)):
          
-        r, g, b = cm(c)[:3]
-        #gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
+        r, g, b = cm(c, bytes=True)[:3]
+        #gray = 0.2989 * r + 0.5870 * g + 0.1140 * b 
+        #print(r,g,b)
         color = r* 65536 + g*256 + b
         if i!=0:
             
@@ -264,9 +344,17 @@ def rosimg_fordisplay(img_d):
  
             #if thresholds[n]!=0.0:
     
-            img_d[np.logical_and(img_d>= thresholds[n], img_d <thresholds[i])] = color #gray
-    
-    return img_d 
+            #img_d[np.logical_and(img_d>= thresholds[n], img_d <thresholds[i])] = color #gray
+            lists = np.where(np.logical_and(img_d>= thresholds[n], img_d <thresholds[i]))    
+            stacked = np.column_stack((lists[0], lists[1]))
+            #print(stacked)
+            for height, width in stacked:
+                new_d[height, width] = np.array([r,g,b], dtype=np.uint8) 
+
+   
+    #new_d = cv2.normalize(new_d, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC3) 
+    #print(new_d) 
+    return new_d 
 
 def backgr_sub(depth_image):
    
@@ -683,100 +771,133 @@ if  __name__ == '__main__':
         #print(img)   
         
         sys.exit(0)
+        
         '''
-        for no, (x_top, y_top, x_btm, y_btm)  in enumerate(max_bound(n_bboxes)):
-            
-            nimgd = imgd.copy()            
-       
-            #print("(%s, %s, %s, %s)" % (x_top,y_top,x_btm,y_btm))
-            cv2.rectangle(rgb_img,(x_top, y_top),(x_btm,y_btm),(0,255,0),3) 
-            #nimgd = imgd[130:140, 130:200]
-            #nrgb = rgb_res[130:140, 130:200]
-       
-            nimgd = imgd[y_top:y_btm,x_top:x_btm]
-            nrgb = rgb_res[y_top:y_btm, x_top:x_btm]
-
-            #print(str(x_btm - x_top))            
-            #print(str(y_btm - y_top))
-            #print(imgd.size)
-            #print(rgb_res)
-            #print(rgb_res.shape)
-            #sys.exit(0)
-            logging.info('Starting pixel-level clustering')
-            new_rgb, label_matrix  = BGM_Dirichlet(nimgd, nrgb)     
-   
-            ''' 
-            #Check if grid viz is present
-            if grid_img is not None:
- 
-                logging.info('Slicing grid image too')
-                ngrid = grid_img[y_top:y_btm, x_top:x_btm]
-                grid_array = np.array(ngrid, dtype = np.dtype('f8'))
-                #grid_array = np.array(ngrid, dtype = np.dtype('f8'))
-                #Normalize in the [0, 255] space
-                grid_norm = cv2.normalize(grid_array, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
-                #print(grid_norm.shape) 
-                #And go from 1 channel to 3
-                grid_norm = cv2.cvtColor(grid_norm, cv2.COLOR_GRAY2BGR)                 
-                #print(grid_norm.shape) 
-                #cv2.imwrite(out.split('.png')[0]+'_grid_%s.png' % str(no) , grid_norm)
-                
-                #Overlay to the existing RGB (clustering-segmented)
-                new_rgb= cv2.addWeighted(ngrid, 0.3, new_rgb, 1, 0, new_rgb)
-            '''
-            
-            cv2.imwrite(out.split('.png')[0]+'_%s.png' % str(no) , new_rgb)
-
+        try:
+            for no, (x_top, y_top, x_btm, y_btm)  in enumerate(max_bound(n_bboxes)):
            
-            #rag = graph.rag_mean_color(nrgb, label_matrix)
-            edge_map = filters.sobel(color.rgb2gray(nrgb))
-            rag = graph.rag_boundary(label_matrix, edge_map)
+                #Break if it was not in previous video too
+                if not os.path.isfile(out.split('.png')[0]+'_%s.png' % str(no)):
+                    sys.exit(0)
+ 
+                nimgd = imgd.copy()            
+       
+                #print("(%s, %s, %s, %s)" % (x_top,y_top,x_btm,y_btm))
+                cv2.rectangle(rgb_img,(x_top, y_top),(x_btm,y_btm),(0,255,0),3) 
+                #nimgd = imgd[130:140, 130:200]
+                #nrgb = rgb_res[130:140, 130:200]
+       
+                nimgd = imgd[y_top:y_btm,x_top:x_btm]
+                nrgb = rgb_res[y_top:y_btm, x_top:x_btm]
 
-            plt.clf() #In case there were histograms from before
-            viz = graph.show_rag(label_matrix, rag, nrgb, img_cmap= 'gray', edge_cmap='viridis')
-
-            #Save resulting viz locally
-            cbar = plt.colorbar(viz)
-            plt.savefig(out.split('.png')[0]+'_rag.png', bbox_inches='tight')
-            plt.clf()
+                #print(str(x_btm - x_top))            
+                #print(str(y_btm - y_top))
+                print(nimgd.shape)
             
-            #sys.exit(0)
-            new_labels = graph.merge_hierarchical(label_matrix, rag, thresh=0.02, rag_copy=False,
+                print(nrgb.shape)
+                #print(rgb_res)
+                #print(rgb_res.shape)
+                #sys.exit(0)
+                logging.info('Starting pixel-level clustering')
+
+                #Depth + pixel height clustering
+                #new_rgb, label_matrix  = BGM_Dirichlet(nimgd, nrgb)     
+                #Trying to cluster only based on depth
+                try:
+                    new_rgb, label_matrix = BGM_Dirichlet(nimgd, nrgb)
+                except TypeError:
+
+                    continue 
+                ''' 
+                #Check if grid viz is present
+                if grid_img is not None:
+ 
+                    logging.info('Slicing grid image too')
+                    ngrid = grid_img[y_top:y_btm, x_top:x_btm]
+                    grid_array = np.array(ngrid, dtype = np.dtype('f8'))
+                    #grid_array = np.array(ngrid, dtype = np.dtype('f8'))
+                    #Normalize in the [0, 255] space
+                    grid_norm = cv2.normalize(grid_array, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
+                    #print(grid_norm.shape) 
+                    #And go from 1 channel to 3
+                    grid_norm = cv2.cvtColor(grid_norm, cv2.COLOR_GRAY2BGR)                 
+                    #print(grid_norm.shape) 
+                    #cv2.imwrite(out.split('.png')[0]+'_grid_%s.png' % str(no) , grid_norm)
+                
+                    #Overlay to the existing RGB (clustering-segmented)
+                    new_rgb= cv2.addWeighted(ngrid, 0.3, new_rgb, 1, 0, new_rgb)
+                '''
+                sliced_image = rosimg_fordisplay(nimgd)     
+
+                #plt.imshow(sliced_image, cmap = plt.get_cmap('plasma'))        
+                #plt.savefig(out.split('.png')[0]+'dmap_%s.png' % str(no) )
+                #plt.clf()
+        
+                #sliced_image = cv2.imread(out.split('.png')[0]+'dmap_%s.png' % str(no))
+                #sliced_image = cv2.cvtColor(sliced_image, cv2.COLOR_BGR2RGB) 
+                print(nrgb.shape)
+                print(sliced_image.shape)
+                print(new_rgb.shape)
+
+                final = np.hstack((nrgb, sliced_image, new_rgb))
+                
+
+                cv2.imwrite(out.split('.png')[0]+'2feat_%s.png' % str(no) , final)
+                 
+                ################### RAG + Cluster Merging ###################################################
+                '''
+                #rag = graph.rag_mean_color(nrgb, label_matrix)
+                edge_map = filters.sobel(color.rgb2gray(nrgb))
+                rag = graph.rag_boundary(label_matrix, edge_map)
+
+                plt.clf() #In case there were histograms from before
+                viz = graph.show_rag(label_matrix, rag, nrgb, img_cmap= 'gray', edge_cmap='viridis')
+
+                #Save resulting viz locally
+                cbar = plt.colorbar(viz)
+                plt.savefig(out.split('.png')[0]+'_rag.png', bbox_inches='tight')
+                plt.clf()
+            
+                #sys.exit(0)
+                new_labels = graph.merge_hierarchical(label_matrix, rag, thresh=0.02, rag_copy=False,
                                    in_place_merge=True,
                                    merge_func=merge_boundary,
                                    weight_func=weight_boundary)
-            #new_labels = graph.cut_threshold(label_matrix, rag, thresh=30, in_place=True)
-            #new_labels = graph.merge_hierarchical(label_matrix, rag, thresh=50, rag_copy=False,                
+                #new_labels = graph.cut_threshold(label_matrix, rag, thresh=30, in_place=True)
+                #new_labels = graph.merge_hierarchical(label_matrix, rag, thresh=50, rag_copy=False,                
                            #in_place_merge=True, merge_func=merge_clust, weight_func=weight_merging) 
-            #cv2.imwrite(out.split('.png')[0]+'_rag.png', viz) 
+                #cv2.imwrite(out.split('.png')[0]+'_rag.png', viz) 
+                #sys.exit(0)
+
+                #nviz = graph.show_rag(new_labels, rag, nrgb, img_cmap= 'gray', edge_cmap='viridis')
+
+
+                #Save resulting viz locally
+            
+                #cbar = plt.colorbar(nviz)
+                #plt.savefig(out.split('.png')[0]+'_new_rag.png', bbox_inches='tight')
+
+                #plt.clf()
+
+                #Pastel-like coloring with averages, alternative option for overlay is possible too
+                final = color.label2rgb(new_labels, nrgb, kind='avg')
+
+                #final = segmentation.mark_boundaries(final, new_labels, (0, 0, 0))
+                #Saving final segmented image
+                cv2.imwrite(out.split('.png')[0]+'final_%s.png' % str(no) , final)
+                '''
             #sys.exit(0)
-
-            #nviz = graph.show_rag(new_labels, rag, nrgb, img_cmap= 'gray', edge_cmap='viridis')
-
-
-            #Save resulting viz locally
+            '''       
+            #Do pre-processing steps within each bounding box        
+            for obj, dimg in obj_list:
             
-            #cbar = plt.colorbar(nviz)
-            #plt.savefig(out.split('.png')[0]+'_new_rag.png', bbox_inches='tight')
+                cv2.imwrite('/mnt/c/Users/HP/Desktop/test_crop.png', obj)
 
-            #plt.clf()
+                cv2.imwrite('/mnt/c/Users/HP/Desktop/depth_crop.png', dimg)
+            '''
+        except Exception as e:
 
-            #PAstel-like coloring with averages, alternative option for overlay is possible too
-            final = color.label2rgb(new_labels, nrgb, kind='avg')
-
-            #final = segmentation.mark_boundaries(final, new_labels, (0, 0, 0))
-            #Saving final segmented image
-            cv2.imwrite(out.split('.png')[0]+'final_%s.png' % str(no) , final)
-        
-        sys.exit(0)
-        '''       
-        #Do pre-processing steps within each bounding box        
-        for obj, dimg in obj_list:
-            
-            cv2.imwrite('/mnt/c/Users/HP/Desktop/test_crop.png', obj)
-
-            cv2.imwrite('/mnt/c/Users/HP/Desktop/depth_crop.png', dimg)
-        '''
-
+            logging.info(str(e))
+            continue
 
     logging.info("Complete...took %f seconds" % float(time.time() - start))

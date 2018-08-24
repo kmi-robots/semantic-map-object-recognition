@@ -28,7 +28,7 @@ import h5py
 def shapeMatch(shape1, model):
 
 
-    ret, thresh2 = cv2.threshold(model, 127, 255,0)
+    ret, thresh2 = cv2.threshold(model, 127, 255,1)
     _, contours,hierarchy = cv2.findContours(thresh2,2,1)
     shape2 = contours[0]
 
@@ -172,10 +172,15 @@ if __name__ == '__main__':
         
         #Extract shape
         try:
-            ret, thresh = cv2.threshold(objimg, 127, 255,0)
+            ret, thresh = cv2.threshold(objimg, 0, 255,0)
             _, contours,hierarchy = cv2.findContours(thresh,2,1)
             shape1 = contours[0]
 
+            #cv2.imshow('', objimg)
+
+            #cv2.waitKey(2000)
+            #cv2.imshow('', thresh)
+            #cv2.waitKey(2000)
         except Exception as e:
 
             #Empty masks 
@@ -184,11 +189,24 @@ if __name__ == '__main__':
             simdict['error'] ='Segmented area could not be processed'
             #Output dictionary as JSON file
             jname = fname[:-3]+'json'
+            
+            #cv2.imshow('', objimg)
 
+            #cv2.waitKey(2000)
+            #cv2.imshow('', thresh)
+            #cv2.waitKey(2000)
+            #print(contours)
+
+            #cv2.drawContours(objimg, contours, 0, (0,255,0), 3)
+
+            #cv2.imshow('', objimg)
+
+            #cv2.waitKey(2000)
+            
             with open(os.path.join(args.outpath, jname), 'w') as outf:
 
                 json.dump(simdict, outf, indent=4)
-
+            
             continue
 
 

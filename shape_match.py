@@ -1,6 +1,6 @@
 import rosbag
-import matlab
-from mat_segmenting import extract_masks
+#import matlab
+#from mat_segmenting import extract_masks
 #import matlab.engine
 import numpy as np
 import os
@@ -25,16 +25,18 @@ import h5py
 
 
 
-def shapeMatch(path_to_models):
+def shapeMatch(shape1, model):
 
-    objs=os.listdir(path_to_models)
-    simdict ={}    
-    shape1= None
-    shape2= None
+
+    ret, thresh2 = cv2.threshold(model, 127, 255,0)
+    _, contours,hierarchy = cv2.findContours(thresh2,2,1)
+    shape2 = contours[0]
+
+    #cv2.drawContours(image, [shape1], 0, (0,255,0), 3)
+    #cv2.drawContours(model, [shape2], 0, (0,255,0), 3)
     
-    cv2.matchShapes(shape1, shape2,1,0.0)
+    return cv2.matchShapes(shape1, shape2,1,0.0)
     
-    return simdict 
 
 
 def loadNYU(path_to_mat):
@@ -125,70 +127,6 @@ def loadNYU(path_to_mat):
     return label_index
     '''
 
-def get_masks(path_to_masks):
-
-    all_masks=[]
-    fnames = os.listdir(path_to_masks)[:3]
-
-    for filen in fnames:
-
-        mat = matlab.engine.start_matlab()
-        print('Starting to load file %s' % filen)
-        f = mat.load(os.path.join(path_to_masks, filen), nargout=1)
-
-        m = f['m']
-        
-        print(m)
-        sys.exit(0)
-        all_masks.append((m,l))
-        
-        '''
-        f = h5py.File(os.path.join(path_to_masks,filen),'r')
-
-        variables = f.items()
-
-    
-        for var in variables:
-
-            #print(var)
-            name = var[0]
-            data = var[1]
-
-            if type(data) is h5py.Dataset and name=='masks':
-
-                m = data.value
-            if type(data) is h5py.Dataset and name=='lab':
-
-                l = data.value
-
-        all_masks.append((m,l))
-
-        '''
-    '''
-    print('Extracting object labels and masks, for each image')
-    
-    print(len(zip(labels,instances))) 
-    print(zip(labels,instances)[:1])   
-
-    masks=[]
-    for label_mat, instance_mat in zip(labels,instances):
-
-        #print(label_mat.shape)
-        #print(instance_mat.shape)
-        m, l = extract_masks(matlab.uint8(label_mat.tolist()), matlab.uint8(instance_mat.tolist()))
-                
-        masks.append((m,l))
-        sys.exit(0)
-
-    #masks = [extract_masks(matlab.uint8(label_mat.tolist()), matlab.uint8(instance_mat.tolist())) for label_mat, instance_mat in zip(labels,instances)]
-    
-
-    for in_masks, in_labels in masks:
-
-        print(in_labels)
-        system.exit(0)
-    '''
-    return all_masks 
         
 if __name__ == '__main__':
 
@@ -196,40 +134,110 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("imgpath", help="Provide path to the images to be classified") 
     parser.add_argument("modelpath", help="Provide path to the reference models")
-    parser.add_argument("pathtomasks", help="Provide path to the mat files containing masks and label info")
+    #parser.add_argument("pathtomasks", help="Provide path to the segmented objects to be evaluated")
     parser.add_argument("outpath", help="Provide path to output the similarity scores")
     args =parser.parse_args()
 
     start = time.time()
    
-   
-    #logging.info('Off we go!')
- 
+     
+    #CHANGED: Ended up implementing dataset pre-proc in Matlab directly
+    #see maskfiles.m
+
     #Imgs are read from the BYUDepth data set here
-    images = loadNYU(args.imgpath).T    #We have to take the transpose here from what it returns 
+    #images = loadNYU(args.imgpath).T    #We have to take the transpose here from what it returns 
 
-    print(images.shape)
+    #print(images.shape)
     
+    modelfiles = os.listdir(args.modelpath)
+    modelpaths = [os.path.join(args.modelpath, mfile) for mfile in modelfiles]
 
-    all_masks = get_masks(args.pathtomasks)
-    print(len(all_masks))  
+    objectn = os.listdir(args.imgpath)
+    objectpaths = [os.path.join(args.imgpath, name) for name in objectn]
+
+    for filep in objectpaths:
+
+        simdict = {}
+        l = filep.split("/")
+        fname = l[len(l)-1]
+        objcat = l[len(l)-2]
+
+        #Read image in grayscale
+        objimg = cv2.imread(filep, 0) 
     
-    '''
-    img = img_mat[0]
-    #img = np.reshape(img, (480,640,3))
-    
-    #print(img)
-    #print(img.T.shape)
-    #print(type(img))
+        simdict["img_id"] = fname
+        simdict['obj_category']= objcat
+        simdict['comparisons']=[]
+        glob_min =1000.0
+        
+        #Extract shape
+        try:
+            ret, thresh = cv2.threshold(objimg, 127, 255,0)
+            _, contours,hierarchy = cv2.findContours(thresh,2,1)
+            shape1 = contours[0]
 
-    
+        except Exception as e:
 
-    #cv2.imshow('Image', img)    
-    cv2.imwrite('./test.png', img.T)   
-    '''
+            #Empty masks 
+            print('Problem while processing image %s' % fname)
+            print(str(e))
+            simdict['error'] ='Segmented area could not be processed'
+            #Output dictionary as JSON file
+            jname = fname[:-3]+'json'
 
-    
+            with open(os.path.join(args.outpath, jname), 'w') as outf:
 
-    #shapeMatch(args.modelpath)        
+                json.dump(simdict, outf, indent=4)
+
+            continue
+
+
+        #Compare with all Shapenet models
+        for modelp in modelpaths: 
+
+            comparison={} 
+            
+            lm = modelp.split('/')             
+            modname = lm[len(lm)-1]
+
+            comparison["compared_obj"] = modname
+            comparison["similarities"] =[]   
+
+            mimage = cv2.imread(modelp, 0)
+            
+            #Do a pointwise comparison within each couple
+            score= shapeMatch(shape1, mimage)        
+            comparison["similarities"].append(score)
+            
+            #sys.exit(0)
+
+            try:
+                iterat, curr_min = min(comparison["similarities"], key = lambda t: t[1])  
+
+            
+            except TypeError:
+
+                #Not enough values yet
+                curr_min = score
+
+            if curr_min < glob_min:
+                glob_min = curr_min
+                obj_min = modname
+
+            simdict['comparisons'].append(comparison)
+
+        #Sort by descending similarity
+        #simdict["comparisons"] = sorted(simdict["comparisons"],key=lambda x:(x[1],x[0]))
+        
+        #Add key field for most similar object 
+        simdict["min"]=(modname, glob_min)
+
+        #Output dictionary as JSON file
+        jname = fname[:-3]+'json'
+        with open(os.path.join(args.outpath, jname), 'w') as outf:
+
+            json.dump(simdict, outf, indent=4)
+
+        #sys.exit(0)
  
     logging.info("Complete...took %f seconds" % float(time.time() - start))

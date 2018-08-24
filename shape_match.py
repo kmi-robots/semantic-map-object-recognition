@@ -49,28 +49,35 @@ def loadNYU(path_to_mat):
     #matdb = sio.loadmat(path_to_mat)    
     f = h5py.File(path_to_mat,'r')
 
+    #print(f.keys())
+    ''' 
     label_names = f['names']  
  
-    for st in  label_names[0]:
+    for i, st in  enumerate(label_names[0]):
         #print(st)
         #print(type(st))
         obj= f[st]
 
         str1 = ''.join(chr(i) for i in obj[:])
 
+        #print(str1)
+        #sys.exit(0)
+
         if str1 =='chair': 
+
+            label_index=i 
             print('Hey, I have just found a chair!')
    
     #print(label_names)
-
-    '''
+    
+   
     for lab in label_names.value:
         
         print(lab) 
         print(f[lab])
    
     '''
-    '''
+    
     variables = f.items()
 
     
@@ -81,11 +88,12 @@ def loadNYU(path_to_mat):
         data = var[1]
         #print ("Name ", name)  # Name
 
+        '''
+        if type(data) is h5py.Dataset and name=='namesToIds':
 
-        if type(data) is h5py.Dataset and name=='names':
-
+            print(data.keys())
             label_names = data.value
-       
+        
           
         if type(data) is h5py.Dataset and name=='instances':
 
@@ -97,7 +105,8 @@ def loadNYU(path_to_mat):
         elif type(data) is h5py.Dataset and name=='labels':
 
             labels =data.value
-        
+        '''
+
         if type(data) is h5py.Dataset and name=='images':
 
             #print(data.shape)
@@ -105,17 +114,16 @@ def loadNYU(path_to_mat):
             #print(data.shape)
             # If DataSet pull the associated Data
             # If not a dataset, you may need to access the element sub-items
-            #print(data.value)
-
-    
             return data.value
-        
-    '''    
 
+
+        
+    '''   
+    print(label_names)
     print('Label names collected')
     
-    return label_names
-
+    return label_index
+    '''
 
 def get_masks(path_to_masks):
 
@@ -124,12 +132,14 @@ def get_masks(path_to_masks):
 
     for filen in fnames:
 
-
         mat = matlab.engine.start_matlab()
+        print('Starting to load file %s' % filen)
         f = mat.load(os.path.join(path_to_masks, filen), nargout=1)
 
-        m = f['masks']
-        l = f['lab']
+        m = f['m']
+        
+        print(m)
+        sys.exit(0)
         all_masks.append((m,l))
         
         '''
@@ -196,8 +206,11 @@ if __name__ == '__main__':
     #logging.info('Off we go!')
  
     #Imgs are read from the BYUDepth data set here
-    names = loadNYU(args.imgpath)
-    #print(names)
+    images = loadNYU(args.imgpath).T    #We have to take the transpose here from what it returns 
+
+    print(images.shape)
+    
+
     all_masks = get_masks(args.pathtomasks)
     print(len(all_masks))  
     

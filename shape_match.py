@@ -29,12 +29,22 @@ def shapeMatch(shape1, model):
 
 
     ret, thresh2 = cv2.threshold(model, 127, 255,1)
-    _, contours,hierarchy = cv2.findContours(thresh2,2,1)
-    shape2 = contours[0]
+    _, contours,hierarchy = cv2.findContours(thresh2,cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
 
-    #cv2.drawContours(image, [shape1], 0, (0,255,0), 3)
+    areas = [cv2.contourArea(cnt) for cnt in contours]
+   
+    idx = areas.index(max(areas))    
+
+    shape2 = contours[idx]
+
+    model  = cv2.cvtColor(model,cv2.COLOR_GRAY2RGB)
     #cv2.drawContours(model, [shape2], 0, (0,255,0), 3)
     
+    #cv2.imshow('', model)
+    #cv2.waitKey(8000)
+    #sys.exit(0)
+
     return cv2.matchShapes(shape1, shape2,1,0.0)
     
 
@@ -173,12 +183,22 @@ if __name__ == '__main__':
         #Extract shape
         try:
             ret, thresh = cv2.threshold(objimg, 0, 255,0)
-            _, contours,hierarchy = cv2.findContours(thresh,2,1)
-            shape1 = contours[0]
+            _, contours,hierarchy = cv2.findContours(thresh,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-            #cv2.imshow('', objimg)
 
-            #cv2.waitKey(2000)
+            areas = [cv2.contourArea(cnt) for cnt in contours]
+   
+            idx = areas.index(max(areas))    
+
+
+            shape1 = contours[idx]
+
+            img =  cv2.imread(filep, 1)  
+            #cv2.drawContours(img, [shape1], 0, (0,0,255), 3)
+            #cv2.imshow('', img)
+            
+            #cv2.waitKey(5000)
+
             #cv2.imshow('', thresh)
             #cv2.waitKey(2000)
         except Exception as e:
@@ -201,14 +221,14 @@ if __name__ == '__main__':
 
             #cv2.imshow('', objimg)
 
-            #cv2.waitKey(2000)
+            #cv2.waitKey(5000)
             
             with open(os.path.join(args.outpath, jname), 'w') as outf:
 
                 json.dump(simdict, outf, indent=4)
             
             continue
-
+ 
 
         #Compare with all Shapenet models
         for modelp in modelpaths: 

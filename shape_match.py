@@ -239,27 +239,27 @@ if __name__ == '__main__':
             modname = lm[len(lm)-1]
 
             comparison["compared_obj"] = modname
-            comparison["similarities"] =[]   
+            #comparison["similarities"] =[]   
 
             mimage = cv2.imread(modelp, 0)
             
             #Do a pointwise comparison within each couple
             score= shapeMatch(shape1, mimage)        
-            comparison["similarities"].append(score)
+            comparison["similarity"]= score
             
             #sys.exit(0)
-
+            '''
             try:
-                iterat, curr_min = min(comparison["similarities"], key = lambda t: t[1])  
+                iterat, curr_min = min(comparison["similarities"])  
 
             
             except TypeError:
 
                 #Not enough values yet
                 curr_min = score
-
-            if curr_min < glob_min:
-                glob_min = curr_min
+            '''
+            if score < glob_min:
+                glob_min = score
                 obj_min = modname
 
             simdict['comparisons'].append(comparison)
@@ -268,10 +268,11 @@ if __name__ == '__main__':
         #simdict["comparisons"] = sorted(simdict["comparisons"],key=lambda x:(x[1],x[0]))
         
         #Add key field for most similar object 
-        simdict["min"]=(modname, glob_min)
+        simdict["min"]=(obj_min, glob_min)
 
         #Output dictionary as JSON file
         jname = fname[:-3]+'json'
+
         with open(os.path.join(args.outpath, jname), 'w') as outf:
 
             json.dump(simdict, outf, indent=4)

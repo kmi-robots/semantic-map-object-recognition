@@ -45,7 +45,7 @@ def shapeMatch(shape1, model):
     #cv2.waitKey(8000)
     #sys.exit(0)
 
-    return cv2.matchShapes(shape1, shape2,1,0.0)
+    return cv2.matchShapes(shape1, shape2,3,0.0)
     
 
 
@@ -179,10 +179,12 @@ if __name__ == '__main__':
         simdict['obj_category']= objcat
         simdict['comparisons']=[]
         glob_min =1000.0
+        glob_max =0.0
         
         #Extract shape
         try:
             ret, thresh = cv2.threshold(objimg, 0, 255,0)
+            #ret, thresh = cv2.threshold(objimg, 127, 255,1)
             _, contours,hierarchy = cv2.findContours(thresh,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 
@@ -193,7 +195,7 @@ if __name__ == '__main__':
 
             shape1 = contours[idx]
 
-            img =  cv2.imread(filep, 1)  
+            #img =  cv2.imread(filep, 1)  
             #cv2.drawContours(img, [shape1], 0, (0,0,255), 3)
             #cv2.imshow('', img)
             

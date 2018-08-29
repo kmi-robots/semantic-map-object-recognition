@@ -22,6 +22,13 @@ import random as rng
 import scipy.io as sio
 import logging
 import h5py
+import csv
+import statistics as stat
+
+chairs=['9e14d77634cf619f174b6156db666192-0.png', '9e14d77634cf619f174b6156db666192-2.png', '9e14d77634cf619f174b6156db666192-5.png', '9e14d77634cf619f174b6156db666192-7.png', '9e14d77634cf619f174b6156db666192-10.png', '9e14d77634cf619f174b6156db666192-12.png', '49918114029ce6a63db5e7f805103dd-0.png', '49918114029ce6a63db5e7f805103dd-1.png' ,'49918114029ce6a63db5e7f805103dd-5 (1).png', '49918114029ce6a63db5e7f805103dd-5.png', '49918114029ce6a63db5e7f805103dd-6.png', '49918114029ce6a63db5e7f805103dd-9.png', '49918114029ce6a63db5e7f805103dd-11.png', '49918114029ce6a63db5e7f805103dd-13.png', 'c.png']
+plants=['4d637018815139ab97d540195229f372-1.png', '4d637018815139ab97d540195229f372-3.png', '4d637018815139ab97d540195229f372-7.png', '4d637018815139ab97d540195229f372-8.png', '4d637018815139ab97d540195229f372-11.png', '4d637018815139ab97d540195229f372-12.png' ]
+bins=['7bde818d2cbd21f3bac465483662a51d-0.png', '7bde818d2cbd21f3bac465483662a51d-3.png', '7bde818d2cbd21f3bac465483662a51d-10.png', '7bde818d2cbd21f3bac465483662a51d-12.png', '8ab06d642437f3a77d8663c09e4f524d-0.png', '8ab06d642437f3a77d8663c09e4f524d-3.png', '8ab06d642437f3a77d8663c09e4f524d-5.png', '8ab06d642437f3a77d8663c09e4f524d-8.png', '8ab06d642437f3a77d8663c09e4f524d-9.png', '8ab06d642437f3a77d8663c09e4f524d-13.png']
+
 
 
 
@@ -45,7 +52,7 @@ def shapeMatch(shape1, model):
     #cv2.waitKey(8000)
     #sys.exit(0)
 
-    return cv2.matchShapes(shape1, shape2,3,0.0)
+    return cv2.matchShapes(shape1, shape2,1,0.0)
     
 
 
@@ -165,8 +172,14 @@ if __name__ == '__main__':
     objectn = os.listdir(args.imgpath)
     objectpaths = [os.path.join(args.imgpath, name) for name in objectn]
 
+    #Recap all in a csv
+    wrtr = csv.writer(open(os.path.join(args.outpath, 'l1_results_recap_chairs.csv'), 'w'))
+    #Write header
+    wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
+    
     for filep in objectpaths:
 
+        row=[]
         simdict = {}
         l = filep.split("/")
         fname = l[len(l)-1]
@@ -181,6 +194,10 @@ if __name__ == '__main__':
         glob_min =1000.0
         glob_max =0.0
         
+        row.append(fname)
+        row.append(objcat)
+
+
         #Extract shape
         try:
             ret, thresh = cv2.threshold(objimg, 0, 255,0)
@@ -231,6 +248,7 @@ if __name__ == '__main__':
             
             continue
  
+        scores =[]        
 
         #Compare with all Shapenet models
         for modelp in modelpaths: 
@@ -264,7 +282,9 @@ if __name__ == '__main__':
                 glob_min = score
                 obj_min = modname
 
+            scores.append(score)
             simdict['comparisons'].append(comparison)
+
 
         #Sort by descending similarity
         #simdict["comparisons"] = sorted(simdict["comparisons"],key=lambda x:(x[1],x[0]))
@@ -272,13 +292,45 @@ if __name__ == '__main__':
         #Add key field for most similar object 
         simdict["min"]=(obj_min, glob_min)
 
+        row.append(obj_min)
+        row.append(glob_min)
+
         #Output dictionary as JSON file
         jname = fname[:-3]+'json'
+        
+        #Add stats on scores
+        row.append(stat.mean(scores))
+        row.append(stat.median(scores))
+        row.append(stat.stdev(scores))
+        row.append(max(scores))
+        
+        #Output predicted cat
+        if obj_min in chairs:
+            pred='chairs'
 
+        elif obj_min in bins:
+            pred='bins'
+        
+        elif obj_min in plants:
+            pred='plants'
+            
+        row.append(pred)
+
+        if pred==objcat:
+            row.append(1)
+        else:
+            row.append(0)
+
+        wrtr.writerow(row) 
+         
+        '''
         with open(os.path.join(args.outpath, jname), 'w') as outf:
 
             json.dump(simdict, outf, indent=4)
 
         #sys.exit(0)
- 
+        '''
+
+
+
     logging.info("Complete...took %f seconds" % float(time.time() - start))

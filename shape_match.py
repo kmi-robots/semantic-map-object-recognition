@@ -73,6 +73,22 @@ def shapeMatch(shape1, shape2):
     
 
 
+def cropToC(image, contour):
+
+    
+    mask = np.zeros_like(image) # Create mask where white is what we want, black otherwise
+    cv2.drawContours(mask, [contour], 0, 255, -1) # Draw filled contour in mask
+    out = np.zeros_like(image) # Extract out the object and place into output image
+    out[mask == 255] = image[mask == 255]
+    
+    # Now crop
+    (x, y) = np.where(mask == 255)
+    (topx, topy) = (np.min(x), np.min(y))
+    (bottomx, bottomy) = (np.max(x), np.max(y))
+
+    return out[topx:bottomx+1, topy:bottomy+1]
+
+
 def featureMatch(inimg, refimg):
 
     '''
@@ -80,7 +96,7 @@ def featureMatch(inimg, refimg):
     cropped to contour instead
 
     '''
-        
+    pass        
 
      
         
@@ -127,6 +143,8 @@ if __name__ == '__main__':
         #Read image in grayscale
         objimg = cv2.imread(filep, 0) 
     
+        objrgb = cv2.imread(filep, 1) 
+ 
         simdict["img_id"] = fname
         simdict['obj_category']= objcat
         simdict['comparisons']=[]
@@ -141,6 +159,7 @@ if __name__ == '__main__':
         try:
 
             shape1 = mainContour(objimg)
+
         except Exception as e:
 
             #Empty masks 
@@ -183,17 +202,23 @@ if __name__ == '__main__':
             #comparison["similarities"] =[]   
 
             mimage = cv2.imread(modelp, 0)
-                         
+            mrgb = cv2.imread(modelp, 1)
+            
             shape2 = mainContour(mimage)
             
             #Perform a pointwise comparison within each couple
-            #score= shapeMatch(shape1, shape2)        
-            #Crop image 
-            score = featureMatch(objimg, mimage)
+            #score= shapeMatch(shape1, shape2) 
+       
+            #Crop images to contour 
+            objrgb = cropToC(objrgb, shape1)
+            mrgb = cropToC(mrgb, shape2)
+             
+            score = featureMatch(objrgb, mrgb)
+                        
+            #sys.exit(0)
 
             comparison["similarity"]= score
             
-            #sys.exit(0)
             '''
             try:
                 iterat, curr_min = min(comparison["similarities"])  

@@ -49,7 +49,6 @@ def mainContour(image):
    
     idx = areas.index(max(areas))    
 
-
     return contours[idx]
 
 
@@ -75,28 +74,72 @@ def shapeMatch(shape1, shape2):
 
 def cropToC(image, contour):
 
-    
+    alpha=0.0 # transparent overlay
     mask = np.zeros_like(image) # Create mask where white is what we want, black otherwise
-    cv2.drawContours(mask, [contour], 0, 255, -1) # Draw filled contour in mask
-    out = np.zeros_like(image) # Extract out the object and place into output image
-    out[mask == 255] = image[mask == 255]
     
+    cv2.drawContours(mask, [contour], 0, 255, -1) # Draw filled contour in mask
+    
+    mask = np.invert(mask)
+    #out = np.zeros_like(image) # Extract out the object and place into output image
+    #Invert Black  with White (ShapeNets backgrounds are white) 
+    #out = np.invert(out)
+    out = image.copy()
+    #overlay = image.copy()
+    #Add transarent mask on top
+    cv2.addWeighted(mask, alpha, out, 1 - alpha,
+		0, out)
+    out[np.where((mask == [255,255,255]).all(axis = 2))] = [255,255,255]
+    
+    print(out.shape)
     # Now crop
-    (x, y) = np.where(mask == 255)
+    x = np.where(mask == [0,0,0])[0]
+    y = np.where(mask == [0,0,0])[1]
+    print(x)
+    print(y)
     (topx, topy) = (np.min(x), np.min(y))
     (bottomx, bottomy) = (np.max(x), np.max(y))
 
-    return out[topx:bottomx+1, topy:bottomy+1]
+    out= out[topx:bottomx+1, topy:bottomy+1]
+    
+    cv2.imshow('', out)
+    cv2.waitKey(0)
 
+    return out
 
-def featureMatch(inimg, refimg):
+def featureMatch(inimg, refimg, flag=0):
 
     '''
     TODO: figure out if it should better have img
     cropped to contour instead
 
     '''
-    pass        
+
+    
+    #Histogram comparison as method
+    if flag ==0:
+
+
+        # extract a 3D RGB color histogram from the image,
+	# using 8 bins per channel, normalize, and update
+	# the index
+	hist = cv2.calcHist([inimg], [0, 1, 2], None, [8, 8, 8],
+		[0, 256, 0, 256, 0, 256])
+	hist = cv2.normalize(hist).flatten()
+
+	hist2 = cv2.calcHist([refimg], [0, 1, 2], None, [8, 8, 8],
+		[0, 256, 0, 256, 0, 256])
+	hist2 = cv2.normalize(hist2).flatten()
+
+        OPENCV_METHODS = (
+	("Correlation", cv2.cv.CV_COMP_CORREL), #the higher the better
+	("Chi-Squared", cv2.cv.CV_COMP_CHISQR), #the smaller the better
+	("Intersection", cv2.cv.CV_COMP_INTERSECT), #the higher the better
+	("Hellinger", cv2.cv.CV_COMP_BHATTACHARYYA)) #the smaller the better
+
+        d = cv2.compareHist(hist2, hist, OPENCV_METHODS[0][1])
+
+
+    return d        
 
      
         
@@ -215,7 +258,7 @@ if __name__ == '__main__':
              
             score = featureMatch(objrgb, mrgb)
                         
-            #sys.exit(0)
+            sys.exit(0)
 
             comparison["similarity"]= score
             

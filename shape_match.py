@@ -26,6 +26,7 @@ import csv
 import statistics as stat
 
 
+
 #### A bunch of ugly hardcoded object IDs    ##############################
 
 chairs=['9e14d77634cf619f174b6156db666192-0.png', '9e14d77634cf619f174b6156db666192-2.png', '9e14d77634cf619f174b6156db666192-5.png', '9e14d77634cf619f174b6156db666192-7.png', '9e14d77634cf619f174b6156db666192-10.png', '9e14d77634cf619f174b6156db666192-12.png', '49918114029ce6a63db5e7f805103dd-0.png', '49918114029ce6a63db5e7f805103dd-1.png' ,'49918114029ce6a63db5e7f805103dd-5 (1).png', '49918114029ce6a63db5e7f805103dd-5.png', '49918114029ce6a63db5e7f805103dd-6.png', '49918114029ce6a63db5e7f805103dd-9.png', '49918114029ce6a63db5e7f805103dd-11.png', '49918114029ce6a63db5e7f805103dd-13.png', 'c.png']
@@ -33,6 +34,9 @@ plants=['4d637018815139ab97d540195229f372-1.png', '4d637018815139ab97d540195229f
 bins=['7bde818d2cbd21f3bac465483662a51d-0.png', '7bde818d2cbd21f3bac465483662a51d-3.png', '7bde818d2cbd21f3bac465483662a51d-10.png', '7bde818d2cbd21f3bac465483662a51d-12.png', '8ab06d642437f3a77d8663c09e4f524d-0.png', '8ab06d642437f3a77d8663c09e4f524d-3.png', '8ab06d642437f3a77d8663c09e4f524d-5.png', '8ab06d642437f3a77d8663c09e4f524d-8.png', '8ab06d642437f3a77d8663c09e4f524d-9.png', '8ab06d642437f3a77d8663c09e4f524d-13.png']
 
 #############################################################################
+
+
+inverseNeeded = False
 
 
 def mainContour(image):
@@ -68,6 +72,7 @@ def shapeMatch(shape1, shape2):
     #cv2.waitKey(8000)
     #sys.exit(0)
 
+    #Currently takes L3 method as reference
     return cv2.matchShapes(shape1, shape2,3,0.0)
     
 
@@ -90,19 +95,22 @@ def cropToC(image, contour):
 		0, out)
     out[np.where((mask == [255,255,255]).all(axis = 2))] = [255,255,255]
     
-    print(out.shape)
     # Now crop
     x = np.where(mask == [0,0,0])[0]
     y = np.where(mask == [0,0,0])[1]
-    print(x)
-    print(y)
-    (topx, topy) = (np.min(x), np.min(y))
-    (bottomx, bottomy) = (np.max(x), np.max(y))
+    try:
+        (topx, topy) = (np.min(x), np.min(y))
+        (bottomx, bottomy) = (np.max(x), np.max(y))
 
-    out= out[topx:bottomx+1, topy:bottomy+1]
+        out= out[topx:bottomx+1, topy:bottomy+1]
+
+
+    except Exception as e:
+        print(str(e))
+        sys.exit(0)
     
-    cv2.imshow('', out)
-    cv2.waitKey(0)
+    #cv2.imshow('', out)
+    #cv2.waitKey(0)
 
     return out
 
@@ -124,22 +132,25 @@ def featureMatch(inimg, refimg, flag=0):
 	# the index
 	hist = cv2.calcHist([inimg], [0, 1, 2], None, [8, 8, 8],
 		[0, 256, 0, 256, 0, 256])
-	hist = cv2.normalize(hist).flatten()
+	hist = cv2.normalize(hist, hist).flatten()
 
 	hist2 = cv2.calcHist([refimg], [0, 1, 2], None, [8, 8, 8],
 		[0, 256, 0, 256, 0, 256])
-	hist2 = cv2.normalize(hist2).flatten()
+	hist2 = cv2.normalize(hist2, hist2).flatten()
 
         OPENCV_METHODS = (
-	("Correlation", cv2.cv.CV_COMP_CORREL), #the higher the better
-	("Chi-Squared", cv2.cv.CV_COMP_CHISQR), #the smaller the better
-	("Intersection", cv2.cv.CV_COMP_INTERSECT), #the higher the better
-	("Hellinger", cv2.cv.CV_COMP_BHATTACHARYYA)) #the smaller the better
+	("Correlation", cv2.HISTCMP_CORREL), #the higher the better
+	("Chi-Squared", cv2.HISTCMP_CHISQR), #the smaller the better
+	("Intersection", cv2.HISTCMP_INTERSECT), #the higher the better
+	("Hellinger", cv2.HISTCMP_BHATTACHARYYA)) #the smaller the better
 
         d = cv2.compareHist(hist2, hist, OPENCV_METHODS[0][1])
 
+        if OPENCV_METHODS[0][1] == 0 or OPENCV_METHODS[0][1] == 2:
+            
+            inverseNeeded = True
 
-    return d        
+    return d, inverseNeeded        
 
      
         
@@ -171,7 +182,7 @@ if __name__ == '__main__':
     objectpaths = [os.path.join(args.imgpath, name) for name in objectn]
 
     #Recap all in a csv
-    wrtr = csv.writer(open(os.path.join(args.outpath, 'l3_results_recap_bins.csv'), 'w'))
+    wrtr = csv.writer(open(os.path.join(args.outpath, 'l3corr_results_recap_chairs_0307.csv'), 'w'))
     #Write header
     wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     
@@ -203,6 +214,7 @@ if __name__ == '__main__':
 
             shape1 = mainContour(objimg)
 
+            objrgb = cropToC(objrgb, shape1)
         except Exception as e:
 
             #Empty masks 
@@ -250,15 +262,29 @@ if __name__ == '__main__':
             shape2 = mainContour(mimage)
             
             #Perform a pointwise comparison within each couple
-            #score= shapeMatch(shape1, shape2) 
+            shapescore= shapeMatch(shape1, shape2) 
        
             #Crop images to contour 
-            objrgb = cropToC(objrgb, shape1)
             mrgb = cropToC(mrgb, shape2)
              
-            score = featureMatch(objrgb, mrgb)
-                        
-            sys.exit(0)
+            #sys.exit(0)
+            #print(filep)
+
+            #WEIGHTS are INITIALIZED HERE!
+            alpha =0.3
+            beta= 0.7
+
+            clrscore, flag = featureMatch(objrgb, mrgb)
+     
+            if flag:
+
+                #print("Inverting opposite trend scores!")
+                clrscore = 1./clrscore   
+            
+            score = alpha*shapescore + beta*clrscore
+
+            #print(score)                   
+            #sys.exit(0)
 
             comparison["similarity"]= score
             
@@ -272,10 +298,15 @@ if __name__ == '__main__':
                 #Not enough values yet
                 curr_min = score
             '''
+            
             if score < glob_min:
                 glob_min = score
                 obj_min = modname
-
+            '''
+            if score > glob_max:
+                glob_max=score
+                obj_max =modname
+            '''
             scores.append(score)
             simdict['comparisons'].append(comparison)
 
@@ -283,12 +314,16 @@ if __name__ == '__main__':
         #Sort by descending similarity
         #simdict["comparisons"] = sorted(simdict["comparisons"],key=lambda x:(x[1],x[0]))
         
+        
         #Add key field for most similar object 
         simdict["min"]=(obj_min, glob_min)
 
         row.append(obj_min)
         row.append(glob_min)
-
+        '''
+        row.append(obj_max)
+        row.append(glob_max)
+        '''
         #Output dictionary as JSON file
         jname = fname[:-3]+'json'
         
@@ -299,6 +334,7 @@ if __name__ == '__main__':
         row.append(max(scores))
         
         #Output predicted cat
+        
         if obj_min in chairs:
             pred='chairs'
 
@@ -307,7 +343,18 @@ if __name__ == '__main__':
         
         elif obj_min in plants:
             pred='plants'
-            
+        
+        '''
+
+        if obj_max in chairs:
+            pred='chairs'
+
+        elif obj_max in bins:
+            pred='bins'
+        
+        elif obj_max in plants:
+            pred='plants'
+        '''
         row.append(pred)
 
         if pred==objcat:

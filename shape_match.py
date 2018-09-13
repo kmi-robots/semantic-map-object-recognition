@@ -1,3 +1,4 @@
+from __future__ import division
 import rosbag
 #import matlab
 #from mat_segmenting import extract_masks
@@ -24,7 +25,7 @@ import logging
 import h5py
 import csv
 import statistics as stat
-
+import random
 
 
 #### A bunch of ugly hardcoded object IDs    ##############################
@@ -33,11 +34,13 @@ chairs=['9e14d77634cf619f174b6156db666192-0.png', '9e14d77634cf619f174b6156db666
 plants=['4d637018815139ab97d540195229f372-1.png', '4d637018815139ab97d540195229f372-3.png', '4d637018815139ab97d540195229f372-7.png', '4d637018815139ab97d540195229f372-8.png', '4d637018815139ab97d540195229f372-11.png', '4d637018815139ab97d540195229f372-12.png' ]
 bins=['7bde818d2cbd21f3bac465483662a51d-0.png', '7bde818d2cbd21f3bac465483662a51d-3.png', '7bde818d2cbd21f3bac465483662a51d-10.png', '7bde818d2cbd21f3bac465483662a51d-12.png', '8ab06d642437f3a77d8663c09e4f524d-0.png', '8ab06d642437f3a77d8663c09e4f524d-3.png', '8ab06d642437f3a77d8663c09e4f524d-5.png', '8ab06d642437f3a77d8663c09e4f524d-8.png', '8ab06d642437f3a77d8663c09e4f524d-9.png', '8ab06d642437f3a77d8663c09e4f524d-13.png']
 
+all_ids = list(set().union(chairs,plants,bins))
+
 #############################################################################
 
 
 inverseNeeded = False
-
+randomized = True
 
 def mainContour(image):
 
@@ -166,7 +169,8 @@ if __name__ == '__main__':
 
     start = time.time()
    
-     
+    accuracy = 0.0     
+    correct =0
     #CHANGED: Ended up implementing dataset pre-proc in Matlab directly
     #see maskfiles.m
 
@@ -182,7 +186,7 @@ if __name__ == '__main__':
     objectpaths = [os.path.join(args.imgpath, name) for name in objectn]
 
     #Recap all in a csv
-    wrtr = csv.writer(open(os.path.join(args.outpath, 'l3corr_results_recap_chairs_0307.csv'), 'w'))
+    wrtr = csv.writer(open(os.path.join(args.outpath, 'base_results_recap_chairs.csv'), 'w'))
     #Write header
     wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     
@@ -215,6 +219,7 @@ if __name__ == '__main__':
             shape1 = mainContour(objimg)
 
             objrgb = cropToC(objrgb, shape1)
+
         except Exception as e:
 
             #Empty masks 
@@ -302,6 +307,11 @@ if __name__ == '__main__':
             if score < glob_min:
                 glob_min = score
                 obj_min = modname
+         
+            elif randomized:
+                obj_min = random.choice(all_ids)
+
+
             '''
             if score > glob_max:
                 glob_max=score
@@ -333,6 +343,7 @@ if __name__ == '__main__':
         row.append(stat.stdev(scores))
         row.append(max(scores))
         
+
         #Output predicted cat
         
         if obj_min in chairs:
@@ -358,12 +369,16 @@ if __name__ == '__main__':
         row.append(pred)
 
         if pred==objcat:
-            row.append(1)
+ 
+           row.append(1)
+           correct +=1 
         else:
             row.append(0)
 
         wrtr.writerow(row) 
-         
+
+ 
+                 
         '''
         with open(os.path.join(args.outpath, jname), 'w') as outf:
 
@@ -371,7 +386,9 @@ if __name__ == '__main__':
 
         #sys.exit(0)
         '''
-
-
+    print(correct)
+    print(len(objectn))
+    accuracy = float(correct/ len(objectn)) 
+    print("Tot accuracy is %f " % accuracy )
 
     logging.info("Complete...took %f seconds" % float(time.time() - start))

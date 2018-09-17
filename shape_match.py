@@ -49,6 +49,8 @@ all_ids = list(set().union(chairs,plants,bins))
 
 inverseNeeded = False
 randomized = True
+micro =True
+macro =False
 
 def mainContour(image):
 
@@ -163,7 +165,15 @@ def featureMatch(inimg, refimg, flag=0):
 
     return d, inverseNeeded        
 
-     
+
+def macroscore(namelist,path):
+
+    #exactly the same, but on a broader list, 
+    #just repeating for the sake of readability
+
+    return microscore(namelist, path)
+
+ 
 def microscore(namelist, path):
 
     scores=[]
@@ -193,8 +203,8 @@ def microscore(namelist, path):
         #print(filep)
 
         #WEIGHTS are INITIALIZED HERE!
-        alpha =1.0  #0.3
-        beta= 1.0   #0.7
+        alpha =0.3
+        beta= 0.7
 
         clrscore, flag = featureMatch(objrgb, mrgb)
      
@@ -240,7 +250,7 @@ if __name__ == '__main__':
     objectpaths = [os.path.join(args.imgpath, name) for name in objectn]
 
     #Recap all in a csv
-    wrtr = csv.writer(open(os.path.join(args.outpath, 'micro_l3corr_results_recap_chairs.csv'), 'w'))
+    wrtr = csv.writer(open(os.path.join(args.outpath, 'micro_l3corr_results_recap_chairs_0307.csv'), 'w'))
     #Write header
     wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     
@@ -304,211 +314,266 @@ if __name__ == '__main__':
     
         avgs =[] 
 
-        #Constrain the comparison by micro-category
-        chair1s = microscore(chair1, args.modelpath)
 
-        chair2s = microscore(chair2, args.modelpath)
+        if micro:
 
-        plant1s = microscore(plant1, args.modelpath)
+            #Constrain the comparison by micro-category
+            chair1s = microscore(chair1, args.modelpath)
 
-        bin1s = microscore(bin1, args.modelpath)
+            chair2s = microscore(chair2, args.modelpath)
 
-        bin2s = microscore(bin2, args.modelpath)
+            plant1s = microscore(plant1, args.modelpath)
 
-        avgch1 = sum(chair1s)/len(chair1s)
-        avgs.append(avgch1)
-        avgch2 = sum(chair2s)/len(chair2s)
-        avgs.append(avgch2)
-        avgpl1 = sum(plant1s)/len(plant1s)
-        avgs.append(avgpl1)
-        avgb1 = sum(bin1s)/len(bin1s)
-        avgs.append(avgb1)
-        avgb2 = sum(bin2s)/len(bin2s)
-        avgs.append(avgb2)
+            bin1s = microscore(bin1, args.modelpath)
+
+            bin2s = microscore(bin2, args.modelpath)
+
+            avgch1 = sum(chair1s)/len(chair1s)
+            avgs.append(avgch1)
+            avgch2 = sum(chair2s)/len(chair2s)
+            avgs.append(avgch2)
+            avgpl1 = sum(plant1s)/len(plant1s)
+            avgs.append(avgpl1)
+            avgb1 = sum(bin1s)/len(bin1s)
+            avgs.append(avgb1)
+            avgb2 = sum(bin2s)/len(bin2s)
+            avgs.append(avgb2)
         
-        glob_min = min(avgs)
-        min_idx = avgs.index(min(avgs))
+            glob_min = min(avgs)
+            min_idx = avgs.index(min(avgs))
 
-        if min_idx ==0 or min_idx==1:
-            obj_min ='chair'
-            pred='chairs'
+            if min_idx ==0 or min_idx==1:
+                obj_min ='chair'
+                pred='chairs'
         
-        elif min_idx ==2:
-            obj_min ='plant'
-            pred='plants'
+            elif min_idx ==2:
+                obj_min ='plant'
+                pred='plants'
 
-        elif min_idx ==3 or min_idx==4:
-            obj_min ='bin'
-            pred='bins'
+            elif min_idx ==3 or min_idx==4:
+                obj_min ='bin'
+                pred='bins'
 
         
-        row.append(obj_min)
-        row.append(glob_min)
+            row.append(obj_min)
+            row.append(glob_min)
 
-        #Add stats on scores
-        row.append(stat.mean(avgs))
-        row.append(stat.median(avgs))
-        row.append(stat.stdev(avgs))
-        row.append(max(avgs))
+            #Add stats on scores
+            row.append(stat.mean(avgs))
+            row.append(stat.median(avgs))
+            row.append(stat.stdev(avgs))
+            row.append(max(avgs))
 
-        row.append(pred)
+            row.append(pred)
 
-        if pred==objcat:
+            if pred==objcat:
  
-           row.append(1)
-           correct +=1 
-        else:
-            row.append(0)
+                row.append(1)
+                correct +=1 
+            else:
+                row.append(0)
 
-        wrtr.writerow(row) 
+            wrtr.writerow(row) 
 
 
         #Constrain the comparison by macro-category
-
-        ''' 
-        scores =[]        
-        #Compare with all Shapenet models
-        for modelp in modelpaths: 
-
-            comparison={} 
-            
-            lm = modelp.split('/')             
-            modname = lm[len(lm)-1]
-
-            comparison["compared_obj"] = modname
-            #comparison["similarities"] =[]   
-
-            mimage = cv2.imread(modelp, 0)
-            mrgb = cv2.imread(modelp, 1)
-            
-            shape2 = mainContour(mimage)
-            
-            #Perform a pointwise comparison within each couple
-            shapescore= shapeMatch(shape1, shape2) 
-       
-            #Crop images to contour 
-            mrgb = cropToC(mrgb, shape2)
-             
-            #sys.exit(0)
-            #print(filep)
-
-            #WEIGHTS are INITIALIZED HERE!
-            alpha =0.3
-            beta= 0.7
-
-            clrscore, flag = featureMatch(objrgb, mrgb)
-     
-            if flag:
-
-                #print("Inverting opposite trend scores!")
-                clrscore = 1./clrscore   
-            
-            score = alpha*shapescore + beta*clrscore
-
-            #print(score)                   
-            #sys.exit(0)
-
-            comparison["similarity"]= score
-            
-            
-            
-            #try:
-            #    iterat, curr_min = min(comparison["similarities"])  
-
-            
-            #except TypeError:
-
-                #Not enough values yet
-            #    curr_min = score
-            
-            
-            if score < glob_min:
-                glob_min = score
-                obj_min = modname
-         
-            elif randomized:
-                obj_min = random.choice(all_ids)
-           
-            
-           
-            #if score > glob_max:
-            #    glob_max=score
-            #    obj_max =modname
-            
-            
-            scores.append(score)
-            simdict['comparisons'].append(comparison)
-        '''
-
-        #Sort by descending similarity
-        #simdict["comparisons"] = sorted(simdict["comparisons"],key=lambda x:(x[1],x[0]))
+        elif macro:
         
-        '''        
-        #Add key field for most similar object 
-        simdict["min"]=(obj_min, glob_min)
+            chairstot = macroscore(chairs, args.modelpath)
 
-        row.append(obj_min)
-        row.append(glob_min)
-        '''
-        '''
-        row.append(obj_max)
-        row.append(glob_max)
-        '''
-        '''
-        #Output dictionary as JSON file
-        jname = fname[:-3]+'json'
-        
-        #Add stats on scores
-        row.append(stat.mean(scores))
-        row.append(stat.median(scores))
-        row.append(stat.stdev(scores))
-        row.append(max(scores))
-        
-        '''
-        '''
-        #Output predicted cat
-        
-        if obj_min in chairs:
-            pred='chairs'
+            plantstot = macroscore(plants, args.modelpath)
 
-        elif obj_min in bins:
-            pred='bins'
+            binstot = macroscore(bins, args.modelpath)
+
+            avgch = sum(chairstot)/len(chairstot)
+            avgs.append(avgch)
+            avgpl = sum(plantstot)/len(plantstot)
+            avgs.append(avgpl)
+            avgbin = sum(binstot)/len(binstot)
+            avgs.append(avgbin)
         
-        elif obj_min in plants:
-            pred='plants'
-        '''
-        '''
+            glob_min = min(avgs)
+            min_idx = avgs.index(min(avgs))
 
-        if obj_max in chairs:
-            pred='chairs'
-
-        elif obj_max in bins:
-            pred='bins'
+            if min_idx ==0:
+                obj_min ='chair'
+                pred='chairs'
         
-        elif obj_max in plants:
-            pred='plants'
-        '''
-        '''
-        row.append(pred)
+            elif min_idx ==1:
+                obj_min ='plant'
+                pred='plants'
 
-        if pred==objcat:
+            elif min_idx ==2:
+                obj_min ='bin'
+                pred='bins'
+
+        
+            row.append(obj_min)
+            row.append(glob_min)
+
+            #Add stats on scores
+            row.append(stat.mean(avgs))
+            row.append(stat.median(avgs))
+            row.append(stat.stdev(avgs))
+            row.append(max(avgs))
+
+            row.append(pred)
+
+            if pred==objcat:
  
-           row.append(1)
-           correct +=1 
+                row.append(1)
+                correct +=1 
+            else:
+                row.append(0)
+
+            wrtr.writerow(row) 
+
         else:
-            row.append(0)
 
-        wrtr.writerow(row) 
+                #Compare with all Shapenet models
+                scores =[]    
+    
+                for modelp in modelpaths: 
 
-        '''
+                    comparison={} 
+            
+                    lm = modelp.split('/')             
+                    modname = lm[len(lm)-1]
+
+                    comparison["compared_obj"] = modname
+                    #comparison["similarities"] =[]   
+
+                    mimage = cv2.imread(modelp, 0)
+                    mrgb = cv2.imread(modelp, 1)
+            
+                    shape2 = mainContour(mimage)
+            
+                    #Perform a pointwise comparison within each couple
+                    shapescore= shapeMatch(shape1, shape2) 
+       
+                    #Crop images to contour 
+                    mrgb = cropToC(mrgb, shape2)
+             
+                    #sys.exit(0)
+                    #print(filep)
+
+                    #WEIGHTS are INITIALIZED HERE!
+                    alpha =0.3
+                    beta= 0.7
+
+                    clrscore, flag = featureMatch(objrgb, mrgb)
+     
+                    if flag:
+
+                        #print("Inverting opposite trend scores!")
+                        clrscore = 1./clrscore   
+            
+                    score = alpha*shapescore + beta*clrscore
+
+                    #print(score)                   
+                    #sys.exit(0)
+
+                    comparison["similarity"]= score
+            
+            
+            
+                    #try:
+                    #    iterat, curr_min = min(comparison["similarities"])  
+
+            
+                    #except TypeError:
+
+                        #Not enough values yet
+                    #    curr_min = score
+            
+            
+                    if score < glob_min:
+                        glob_min = score
+                        obj_min = modname
+         
+                    elif randomized:
+                        obj_min = random.choice(all_ids)
+           
+            
+           
+                    #if score > glob_max:
+                    #    glob_max=score
+                    #    obj_max =modname
+            
+            
+                scores.append(score)
+                simdict['comparisons'].append(comparison)
+
+                '''
+
+                #Sort by descending similarity
+                #simdict["comparisons"] = sorted(simdict["comparisons"],key=lambda x:(x[1],x[0]))
+        
+                '''        
+                #Add key field for most similar object 
+                simdict["min"]=(obj_min, glob_min)
+
+                row.append(obj_min)
+                row.append(glob_min)
+        
+                '''
+                row.append(obj_max)
+                row.append(glob_max)
+                '''
+        
+                #Output dictionary as JSON file
+                jname = fname[:-3]+'json'
+        
+                #Add stats on scores
+                row.append(stat.mean(scores))
+                row.append(stat.median(scores))
+                row.append(stat.stdev(scores))
+                row.append(max(scores))
+        
+        
+                #Output predicted cat
+        
+                if obj_min in chairs:
+                    pred='chairs'
+
+                elif obj_min in bins:
+                    pred='bins'
+        
+                elif obj_min in plants:
+                    pred='plants'
+        
+                '''
+
+                if obj_max in chairs:
+                    pred='chairs'
+
+                elif obj_max in bins:
+                    pred='bins'
+        
+                elif obj_max in plants:
+                    pred='plants'
+                '''
+        
+                row.append(pred)
+
+                if pred==objcat:
+ 
+                    row.append(1)
+                    correct +=1 
+                else:
+                    row.append(0)
+
+                wrtr.writerow(row) 
+
+        
                  
-        '''
-        with open(os.path.join(args.outpath, jname), 'w') as outf:
+                '''
+                with open(os.path.join(args.outpath, jname), 'w') as outf:
 
-            json.dump(simdict, outf, indent=4)
+                    json.dump(simdict, outf, indent=4)
 
-        #sys.exit(0)
-        '''
+                #sys.exit(0)
+                '''
     print(correct)
     print(len(objectn))
     accuracy = float(correct/ len(objectn)) 

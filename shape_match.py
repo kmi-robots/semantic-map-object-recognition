@@ -30,7 +30,15 @@ import random
 
 #### A bunch of ugly hardcoded object IDs    ##############################
 
-chairs=['9e14d77634cf619f174b6156db666192-0.png', '9e14d77634cf619f174b6156db666192-2.png', '9e14d77634cf619f174b6156db666192-5.png', '9e14d77634cf619f174b6156db666192-7.png', '9e14d77634cf619f174b6156db666192-10.png', '9e14d77634cf619f174b6156db666192-12.png', '49918114029ce6a63db5e7f805103dd-0.png', '49918114029ce6a63db5e7f805103dd-1.png' ,'49918114029ce6a63db5e7f805103dd-5 (1).png', '49918114029ce6a63db5e7f805103dd-5.png', '49918114029ce6a63db5e7f805103dd-6.png', '49918114029ce6a63db5e7f805103dd-9.png', '49918114029ce6a63db5e7f805103dd-11.png', '49918114029ce6a63db5e7f805103dd-13.png', 'c.png']
+#Micro, i.e., same object different views
+chair1=['9e14d77634cf619f174b6156db666192-0.png', '9e14d77634cf619f174b6156db666192-2.png', '9e14d77634cf619f174b6156db666192-5.png', '9e14d77634cf619f174b6156db666192-7.png', '9e14d77634cf619f174b6156db666192-10.png', '9e14d77634cf619f174b6156db666192-12.png', 'c.png']
+chair2=['49918114029ce6a63db5e7f805103dd-0.png', '49918114029ce6a63db5e7f805103dd-1.png' ,'49918114029ce6a63db5e7f805103dd-5.png', '49918114029ce6a63db5e7f805103dd-6.png', '49918114029ce6a63db5e7f805103dd-9.png', '49918114029ce6a63db5e7f805103dd-11.png', '49918114029ce6a63db5e7f805103dd-13.png']
+plant1=['4d637018815139ab97d540195229f372-1.png', '4d637018815139ab97d540195229f372-3.png', '4d637018815139ab97d540195229f372-7.png', '4d637018815139ab97d540195229f372-8.png', '4d637018815139ab97d540195229f372-11.png', '4d637018815139ab97d540195229f372-12.png'] 
+bin1=['7bde818d2cbd21f3bac465483662a51d-0.png', '7bde818d2cbd21f3bac465483662a51d-3.png', '7bde818d2cbd21f3bac465483662a51d-10.png', '7bde818d2cbd21f3bac465483662a51d-12.png']
+bin2=['8ab06d642437f3a77d8663c09e4f524d-0.png', '8ab06d642437f3a77d8663c09e4f524d-3.png', '8ab06d642437f3a77d8663c09e4f524d-5.png', '8ab06d642437f3a77d8663c09e4f524d-8.png', '8ab06d642437f3a77d8663c09e4f524d-9.png', '8ab06d642437f3a77d8663c09e4f524d-13.png']
+
+#Macro, i.e., same object class
+chairs=['9e14d77634cf619f174b6156db666192-0.png', '9e14d77634cf619f174b6156db666192-2.png', '9e14d77634cf619f174b6156db666192-5.png', '9e14d77634cf619f174b6156db666192-7.png', '9e14d77634cf619f174b6156db666192-10.png', '9e14d77634cf619f174b6156db666192-12.png', '49918114029ce6a63db5e7f805103dd-0.png', '49918114029ce6a63db5e7f805103dd-1.png' ,'49918114029ce6a63db5e7f805103dd-5.png', '49918114029ce6a63db5e7f805103dd-6.png', '49918114029ce6a63db5e7f805103dd-9.png', '49918114029ce6a63db5e7f805103dd-11.png', '49918114029ce6a63db5e7f805103dd-13.png', 'c.png']
 plants=['4d637018815139ab97d540195229f372-1.png', '4d637018815139ab97d540195229f372-3.png', '4d637018815139ab97d540195229f372-7.png', '4d637018815139ab97d540195229f372-8.png', '4d637018815139ab97d540195229f372-11.png', '4d637018815139ab97d540195229f372-12.png' ]
 bins=['7bde818d2cbd21f3bac465483662a51d-0.png', '7bde818d2cbd21f3bac465483662a51d-3.png', '7bde818d2cbd21f3bac465483662a51d-10.png', '7bde818d2cbd21f3bac465483662a51d-12.png', '8ab06d642437f3a77d8663c09e4f524d-0.png', '8ab06d642437f3a77d8663c09e4f524d-3.png', '8ab06d642437f3a77d8663c09e4f524d-5.png', '8ab06d642437f3a77d8663c09e4f524d-8.png', '8ab06d642437f3a77d8663c09e4f524d-9.png', '8ab06d642437f3a77d8663c09e4f524d-13.png']
 
@@ -156,6 +164,52 @@ def featureMatch(inimg, refimg, flag=0):
     return d, inverseNeeded        
 
      
+def microscore(namelist, path):
+
+    scores=[]
+
+    for modelname in namelist:
+             
+        modelp = os.path.join(path, modelname)
+
+            
+        lm = modelp.split('/')             
+        modname = lm[len(lm)-1]
+
+        #comparison["similarities"] =[]   
+
+        mimage = cv2.imread(modelp, 0)
+        mrgb = cv2.imread(modelp, 1)
+            
+        shape2 = mainContour(mimage)
+            
+        #Perform a pointwise comparison within each couple
+        shapescore= shapeMatch(shape1, shape2) 
+       
+        #Crop images to contour 
+        mrgb = cropToC(mrgb, shape2)
+             
+        #sys.exit(0)
+        #print(filep)
+
+        #WEIGHTS are INITIALIZED HERE!
+        alpha =1.0  #0.3
+        beta= 1.0   #0.7
+
+        clrscore, flag = featureMatch(objrgb, mrgb)
+     
+        if flag:
+
+            #print("Inverting opposite trend scores!")
+            clrscore = 1./clrscore   
+            
+        score = alpha*shapescore + beta*clrscore
+
+        scores.append(score)
+
+            
+    return scores
+
         
 if __name__ == '__main__':
 
@@ -186,7 +240,7 @@ if __name__ == '__main__':
     objectpaths = [os.path.join(args.imgpath, name) for name in objectn]
 
     #Recap all in a csv
-    wrtr = csv.writer(open(os.path.join(args.outpath, 'base_results_recap_chairs.csv'), 'w'))
+    wrtr = csv.writer(open(os.path.join(args.outpath, 'micro_l3corr_results_recap_chairs.csv'), 'w'))
     #Write header
     wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     
@@ -247,9 +301,72 @@ if __name__ == '__main__':
                 json.dump(simdict, outf, indent=4)
             
             continue
- 
-        scores =[]        
+    
+        avgs =[] 
 
+        #Constrain the comparison by micro-category
+        chair1s = microscore(chair1, args.modelpath)
+
+        chair2s = microscore(chair2, args.modelpath)
+
+        plant1s = microscore(plant1, args.modelpath)
+
+        bin1s = microscore(bin1, args.modelpath)
+
+        bin2s = microscore(bin2, args.modelpath)
+
+        avgch1 = sum(chair1s)/len(chair1s)
+        avgs.append(avgch1)
+        avgch2 = sum(chair2s)/len(chair2s)
+        avgs.append(avgch2)
+        avgpl1 = sum(plant1s)/len(plant1s)
+        avgs.append(avgpl1)
+        avgb1 = sum(bin1s)/len(bin1s)
+        avgs.append(avgb1)
+        avgb2 = sum(bin2s)/len(bin2s)
+        avgs.append(avgb2)
+        
+        glob_min = min(avgs)
+        min_idx = avgs.index(min(avgs))
+
+        if min_idx ==0 or min_idx==1:
+            obj_min ='chair'
+            pred='chairs'
+        
+        elif min_idx ==2:
+            obj_min ='plant'
+            pred='plants'
+
+        elif min_idx ==3 or min_idx==4:
+            obj_min ='bin'
+            pred='bins'
+
+        
+        row.append(obj_min)
+        row.append(glob_min)
+
+        #Add stats on scores
+        row.append(stat.mean(avgs))
+        row.append(stat.median(avgs))
+        row.append(stat.stdev(avgs))
+        row.append(max(avgs))
+
+        row.append(pred)
+
+        if pred==objcat:
+ 
+           row.append(1)
+           correct +=1 
+        else:
+            row.append(0)
+
+        wrtr.writerow(row) 
+
+
+        #Constrain the comparison by macro-category
+
+        ''' 
+        scores =[]        
         #Compare with all Shapenet models
         for modelp in modelpaths: 
 
@@ -293,16 +410,17 @@ if __name__ == '__main__':
 
             comparison["similarity"]= score
             
-            '''
-            try:
-                iterat, curr_min = min(comparison["similarities"])  
+            
+            
+            #try:
+            #    iterat, curr_min = min(comparison["similarities"])  
 
             
-            except TypeError:
+            #except TypeError:
 
                 #Not enough values yet
-                curr_min = score
-            '''
+            #    curr_min = score
+            
             
             if score < glob_min:
                 glob_min = score
@@ -310,29 +428,32 @@ if __name__ == '__main__':
          
             elif randomized:
                 obj_min = random.choice(all_ids)
-
-
-            '''
-            if score > glob_max:
-                glob_max=score
-                obj_max =modname
-            '''
+           
+            
+           
+            #if score > glob_max:
+            #    glob_max=score
+            #    obj_max =modname
+            
+            
             scores.append(score)
             simdict['comparisons'].append(comparison)
-
+        '''
 
         #Sort by descending similarity
         #simdict["comparisons"] = sorted(simdict["comparisons"],key=lambda x:(x[1],x[0]))
         
-        
+        '''        
         #Add key field for most similar object 
         simdict["min"]=(obj_min, glob_min)
 
         row.append(obj_min)
         row.append(glob_min)
         '''
+        '''
         row.append(obj_max)
         row.append(glob_max)
+        '''
         '''
         #Output dictionary as JSON file
         jname = fname[:-3]+'json'
@@ -343,7 +464,8 @@ if __name__ == '__main__':
         row.append(stat.stdev(scores))
         row.append(max(scores))
         
-
+        '''
+        '''
         #Output predicted cat
         
         if obj_min in chairs:
@@ -354,7 +476,7 @@ if __name__ == '__main__':
         
         elif obj_min in plants:
             pred='plants'
-        
+        '''
         '''
 
         if obj_max in chairs:
@@ -365,6 +487,7 @@ if __name__ == '__main__':
         
         elif obj_max in plants:
             pred='plants'
+        '''
         '''
         row.append(pred)
 
@@ -377,7 +500,7 @@ if __name__ == '__main__':
 
         wrtr.writerow(row) 
 
- 
+        '''
                  
         '''
         with open(os.path.join(args.outpath, jname), 'w') as outf:

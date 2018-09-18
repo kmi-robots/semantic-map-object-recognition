@@ -212,8 +212,8 @@ def microscore(namelist, path):
         #print(filep)
 
         #WEIGHTS are INITIALIZED HERE!
-        alpha =1.0  #0.3
-        beta= 1.0 #0.7
+        alpha = 0.3 #1.0  #0.3
+        beta=  0.7 #1.0 #0.7
 
         clrscore, flag = featureMatch(objrgb, mrgb)
      
@@ -228,6 +228,14 @@ def microscore(namelist, path):
 
             
     return scores
+
+def random_pick_from(pathlist, sizepick=79):
+
+    patharray = np.asarray(pathlist)
+
+    return np.random.choice(patharray, size= sizepick).tolist()
+
+
 
         
 if __name__ == '__main__':
@@ -256,10 +264,21 @@ if __name__ == '__main__':
     modelpaths = [os.path.join(args.modelpath, mfile) for mfile in modelfiles]
 
     objectn = os.listdir(args.imgpath)
+    splits = args.imgpath.split('/')
+    objcat = splits[len(splits)-1]
+
+    if objcat =="chairs" or objcat =="plants":
+
+        objectn = random_pick_from(objectn)
+
+    print(objectn)
+    print(len(objectn))
+    sys.exit(0)
+
     objectpaths = [os.path.join(args.imgpath, name) for name in objectn]
 
     #Recap all in a csv
-    wrtr = csv.writer(open(os.path.join(args.outpath, 'micro_l3chi_results_recap_chairs.csv'), 'w'))
+    wrtr = csv.writer(open(os.path.join(args.outpath, 'micro_l3chi_results_recap_bins_0307.csv'), 'w'))
     #Write header
     wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     
@@ -269,7 +288,7 @@ if __name__ == '__main__':
         simdict = {}
         l = filep.split("/")
         fname = l[len(l)-1]
-        objcat = l[len(l)-2]
+        #objcat = l[len(l)-2]
 
         #Read image in grayscale
         objimg = cv2.imread(filep, 0) 

@@ -7,7 +7,7 @@ outp= '/mnt/c/Users/HP/Desktop/KMI/NYUdepth/masked_imgs/monitors';
 
 %disp(length(labels))
 %disp(length(instances))
-disp(size(labels))
+%disp(size(labels))
 
 for i=1:length(instances)
    
@@ -50,7 +50,7 @@ for i=1:length(instances)
              %end         
              
              fname = sprintf(fullfile(outp,'img__%d__%d.png'), i, k); 
-             %imshow(imagecopy);
+             imshow(imagecopy);
              imwrite(imagecopy, fname);
          end
    else

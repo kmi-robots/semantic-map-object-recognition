@@ -50,23 +50,23 @@ displays =  list(set().union(display1,display2))
 printers = list(set().union(printer1, printer2))
 
 
-all_ids = list(set().union(chairs,plants,bins, displays, printers))
+all_ids = list(set().union(chairs,plants,bins)) # displays, printers))
 
 #############################################################################
 
 
 inverseNeeded = False
-randomized = True
-micro =True
-macro =False
+randomized = False
+micro = False
+macro = True
 
 def mainContour(image):
 
     '''
     Extract most prominent shape from given image
     '''
-    ret, thresh = cv2.threshold(image, 0, 255,0)
-    #ret, thresh = cv2.threshold(objimg, 127, 255,1)
+    #ret, thresh = cv2.threshold(image, 0, 255,0)
+    ret, thresh = cv2.threshold(image, 127, 255,1)
     _, contours,hierarchy = cv2.findContours(thresh,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 
@@ -74,6 +74,13 @@ def mainContour(image):
    
     idx = areas.index(max(areas))    
 
+    '''
+    cv2.drawContours(image, [contours[idx]], 0, (0,255,0), 3)
+    
+    cv2.imshow('', image)
+    cv2.waitKey(8000)
+    sys.exit(0)
+    '''
     return contours[idx]
 
 
@@ -129,10 +136,11 @@ def cropToC(image, contour):
     except Exception as e:
         print(str(e))
         sys.exit(0)
-    
-    #cv2.imshow('', out)
-    #cv2.waitKey(0)
-
+    '''    
+    cv2.imshow('', out)
+    cv2.waitKey(8000)
+    sys.exit(0)
+    '''
     return out
 
 def featureMatch(inimg, refimg, flag=0):
@@ -165,10 +173,10 @@ def featureMatch(inimg, refimg, flag=0):
 	("Intersection", cv2.HISTCMP_INTERSECT), #the higher the better
 	("Hellinger", cv2.HISTCMP_BHATTACHARYYA)) #the smaller the better
 
-        d = cv2.compareHist(hist2, hist, OPENCV_METHODS[1][1])
+        d = cv2.compareHist(hist2, hist, OPENCV_METHODS[3][1])
         
         
-        if OPENCV_METHODS[1][1] == 0 or OPENCV_METHODS[1][1] == 2:
+        if OPENCV_METHODS[3][1] == 0 or OPENCV_METHODS[3][1] == 2:
             
             inverseNeeded = True
 
@@ -212,8 +220,8 @@ def microscore(namelist, path):
         #print(filep)
 
         #WEIGHTS are INITIALIZED HERE!
-        alpha = 0.3 #1.0  #0.3
-        beta=  0.7 #1.0 #0.7
+        alpha = 0.3
+        beta=  0.7
 
         clrscore, flag = featureMatch(objrgb, mrgb)
      
@@ -266,19 +274,24 @@ if __name__ == '__main__':
     objectn = os.listdir(args.imgpath)
     splits = args.imgpath.split('/')
     objcat = splits[len(splits)-1]
-
+    
+    #Part to comment/uncomment for downscaling#####
+    '''
     if objcat =="chairs" or objcat =="plants":
 
         objectn = random_pick_from(objectn)
 
+    ##############################################
+    ''' 
+    '''
     print(objectn)
     print(len(objectn))
     sys.exit(0)
-
+    '''
     objectpaths = [os.path.join(args.imgpath, name) for name in objectn]
 
     #Recap all in a csv
-    wrtr = csv.writer(open(os.path.join(args.outpath, 'micro_l3chi_results_recap_bins_0307.csv'), 'w'))
+    wrtr = csv.writer(open(os.path.join(args.outpath, 'shvsh_macro_l3hell_results_recap_bins_0307.csv'), 'w'))
     #Write header
     wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     
@@ -463,6 +476,8 @@ if __name__ == '__main__':
     
                 for modelp in modelpaths: 
 
+
+
                     comparison={} 
             
                     lm = modelp.split('/')             
@@ -478,24 +493,26 @@ if __name__ == '__main__':
             
                     #Perform a pointwise comparison within each couple
                     shapescore= shapeMatch(shape1, shape2) 
-       
+                    
                     #Crop images to contour 
                     mrgb = cropToC(mrgb, shape2)
              
                     #sys.exit(0)
                     #print(filep)
-
+                    
                     #WEIGHTS are INITIALIZED HERE!
                     alpha =0.3
                     beta= 0.7
-
+                    
+                    
                     clrscore, flag = featureMatch(objrgb, mrgb)
      
                     if flag:
 
                         #print("Inverting opposite trend scores!")
                         clrscore = 1./clrscore   
-            
+                    
+                    #score = clrscore #shapescore
                     score = alpha*shapescore + beta*clrscore
 
                     #print(score)                   
@@ -519,8 +536,8 @@ if __name__ == '__main__':
                         glob_min = score
                         obj_min = modname
          
-                    elif randomized:
-                        obj_min = random.choice(all_ids)
+                    #elif randomized:
+                    #    obj_min = random.choice(all_ids)
            
             
            
@@ -529,8 +546,8 @@ if __name__ == '__main__':
                     #    obj_max =modname
             
             
-                scores.append(score)
-                simdict['comparisons'].append(comparison)
+                    scores.append(score)
+                    simdict['comparisons'].append(comparison)
 
                 '''
 
@@ -538,6 +555,10 @@ if __name__ == '__main__':
                 #simdict["comparisons"] = sorted(simdict["comparisons"],key=lambda x:(x[1],x[0]))
         
                 '''        
+                if randomized:
+
+                    obj_min = random.choice(all_ids)
+                
                 #Add key field for most similar object 
                 simdict["min"]=(obj_min, glob_min)
 

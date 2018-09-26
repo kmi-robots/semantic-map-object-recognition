@@ -33,6 +33,7 @@ import random
 #Micro, i.e., same object different views
 chair1=['9e14d77634cf619f174b6156db666192-0.png', '9e14d77634cf619f174b6156db666192-2.png', '9e14d77634cf619f174b6156db666192-5.png', '9e14d77634cf619f174b6156db666192-7.png', '9e14d77634cf619f174b6156db666192-10.png', '9e14d77634cf619f174b6156db666192-12.png', 'c.png']
 chair2=['49918114029ce6a63db5e7f805103dd-0.png', '49918114029ce6a63db5e7f805103dd-1.png' ,'49918114029ce6a63db5e7f805103dd-5.png', '49918114029ce6a63db5e7f805103dd-6.png', '49918114029ce6a63db5e7f805103dd-9.png', '49918114029ce6a63db5e7f805103dd-11.png', '49918114029ce6a63db5e7f805103dd-13.png']
+
 plant1=['4d637018815139ab97d540195229f372-1.png', '4d637018815139ab97d540195229f372-3.png', '4d637018815139ab97d540195229f372-7.png', '4d637018815139ab97d540195229f372-8.png', '4d637018815139ab97d540195229f372-11.png', '4d637018815139ab97d540195229f372-12.png'] 
 bin1=['7bde818d2cbd21f3bac465483662a51d-0.png', '7bde818d2cbd21f3bac465483662a51d-3.png', '7bde818d2cbd21f3bac465483662a51d-10.png', '7bde818d2cbd21f3bac465483662a51d-12.png']
 bin2=['8ab06d642437f3a77d8663c09e4f524d-0.png', '8ab06d642437f3a77d8663c09e4f524d-3.png', '8ab06d642437f3a77d8663c09e4f524d-5.png', '8ab06d642437f3a77d8663c09e4f524d-8.png', '8ab06d642437f3a77d8663c09e4f524d-9.png', '8ab06d642437f3a77d8663c09e4f524d-13.png']
@@ -40,6 +41,26 @@ display1=['2d5d4d79cd464298566636e42679cc7f-0.png', '2d5d4d79cd464298566636e4267
 display2=['17226b72d812ce47272b806070e7941c-1.png', '17226b72d812ce47272b806070e7941c-3.png', '17226b72d812ce47272b806070e7941c-4.png', '17226b72d812ce47272b806070e7941c-5.png', '17226b72d812ce47272b806070e7941c-6.png', '17226b72d812ce47272b806070e7941c-8.png', '17226b72d812ce47272b806070e7941c-9.png', '17226b72d812ce47272b806070e7941c-13.png']
 printer1= ['7c1ac983a6bf981e8ff3763a6b02b3bb-0.png', '7c1ac983a6bf981e8ff3763a6b02b3bb-1.png', '7c1ac983a6bf981e8ff3763a6b02b3bb-4.png', '7c1ac983a6bf981e8ff3763a6b02b3bb-5.png', '7c1ac983a6bf981e8ff3763a6b02b3bb-8.png', '7c1ac983a6bf981e8ff3763a6b02b3bb-10.png', '7c1ac983a6bf981e8ff3763a6b02b3bb-13.png']
 printer2= ['2135295ad1c580e7ffbff4948728b4f5-0.png', '2135295ad1c580e7ffbff4948728b4f5-1.png', '2135295ad1c580e7ffbff4948728b4f5-2.png', '2135295ad1c580e7ffbff4948728b4f5-3.png', '2135295ad1c580e7ffbff4948728b4f5-6.png', '2135295ad1c580e7ffbff4948728b4f5-7.png', '2135295ad1c580e7ffbff4948728b4f5-8.png', '2135295ad1c580e7ffbff4948728b4f5-9.png', '2135295ad1c580e7ffbff4948728b4f5-13.png']
+bottle1= ['9eccbc942fc8c0011ee059e8e1a2ee9_6.png', '9eccbc942fc8c0011ee059e8e1a2ee9_7.png', '9eccbc942fc8c0011ee059e8e1a2ee9_10.png', '9eccbc942fc8c0011ee059e8e1a2ee9_11.png']
+bottle2= ['62451f0ab130709ef7480cb1ee830fb9_0.png', '62451f0ab130709ef7480cb1ee830fb9_1.png', '62451f0ab130709ef7480cb1ee830fb9_6.png', '62451f0ab130709ef7480cb1ee830fb9_8.png']
+#bottle3= ['d851cbc873de1c4d3b6eb309177a6753_0.png', 'd851cbc873de1c4d3b6eb309177a6753_6.png', 'd851cbc873de1c4d3b6eb309177a6753_11.png', 'd851cbc873de1c4d3b6eb309177a6753_12.png']
+paper1=['3dw.b463019e5f3b9a9b5c6bfbdfe6a8f99.png', '3dw.b463019e5f3b9a9b5c6bfbdfe6a8f99_2.png', '3dw.b463019e5f3b9a9b5c6bfbdfe6a8f99_3.png', '3dw.b463019e5f3b9a9b5c6bfbdfe6a8f99_4.png']
+paper2=['3dw.14b4294e99cb10215f606243e56be258.png', '3dw.14b4294e99cb10215f606243e56be258_2.png', '3dw.14b4294e99cb10215f606243e56be258_3.png', '3dw.14b4294e99cb10215f606243e56be258_4.png']
+book1=['3dw.13d22e3b3657e229ce6cd687d82659e9.png', '3dw.13d22e3b3657e229ce6cd687d82659e9_2.png', '3dw.13d22e3b3657e229ce6cd687d82659e9_3.png', '3dw.13d22e3b3657e229ce6cd687d82659e9_4.png']
+book2= ['3dw.1d493a57a21833f2d92c7cdc3939488b.png', '3dw.1d493a57a21833f2d92c7cdc3939488b_2.png', '3dw.1d493a57a21833f2d92c7cdc3939488b_3.png', '3dw.1d493a57a21833f2d92c7cdc3939488b_4.png']
+table1=['f9f9d2fda27c310b266b42a2f1bdd7cf_4.png', 'f9f9d2fda27c310b266b42a2f1bdd7cf_10.png', 'f9f9d2fda27c310b266b42a2f1bdd7cf_11.png', 'f9f9d2fda27c310b266b42a2f1bdd7cf_13.png']
+table2=['7807caccf26f7845e5cf802ea0702182_1.png', '7807caccf26f7845e5cf802ea0702182_6.png', '7807caccf26f7845e5cf802ea0702182_11.png', '7807caccf26f7845e5cf802ea0702182_12.png']
+box1=['3dw.f0f1419ffe0e4475242df0a63deb633.png', '3dw.f0f1419ffe0e4475242df0a63deb633_2.png', '3dw.f0f1419ffe0e4475242df0a63deb633_3.png', '3dw.f0f1419ffe0e4475242df0a63deb633_4.png']
+box2=['3dw.405e820d9717e1724cb8ef90d0735cb6.png', '3dw.405e820d9717e1724cb8ef90d0735cb6_2.png', '3dw.405e820d9717e1724cb8ef90d0735cb6_3.png', '3dw.405e820d9717e1724cb8ef90d0735cb6_4.png']
+window1=['3dw.2f322060f3201f71caf432acbbd622b.png', '3dw.2f322060f3201f71caf432acbbd622b_2.png']
+window2=['3dw.e884d2ee658acf6faa0e334660b67084.png', '3dw.e884d2ee658acf6faa0e334660b67084_2.png', '3dw.e884d2ee658acf6faa0e334660b67084_3.png', '3dw.e884d2ee658acf6faa0e334660b67084_4.png' ]
+door1=['3dw.f40d5808bf78f8003f7c9f4b711809d.png', '3dw.f40d5808bf78f8003f7c9f4b711809d_2.png']
+door2=['3dw.c67fa55ac55e0ca0a3ef625a8daeb343.png', '3dw.c67fa55ac55e0ca0a3ef625a8daeb343_2.png']
+sofa1=['4820b629990b6a20860f0fe00407fa79-0.png', '4820b629990b6a20860f0fe00407fa79-7.png', '4820b629990b6a20860f0fe00407fa79-9.png', '4820b629990b6a20860f0fe00407fa79-13.png']
+sofa2=['87f103e24f91af8d4343db7d677fae7b-0.png', '87f103e24f91af8d4343db7d677fae7b-6.png', '87f103e24f91af8d4343db7d677fae7b-7.png', '87f103e24f91af8d4343db7d677fae7b-12.png']
+lamp1=['3dw.3c5db21345130f0290f1eb8f29abcea8.png', '3dw.3c5db21345130f0290f1eb8f29abcea8_2.png']
+lamp2=['6770adca6c298f68fc3f90c1b551a0f7_4.png', '6770adca6c298f68fc3f90c1b551a0f7_6.png', '6770adca6c298f68fc3f90c1b551a0f7_8.png', '6770adca6c298f68fc3f90c1b551a0f7_12.png']
+
 
 
 #Macro, i.e., same object class
@@ -49,9 +70,18 @@ bins=  list(set().union(bin1,bin2))
 displays =  list(set().union(display1,display2))
 printers = list(set().union(printer1, printer2))
 
+bottles = list(set().union(bottle1, bottle2)) #bottle3))
 
-all_ids = list(set().union(chairs,plants,bins)) # displays, printers))
-
+papers = list(set().union(paper1, paper2)) #bottle3))
+books = list(set().union(book1, book2)) #bottle3))
+tables = list(set().union(table1, table2)) #bottle3))
+boxes = list(set().union(box1, box2)) #bottle3))
+windows = list(set().union(window1, window2)) #bottle3))
+doors = list(set().union(door1, door2)) #bottle3))
+sofas = list(set().union(sofa1, sofa2)) #bottle3))
+lamps = list(set().union(lamp1, lamp2)) #bottle3))
+#all_ids = list(set().union(chairs,plants,bins)) # displays, printers))
+all_ids = list(set().union(chairs, bottles, papers, books, tables, boxes, windows, doors, sofas, lamps))
 #############################################################################
 
 
@@ -65,8 +95,8 @@ def mainContour(image):
     '''
     Extract most prominent shape from given image
     '''
-    #ret, thresh = cv2.threshold(image, 0, 255,0)
-    ret, thresh = cv2.threshold(image, 127, 255,1)
+    ret, thresh = cv2.threshold(image, 0, 255,0)
+    #ret, thresh = cv2.threshold(image, 127, 255,1)
     _, contours,hierarchy = cv2.findContours(thresh,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 

@@ -1,7 +1,7 @@
 load('./nyu_depth_v2_labeled.mat','instances');
 load('./nyu_depth_v2_labeled.mat','labels');
-load('./nyu_depth_v2_labeled.mat','namesToIds');
-
+%load('./nyu_depth_v2_labeled.mat','namesToIds');
+load('./nyu_depth_v2_labeled.mat','images');
 
 classes = zeros(1,894);
 
@@ -13,7 +13,7 @@ for i=1:length(instances)
     
     [rows,cols] = size(instance);
     
-    seen = uint16.empty; %zeros(894, 'uint16');
+    seen = uint8.empty; %zeros(894, 'uint16');
     
     for r=1:rows
         
@@ -25,7 +25,7 @@ for i=1:length(instances)
            current_lab= label(r,c);
            
            
-           if current_lab==0
+           if current_lab==0 
                
                continue
                
@@ -37,7 +37,7 @@ for i=1:length(instances)
            %disp(class(seen));
           
            
-           if ismember(current_lab, seen)
+           if ismember(current, seen)
                  continue
              
            end
@@ -48,7 +48,7 @@ for i=1:length(instances)
            %keylab = keys(map.namesToIds);
            %class_name = keylab{current};
            
-           seen = [seen, current_lab];
+           seen = [seen, current];
        
            
        end

@@ -1,7 +1,7 @@
 load('./nyu_depth_v2_labeled.mat','instances');
 load('./nyu_depth_v2_labeled.mat','labels');
 %load('./nyu_depth_v2_labeled.mat','namesToIds');
-load('./nyu_depth_v2_labeled.mat','images');
+%load('./nyu_depth_v2_labeled.mat','images');
 
 classes = zeros(1,894);
 
@@ -10,6 +10,20 @@ for i=1:length(instances)
    
     instance = instances(:,:,i);
     label = labels(:,:, i);
+    %disp(instance)
+    
+    [masks, lab] = get_instance_masks(label, instance);
+    
+    %disp(lab)
+    
+    for n=1:length(lab)
+        
+       current_lab = lab(n); 
+       
+       classes(1,current_lab) = classes(1, current_lab) + 1 ; 
+        
+    end
+    %{
     
     [rows,cols] = size(instance);
     
@@ -32,7 +46,7 @@ for i=1:length(instances)
            end 
            
            
-           curr_cell = {current_lab};
+           %curr_cell = {current_lab};
            %disp(class(curr_cell));
            %disp(class(seen));
           
@@ -57,7 +71,7 @@ for i=1:length(instances)
     end
        
     
-    
+    %}
     
     
 end

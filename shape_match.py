@@ -86,9 +86,9 @@ all_ids = list(set().union(chairs, bottles, papers, books, tables, boxes, window
 
 
 inverseNeeded = False
-randomized = False
+randomized = True
 micro = False
-macro = True
+macro = False
 
 def mainContour(image):
 
@@ -584,10 +584,12 @@ if __name__ == '__main__':
                 #Sort by descending similarity
                 #simdict["comparisons"] = sorted(simdict["comparisons"],key=lambda x:(x[1],x[0]))
         
-                '''        
+                '''
+        
                 if randomized:
 
                     obj_min = random.choice(all_ids)
+
                 
                 #Add key field for most similar object 
                 simdict["min"]=(obj_min, glob_min)
@@ -621,6 +623,8 @@ if __name__ == '__main__':
                 elif obj_min in plants:
                     pred='plants'
         
+                elif obj_min in :
+                    pred='plants'
                 '''
 
                 if obj_max in chairs:

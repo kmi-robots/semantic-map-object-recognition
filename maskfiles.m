@@ -3,7 +3,7 @@
 %load('./nyu_depth_v2_labeled.mat','labels');
 %load('./nyu_depth_v2_labeled.mat','images');
 
-outp= '/mnt/c/Users/HP/Desktop/KMI/NYUdepth/masked_imgs/tables';
+outp= '/mnt/c/Users/HP/Desktop/KMI/NYUdepth/masked_imgs/lamps';
 
 %disp(length(labels))
 %disp(length(instances))
@@ -18,7 +18,7 @@ for i=1:length(instances)
    [masks, lab] = get_instance_masks(labels(:,:,i), instances(:,:,i));   
    
    %Find indices related to ID. e.g.,  no. 5  = 'chair'
-   indices =  find(lab==19);    %484 for monitor    592 for printer
+   indices =  find(lab==144);    %484 for monitor    592 for printer
    
    m=[];
    

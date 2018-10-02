@@ -84,19 +84,25 @@ lamps = list(set().union(lamp1, lamp2)) #bottle3))
 all_ids = list(set().union(chairs, bottles, papers, books, tables, boxes, windows, doors, sofas, lamps))
 #############################################################################
 
+object_list = [chairs, bottles, papers, books, tables, boxes, windows, doors, sofas, lamps]
+flags =  ["chairs", 'bottles', 'papers', 'books', 'tables', 'boxes', 'windows', 'doors', 'sofas', 'lamps']
+
+micro_object_list = [(chair1, chair2), (bottle1, bottle2), (paper1, paper2), (book1, book2), (table1, table2), (box1, box2), (window1, window2), (door1, door2), (sofa1, sofa2), (lamp1, lamp2)]
 
 inverseNeeded = False
 randomized = True
 micro = False
 macro = False
 
-def mainContour(image):
+def mainContour(image, flag):
 
     '''
     Extract most prominent shape from given image
     '''
-    ret, thresh = cv2.threshold(image, 0, 255,0)
-    #ret, thresh = cv2.threshold(image, 127, 255,1)
+    if flag =='input':
+        ret, thresh = cv2.threshold(image, 0, 255,0)
+    elif flag=='reference':
+        ret, thresh = cv2.threshold(image, 127, 255,1)
     _, contours,hierarchy = cv2.findContours(thresh,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 
@@ -104,13 +110,8 @@ def mainContour(image):
    
     idx = areas.index(max(areas))    
 
-    '''
-    cv2.drawContours(image, [contours[idx]], 0, (0,255,0), 3)
     
-    cv2.imshow('', image)
-    cv2.waitKey(8000)
-    sys.exit(0)
-    '''
+    
     return contours[idx]
 
 
@@ -238,7 +239,7 @@ def microscore(namelist, path):
         mimage = cv2.imread(modelp, 0)
         mrgb = cv2.imread(modelp, 1)
             
-        shape2 = mainContour(mimage)
+        shape2 = mainContour(mimage, 'reference')
             
         #Perform a pointwise comparison within each couple
         shapescore= shapeMatch(shape1, shape2) 
@@ -246,6 +247,7 @@ def microscore(namelist, path):
         #Crop images to contour 
         mrgb = cropToC(mrgb, shape2)
              
+        
         #sys.exit(0)
         #print(filep)
 
@@ -321,7 +323,7 @@ if __name__ == '__main__':
     objectpaths = [os.path.join(args.imgpath, name) for name in objectn]
 
     #Recap all in a csv
-    wrtr = csv.writer(open(os.path.join(args.outpath, 'shvsh_macro_l3hell_results_recap_bins_0307.csv'), 'w'))
+    wrtr = csv.writer(open(os.path.join(args.outpath, 'base_results_recap_lamps.csv'), 'w'))
     #Write header
     wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     
@@ -351,10 +353,16 @@ if __name__ == '__main__':
         #Extract shape
         try:
 
-            shape1 = mainContour(objimg)
+            shape1 = mainContour(objimg, 'input')
 
+            #cv2.drawContours(objrgb, [shape1], 0, (0,255,0), 3)
             objrgb = cropToC(objrgb, shape1)
 
+             
+    
+            #cv2.imshow('', objrgb)
+            #cv2.waitKey(8000)
+            #sys.exit(0)
         except Exception as e:
 
             #Empty masks 
@@ -388,44 +396,28 @@ if __name__ == '__main__':
 
         if micro:
 
-            #Constrain the comparison by micro-category
-            chair1s = microscore(chair1, args.modelpath)
+            for type1, type2 in micro_object_list:
+ 
+                scores1 = microscore(type1, args.modelpath)
+                avg1 = sum(scores1)/len(scores1)
+                scores2 = microscore(type2, args.modelpath)
+                avg2 = sum(scores2)/len(scores2)
+                avgs.append(avg1)
+                avgs.append(avg2)
 
-            chair2s = microscore(chair2, args.modelpath)
-
-            plant1s = microscore(plant1, args.modelpath)
-
-            bin1s = microscore(bin1, args.modelpath)
-
-            bin2s = microscore(bin2, args.modelpath)
-
-            avgch1 = sum(chair1s)/len(chair1s)
-            avgs.append(avgch1)
-            avgch2 = sum(chair2s)/len(chair2s)
-            avgs.append(avgch2)
-            avgpl1 = sum(plant1s)/len(plant1s)
-            avgs.append(avgpl1)
-            avgb1 = sum(bin1s)/len(bin1s)
-            avgs.append(avgb1)
-            avgb2 = sum(bin2s)/len(bin2s)
-            avgs.append(avgb2)
-        
             glob_min = min(avgs)
+
             min_idx = avgs.index(min(avgs))
 
-            if min_idx ==0 or min_idx==1:
-                obj_min ='chair'
-                pred='chairs'
-        
-            elif min_idx ==2:
-                obj_min ='plant'
-                pred='plants'
 
-            elif min_idx ==3 or min_idx==4:
-                obj_min ='bin'
-                pred='bins'
+            if min_idx % 2 != 0:
+                #Then it is odd
+                min_idx = min_idx -1 
 
-        
+            pred = flags[min_idx] 
+            obj_min = flags[min_idx].split('s')[0]
+
+
             row.append(obj_min)
             row.append(glob_min)
 
@@ -446,39 +438,22 @@ if __name__ == '__main__':
 
             wrtr.writerow(row) 
 
-
+        
         #Constrain the comparison by macro-category
         elif macro:
         
-            chairstot = macroscore(chairs, args.modelpath)
+            for slist in object_list:
+            
+                scoretot = macroscore(slist, args.modelpath)
+                avgp = sum(scoretot)/len(scoretot)
+                avgs.append(avgp)
 
-            plantstot = macroscore(plants, args.modelpath)
-
-            binstot = macroscore(bins, args.modelpath)
-
-            avgch = sum(chairstot)/len(chairstot)
-            avgs.append(avgch)
-            avgpl = sum(plantstot)/len(plantstot)
-            avgs.append(avgpl)
-            avgbin = sum(binstot)/len(binstot)
-            avgs.append(avgbin)
-        
             glob_min = min(avgs)
             min_idx = avgs.index(min(avgs))
 
-            if min_idx ==0:
-                obj_min ='chair'
-                pred='chairs'
-        
-            elif min_idx ==1:
-                obj_min ='plant'
-                pred='plants'
+            pred = flags[min_idx]
+            obj_min = pred.split('s')[0]
 
-            elif min_idx ==2:
-                obj_min ='bin'
-                pred='bins'
-
-        
             row.append(obj_min)
             row.append(glob_min)
 
@@ -498,6 +473,7 @@ if __name__ == '__main__':
                 row.append(0)
 
             wrtr.writerow(row) 
+
 
         else:
 
@@ -505,8 +481,6 @@ if __name__ == '__main__':
                 scores =[]    
     
                 for modelp in modelpaths: 
-
-
 
                     comparison={} 
             
@@ -519,14 +493,19 @@ if __name__ == '__main__':
                     mimage = cv2.imread(modelp, 0)
                     mrgb = cv2.imread(modelp, 1)
             
-                    shape2 = mainContour(mimage)
+                    shape2 = mainContour(mimage, 'reference')
             
                     #Perform a pointwise comparison within each couple
                     shapescore= shapeMatch(shape1, shape2) 
                     
                     #Crop images to contour 
+                    #cv2.drawContours(mrgb, [shape2], 0, (0,255,0), 3)
                     mrgb = cropToC(mrgb, shape2)
              
+    
+                    #cv2.imshow('', mrgb)
+                    #cv2.waitKey(8000)
+                    #sys.exit(0)
                     #sys.exit(0)
                     #print(filep)
                     
@@ -623,8 +602,39 @@ if __name__ == '__main__':
                 elif obj_min in plants:
                     pred='plants'
         
-                elif obj_min in :
-                    pred='plants'
+                elif obj_min in bottles:
+                    pred='bottles'
+
+                elif obj_min in papers:
+                    pred='papers'
+
+                elif obj_min in books:
+                    pred='books'
+
+                elif obj_min in tables:
+                    pred='tables'
+
+
+                elif obj_min in boxes:
+                    pred='boxes'
+
+
+                elif obj_min in windows:
+                    pred='windows'
+
+
+                elif obj_min in doors:
+                    pred='doors'
+
+
+                elif obj_min in sofas:
+                    pred='sofas'
+
+
+                elif obj_min in lamps:
+                    pred='lamps'
+
+
                 '''
 
                 if obj_max in chairs:

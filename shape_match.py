@@ -308,9 +308,11 @@ if __name__ == '__main__':
         objcat = folder
     
         #Downsample the chairs
+        '''
         if objcat =="chairs":
 
             objectn = random_pick_from(objectn, 1000)
+        '''
         #Part to comment/uncomment for downscaling#####
         '''
         if objcat =="chairs" or objcat =="plants":

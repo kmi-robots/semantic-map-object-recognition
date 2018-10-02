@@ -91,7 +91,7 @@ flags =  ["chairs", 'bottles', 'papers', 'books', 'tables', 'boxes', 'windows', 
 micro_object_list = [(chair1, chair2), (bottle1, bottle2), (paper1, paper2), (book1, book2), (table1, table2), (box1, box2), (window1, window2), (door1, door2), (sofa1, sofa2), (lamp1, lamp2)]
 
 inverseNeeded = False
-randomized = False
+randomized = True
 micro = False
 macro = False
 
@@ -266,7 +266,7 @@ def microscore(namelist, path):
             
     return scores
 
-def random_pick_from(pathlist, sizepick=79):
+def random_pick_from(pathlist, sizepick=1000):
 
     patharray = np.asarray(pathlist)
 
@@ -307,6 +307,10 @@ if __name__ == '__main__':
         objectn = os.listdir(os.path.join(args.imgpath, folder))
         objcat = folder
     
+        #Downsample the chairs
+        if objcat =="chairs":
+
+            objectn = random_pick_from(objectn, 1000)
         #Part to comment/uncomment for downscaling#####
         '''
         if objcat =="chairs" or objcat =="plants":
@@ -323,7 +327,7 @@ if __name__ == '__main__':
         objectpaths = [os.path.join(args.imgpath, folder, name) for name in objectn]
 
         #Recap all in a csv
-        wrtr = csv.writer(open(os.path.join(args.outpath, 'l1_results_recap_%s.csv' % objcat), 'w'))
+        wrtr = csv.writer(open(os.path.join(args.outpath, 'base_results_recap_%s.csv' % objcat), 'w'))
         #Write header
         wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     

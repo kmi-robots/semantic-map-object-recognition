@@ -91,7 +91,7 @@ flags =  ["chairs", 'bottles', 'papers', 'books', 'tables', 'boxes', 'windows', 
 micro_object_list = [(chair1, chair2), (bottle1, bottle2), (paper1, paper2), (book1, book2), (table1, table2), (box1, box2), (window1, window2), (door1, door2), (sofa1, sofa2), (lamp1, lamp2)]
 
 inverseNeeded = False
-randomized = True
+randomized = False
 micro = False
 macro = False
 
@@ -104,6 +104,7 @@ def mainContour(image, flag):
         ret, thresh = cv2.threshold(image, 0, 255,0)
     elif flag=='reference':
         ret, thresh = cv2.threshold(image, 127, 255,1)
+
     _, contours,hierarchy = cv2.findContours(thresh,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 
@@ -129,7 +130,7 @@ def shapeMatch(shape1, shape2):
     #sys.exit(0)
 
     #Currently takes L3 method as reference
-    return cv2.matchShapes(shape1, shape2,1,0.0)
+    return cv2.matchShapes(shape1, shape2,3,0.0)
     
 
 
@@ -138,8 +139,11 @@ def cropToC(image, contour):
     alpha=0.0 # transparent overlay
     mask = np.zeros_like(image) # Create mask where white is what we want, black otherwise
     
+    #print(type(mask))
+    #print(type(contour))
     cv2.drawContours(mask, [contour], 0, 255, -1) # Draw filled contour in mask
-    
+        
+
     mask = np.invert(mask)
     #out = np.zeros_like(image) # Extract out the object and place into output image
     #Invert Black  with White (ShapeNets backgrounds are white) 
@@ -281,6 +285,9 @@ if __name__ == '__main__':
     parser.add_argument("modelpath", help="Provide path to the reference models")
     #parser.add_argument("pathtomasks", help="Provide path to the segmented objects to be evaluated")
     parser.add_argument("outpath", help="Provide path to output the similarity scores")
+    parser.add_argument('--skipfolders', required=False, nargs='*', 
+    help='Optional: name of folders to be skipped. For example to skip folders named images1 and images4 type "--skipfolders images1 images4" Please do not provide a full path but just the folder name')
+
     args =parser.parse_args()
 
     #CHANGED: Ended up implementing dataset pre-proc in Matlab directly
@@ -290,6 +297,7 @@ if __name__ == '__main__':
     #images = loadNYU(args.imgpath).T    #We have to take the transpose here from what it returns 
 
     #print(images.shape)
+    skip_folders=args.skipfolders    
     
     modelfiles = os.listdir(args.modelpath)
     modelpaths = [os.path.join(args.modelpath, mfile) for mfile in modelfiles]
@@ -297,7 +305,7 @@ if __name__ == '__main__':
     for folder in os.listdir(args.imgpath):
 
 
-        if folder =='bins' or folder=='plants':
+        if folder =='bins' or folder=='plants' or folder in skip_folders:
             continue
 
         start = time.time()
@@ -329,7 +337,7 @@ if __name__ == '__main__':
         objectpaths = [os.path.join(args.imgpath, folder, name) for name in objectn]
 
         #Recap all in a csv
-        wrtr = csv.writer(open(os.path.join(args.outpath, 'base_results_recap_%s.csv' % objcat), 'w'))
+        wrtr = csv.writer(open(os.path.join(args.outpath, 'l3_results_recap_%s.csv' % objcat), 'w'))
         #Write header
         wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     
@@ -509,6 +517,9 @@ if __name__ == '__main__':
                     
                     #Crop images to contour 
                     #cv2.drawContours(mrgb, [shape2], 0, (0,255,0), 3)
+                    #print(modelp)
+                    #print(type(mrgb))
+                    #print(type(shape2))
                     mrgb = cropToC(mrgb, shape2)
              
     

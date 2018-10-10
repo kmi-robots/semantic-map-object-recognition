@@ -92,7 +92,7 @@ micro_object_list = [(chair1, chair2), (bottle1, bottle2), (paper1, paper2), (bo
 
 inverseNeeded = False
 randomized = False
-micro = False
+micro = True
 macro = False
 
 def mainContour(image, flag):
@@ -107,10 +107,14 @@ def mainContour(image, flag):
 
     _, contours,hierarchy = cv2.findContours(thresh,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-
     areas = [cv2.contourArea(cnt) for cnt in contours]
-   
-    idx = areas.index(max(areas))    
+  
+    try: 
+        idx = areas.index(max(areas))    
+
+    except Exception as e:
+
+        return contours[0]
 
     return contours[idx]
 
@@ -205,10 +209,10 @@ def featureMatch(inimg, refimg, flag=0):
 	("Intersection", cv2.HISTCMP_INTERSECT), #the higher the better
 	("Hellinger", cv2.HISTCMP_BHATTACHARYYA)) #the smaller the better
 
-        d = cv2.compareHist(hist2, hist, OPENCV_METHODS[3][1])
+        d = cv2.compareHist(hist2, hist, OPENCV_METHODS[0][1])
         
         
-        if OPENCV_METHODS[3][1] == 0 or OPENCV_METHODS[3][1] == 2:
+        if OPENCV_METHODS[0][1] == 0 or OPENCV_METHODS[0][1] == 2:
             
             inverseNeeded = True
 
@@ -231,9 +235,10 @@ def microscore(namelist, path):
              
         modelp = os.path.join(path, modelname)
 
-            
-        lm = modelp.split('/')             
-        modname = lm[len(lm)-1]
+        #print(modelp)
+    
+        #lm = modelp.split('/')             
+        #modname = lm[len(lm)-1]
 
         #comparison["similarities"] =[]   
 
@@ -253,8 +258,8 @@ def microscore(namelist, path):
         #print(filep)
 
         #WEIGHTS are INITIALIZED HERE!
-        alpha = 0.3
-        beta=  0.7
+        alpha = 1.0
+        beta=  1.0
 
         clrscore, flag = featureMatch(objrgb, mrgb)
      
@@ -305,8 +310,11 @@ if __name__ == '__main__':
     for folder in os.listdir(args.imgpath):
 
 
-        if folder =='bins' or folder=='plants' or folder in skip_folders:
+        if folder =='bins' or folder=='plants':
             continue
+
+        if skip_folders is not None and folder in skip_folders:
+            continue     
 
         start = time.time()
         accuracy = 0.0     
@@ -337,7 +345,7 @@ if __name__ == '__main__':
         objectpaths = [os.path.join(args.imgpath, folder, name) for name in objectn]
 
         #Recap all in a csv
-        wrtr = csv.writer(open(os.path.join(args.outpath, 'l3_results_recap_%s.csv' % objcat), 'w'))
+        wrtr = csv.writer(open(os.path.join(args.outpath, 'micro_l3corr_results_recap_%s.csv' % objcat), 'w'))
         #Write header
         wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     
@@ -425,11 +433,24 @@ if __name__ == '__main__':
 
                 min_idx = avgs.index(min(avgs))
 
+                #print(min_idx)
+                
+                if min_idx == 0 or min_idx == 1:
 
-                if min_idx % 2 != 0:
-                    #Then it is odd
-                    min_idx = min_idx -1 
+                    min_idx =0
+                 
+                elif min_idx % 2 == 0:
+                    #Even number
+                    min_idx = int(min_idx /2)
+                    #print(min_idx) 
 
+                elif min_idx % 2 != 0:
+                    #Then it is od
+                    
+                    min_idx = int((min_idx -1)/2 )
+                    #print(min_idx)
+
+                    
                 pred = flags[min_idx] 
                 obj_min = flags[min_idx].split('s')[0]
 
@@ -541,8 +562,8 @@ if __name__ == '__main__':
                         #print("Inverting opposite trend scores!")
                         clrscore = 1./clrscore   
                     
-                    score = shapescore
-                    #score = alpha*shapescore + beta*clrscore
+                    #score = clrscore #shapescore
+                    score = alpha*shapescore + beta*clrscore
 
                     #print(score)                   
                     #sys.exit(0)

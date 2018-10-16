@@ -90,10 +90,7 @@ flags =  ["chairs", 'bottles', 'papers', 'books', 'tables', 'boxes', 'windows', 
 
 micro_object_list = [(chair1, chair2), (bottle1, bottle2), (paper1, paper2), (book1, book2), (table1, table2), (box1, box2), (window1, window2), (door1, door2), (sofa1, sofa2), (lamp1, lamp2)]
 
-inverseNeeded = False
 randomized = False
-micro = False
-macro = True
 
 def mainContour(image, flag):
 
@@ -118,24 +115,6 @@ def mainContour(image, flag):
 
     return contours[idx]
 
-
-
-def shapeMatch(shape1, shape2):
-    
-    '''
-    Performs comparison just based on shape of main contour,
-    regardless of RGB or any other feature
-    '''
-    #model  = cv2.cvtColor(model,cv2.COLOR_GRAY2RGB)
-    #cv2.drawContours(model, [shape2], 0, (0,255,0), 3)
-    
-    #cv2.imshow('', model)
-    #cv2.waitKey(8000)
-    #sys.exit(0)
-
-    #Currently takes L3 method as reference
-    return cv2.matchShapes(shape1, shape2,3,0.0)
-    
 
 
 def cropToC(image, contour):
@@ -179,107 +158,51 @@ def cropToC(image, contour):
     '''
     return out
 
-def featureMatch(inimg, refimg, flag=0):
+#######################################
+#Methods for feature description
+########################################
+
+
+def SIFT():
+
+    return
+
+def SURF():
+
+    return
+
+def BRIEF():
+
+    return
+
+
+def ORB():
+
+    return
+
+def baseline_method(list_allids):
+    
+    return random.choice(lis_allids)
+
+def featureMatch(inimg, refimg, flag=0, homography= True):
 
     '''
-    TODO: figure out if it should better have img
-    cropped to contour instead
+    Brute-force (0), FLANN matching (1)
+    with or without homography
 
     '''
-    inverseNeeded= False
-    
-    #Histogram comparison as method
-    if flag ==0:
+    if flag == 0:
+        #Brute force
+        pass
 
+    else:
+        #FLANN 
+        pass
 
-        # extract a 3D RGB color histogram from the image,
-	# using 8 bins per channel, normalize, and update
-	# the index
-	hist = cv2.calcHist([inimg], [0, 1, 2], None, [8, 8, 8],
-		[0, 256, 0, 256, 0, 256])
-	hist = cv2.normalize(hist, hist).flatten()
+    if homography:
+        pass
 
-	hist2 = cv2.calcHist([refimg], [0, 1, 2], None, [8, 8, 8],
-		[0, 256, 0, 256, 0, 256])
-	hist2 = cv2.normalize(hist2, hist2).flatten()
-
-        OPENCV_METHODS = (
-	("Correlation", cv2.HISTCMP_CORREL), #the higher the better
-	("Chi-Squared", cv2.HISTCMP_CHISQR), #the smaller the better
-	("Intersection", cv2.HISTCMP_INTERSECT), #the higher the better
-	("Hellinger", cv2.HISTCMP_BHATTACHARYYA)) #the smaller the better
-
-        d = cv2.compareHist(hist2, hist, OPENCV_METHODS[1][1])
-        
-        
-        if OPENCV_METHODS[1][1] == 0 or OPENCV_METHODS[1][1] == 2:
-            
-            inverseNeeded = True
-
-    return d, inverseNeeded        
-
-
-def macroscore(namelist,path):
-
-    #exactly the same, but on a broader list, 
-    #just repeating for the sake of readability
-
-    return microscore(namelist, path)
-
- 
-def microscore(namelist, path):
-
-    scores=[]
-
-    for modelname in namelist:
-             
-        modelp = os.path.join(path, modelname)
-
-        #print(modelp)
-    
-        #lm = modelp.split('/')             
-        #modname = lm[len(lm)-1]
-
-        #comparison["similarities"] =[]   
-
-        mimage = cv2.imread(modelp, 0)
-        mrgb = cv2.imread(modelp, 1)
-            
-        shape2 = mainContour(mimage, 'reference')
-            
-        #Perform a pointwise comparison within each couple
-        shapescore= shapeMatch(shape1, shape2) 
-       
-        #Crop images to contour 
-        mrgb = cropToC(mrgb, shape2)
-             
-        
-        #sys.exit(0)
-        #print(filep)
-
-        #WEIGHTS are INITIALIZED HERE!
-        alpha = 0.3
-        beta=  0.7
-
-        clrscore, flag = featureMatch(objrgb, mrgb)
-     
-        if flag:
-
-            #print("Inverting opposite trend scores!")
-            clrscore = 1./clrscore   
-            
-        score = alpha*shapescore + beta*clrscore
-
-        scores.append(score)
-
-            
-    return scores
-
-def random_pick_from(pathlist, sizepick=1000):
-
-    patharray = np.asarray(pathlist)
-
-    return np.random.choice(patharray, size= sizepick).tolist()
+    return  
 
         
 if __name__ == '__main__':
@@ -323,29 +246,10 @@ if __name__ == '__main__':
         objectn = os.listdir(os.path.join(args.imgpath, folder))
         objcat = folder
     
-        #Downsample the chairs
-        '''
-        if objcat =="chairs":
-
-            objectn = random_pick_from(objectn, 1000)
-        '''
-        #Part to comment/uncomment for downscaling#####
-        '''
-        if objcat =="chairs" or objcat =="plants":
-
-            objectn = random_pick_from(objectn)
-
-        ##############################################
-        ''' 
-        '''
-        print(objectn)
-        print(len(objectn))
-        sys.exit(0)
-        '''
         objectpaths = [os.path.join(args.imgpath, folder, name) for name in objectn]
 
         #Recap all in a csv
-        wrtr = csv.writer(open(os.path.join(args.outpath, 'macro_l3chi_results_recap_%s_0307.csv' % objcat), 'w'))
+        wrtr = csv.writer(open(os.path.join(args.outpath, 'SIFT_BF_results_recap_%s.csv' % objcat), 'w'))
         #Write header
         wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     
@@ -354,7 +258,6 @@ if __name__ == '__main__':
         for filep in objectpaths:
 
             row=[]
-            simdict = {}
             l = filep.split("/")
             fname = l[len(l)-1]
             #objcat = l[len(l)-2]
@@ -363,10 +266,11 @@ if __name__ == '__main__':
             objimg = cv2.imread(filep, 0) 
     
             objrgb = cv2.imread(filep, 1) 
+
+            gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+
+
  
-            simdict["img_id"] = fname
-            simdict['obj_category']= objcat
-            simdict['comparisons']=[]
             glob_min =1000.0
             glob_max =0.0
         
@@ -392,140 +296,23 @@ if __name__ == '__main__':
                 #Empty masks 
                 print('Problem while processing image %s' % fname)
                 print(str(e))
-                simdict['error'] ='Segmented area could not be processed'
-                #Output dictionary as JSON file
-                jname = fname[:-3]+'json'
-            
-                #cv2.imshow('', objimg)
-
-                #cv2.waitKey(2000)
-                #cv2.imshow('', thresh)
-                #cv2.waitKey(2000)
-                #print(contours)
-
-                #cv2.drawContours(objimg, contours, 0, (0,255,0), 3)
-
-                #cv2.imshow('', objimg)
-
-                #cv2.waitKey(5000)
-            
-                with open(os.path.join(args.outpath, jname), 'w') as outf:
-
-                    json.dump(simdict, outf, indent=4)
             
                 continue
     
             avgs =[] 
 
 
-            if micro:
-
-                for type1, type2 in micro_object_list:
- 
-                    scores1 = microscore(type1, args.modelpath)
-                    avg1 = sum(scores1)/len(scores1)
-                    scores2 = microscore(type2, args.modelpath)
-                    avg2 = sum(scores2)/len(scores2)
-                    avgs.append(avg1)
-                    avgs.append(avg2)
-
-                glob_min = min(avgs)
-
-                min_idx = avgs.index(min(avgs))
-
-                #print(min_idx)
-                
-                if min_idx == 0 or min_idx == 1:
-
-                    min_idx =0
-                 
-                elif min_idx % 2 == 0:
-                    #Even number
-                    min_idx = int(min_idx /2)
-                    #print(min_idx) 
-
-                elif min_idx % 2 != 0:
-                    #Then it is od
-                    
-                    min_idx = int((min_idx -1)/2 )
-                    #print(min_idx)
-
-                    
-                pred = flags[min_idx] 
-                obj_min = flags[min_idx].split('s')[0]
-
-
-                row.append(obj_min)
-                row.append(glob_min)
-
-                #Add stats on scores
-                row.append(stat.mean(avgs))
-                row.append(stat.median(avgs))
-                row.append(stat.stdev(avgs))
-                row.append(max(avgs))
-
-                row.append(pred)
-
-                if pred==objcat:
- 
-                    row.append(1)
-                    correct +=1 
-                else:
-                    row.append(0)
-
-                wrtr.writerow(row) 
-
-        
-            #Constrain the comparison by macro-category
-            elif macro:
-        
-                for slist in object_list:
-            
-                    scoretot = macroscore(slist, args.modelpath)
-                    avgp = sum(scoretot)/len(scoretot)
-                    avgs.append(avgp)
-
-                glob_min = min(avgs)
-                min_idx = avgs.index(min(avgs))
-
-                pred = flags[min_idx]
-                obj_min = pred.split('s')[0]
-
-                row.append(obj_min)
-                row.append(glob_min)
-
-                #Add stats on scores
-                row.append(stat.mean(avgs))
-                row.append(stat.median(avgs))
-                row.append(stat.stdev(avgs))
-                row.append(max(avgs))
-
-                row.append(pred)
-
-                if pred==objcat:
- 
-                    row.append(1)
-                    correct +=1 
-                else:
-                    row.append(0)
-
-                wrtr.writerow(row) 
-
-
-            else:
 
                 #Compare with all Shapenet models
                 scores =[]    
     
                 for modelp in modelpaths: 
 
-                    comparison={} 
             
                     lm = modelp.split('/')             
                     modname = lm[len(lm)-1]
 
 
-                    comparison["compared_obj"] = modname
                     #comparison["similarities"] =[]   
 
                     mimage = cv2.imread(modelp, 0)
@@ -536,94 +323,28 @@ if __name__ == '__main__':
                     #Perform a pointwise comparison within each couple
                     shapescore= shapeMatch(shape1, shape2) 
                     
-                    #Crop images to contour 
-                    #cv2.drawContours(mrgb, [shape2], 0, (0,255,0), 3)
-                    #print(modelp)
-                    #print(type(mrgb))
-                    #print(type(shape2))
                     mrgb = cropToC(mrgb, shape2)
              
-    
-                    #cv2.imshow('', mrgb)
-                    #cv2.waitKey(8000)
-                    #sys.exit(0)
-                    #sys.exit(0)
-                    #print(filep)
-                    
-                    #WEIGHTS are INITIALIZED HERE!
-                    alpha =0.3
-                    beta= 0.7
-                    
-                    
-                    clrscore, flag = featureMatch(objrgb, mrgb)
-     
-                    if flag:
-
-                        #print("Inverting opposite trend scores!")
-                        clrscore = 1./clrscore   
-                    
                     #score = clrscore #shapescore
                     score = alpha*shapescore + beta*clrscore
 
-                    #print(score)                   
-                    #sys.exit(0)
-
-                    comparison["similarity"]= score
-            
-            
-            
-                    #try:
-                    #    iterat, curr_min = min(comparison["similarities"])  
-
-            
-                    #except TypeError:
-
-                        #Not enough values yet
-                    #    curr_min = score
-            
-            
                     if score < glob_min:
                         glob_min = score
                         obj_min = modname
          
-                    #elif randomized:
-                    #    obj_min = random.choice(all_ids)
-           
-            
-           
-                    #if score > glob_max:
-                    #    glob_max=score
-                    #    obj_max =modname
-            
-            
+                    
                     scores.append(score)
-                    simdict['comparisons'].append(comparison)
-
-                '''
-
-                #Sort by descending similarity
-                #simdict["comparisons"] = sorted(simdict["comparisons"],key=lambda x:(x[1],x[0]))
-        
-                '''
-        
-                if randomized:
-
-                    obj_min = random.choice(all_ids)
 
                 
-                #Add key field for most similar object 
-                simdict["min"]=(obj_min, glob_min)
+                if randomized:
+
+                    obj_min = baseline_method(all_ids)
+
+                
 
                 row.append(obj_min)
                 row.append(glob_min)
         
-                '''
-                row.append(obj_max)
-                row.append(glob_max)
-                '''
-        
-                #Output dictionary as JSON file
-                jname = fname[:-3]+'json'
         
                 #Add stats on scores
                 row.append(stat.mean(scores))
@@ -701,13 +422,6 @@ if __name__ == '__main__':
 
         
                  
-                '''
-                with open(os.path.join(args.outpath, jname), 'w') as outf:
-
-                    json.dump(simdict, outf, indent=4)
-
-                #sys.exit(0)
-                '''
 
         print(correct)
         print(len(objectn))

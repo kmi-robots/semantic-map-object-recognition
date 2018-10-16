@@ -158,51 +158,114 @@ def cropToC(image, contour):
     '''
     return out
 
-#######################################
+###########################################
 #Methods for feature description
-########################################
+###########################################
 
+def SIFT(gray):
 
-def SIFT():
+    #Returns kp = list of keypoints
+    #des = numpy array of dimensions kp x 128    
 
-    return
+    sift = cv2.SIFT()
+    kp, des = sift.detectAndCompute(gray,None)
+    
+    return kp, des
 
 def SURF():
+    
+    # Create SURF object. You can specify params here or later.
+    # Here I set Hessian Threshold to 400
+    surf = cv2.xfeatures2d.SURF_create(400)
+    surf.extended = True  # making the size of the descriptor 128
+    # Find keypoints and descriptors directly
+    kp, des = surf.detectAndCompute(img,None)    
 
-    return
+    return kp, des
+
 
 def BRIEF():
 
-    return
+    brief = cv2.BriefDescriptorExtractor_create()
+    kp, des = brief.compute(img, kp)
+
+    return kp, des
 
 
-def ORB():
+def ORB(gray):
 
-    return
+    orb = cv2.ORB_create()
+    kp, des = orb.detectAndCompute(gray,None)
+
+    return kp, des
+
+def FAST(gray):
+
+    #TO-DO check nonmax suppression
+    fast = cv2.FastFeatureDetector_create()
+    kp, des = fast.detectAndCompute(gray,None)
+
+    return kp, des
 
 def baseline_method(list_allids):
     
     return random.choice(lis_allids)
 
-def featureMatch(inimg, refimg, flag=0, homography= True):
+def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.75):
 
     '''
     Brute-force (0), FLANN matching (1)
     with or without homography
 
     '''
-    if flag == 0:
-        #Brute force
-        pass
+    if flag == 0 and method =='SIFT':
 
+        #Brute force for SIFT
+        # BFMatcher with default params
+
+        bf = cv2.BFMatcher()
+        
+        matches = bf.knnMatch(des1,des2, K)
+  
+        '''
+        # Apply ratio test
+        good = []
+        for m,n in matches:
+
+            if m.distance < thresh*n.distance:
+
+                good.append([m])
+
+        return good
+        '''
+
+    elif flag == 0  and method =='ORB':
+    
+        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    
+        # Match descriptors.
+        matches = bf.match(des1,des2)
+    
+        # Sort them in the order of their distance.
+        matches = sorted(matches, key = lambda x:x.distance)
+     
     else:
         #FLANN 
-        pass
+        
+        # FLANN parameters
+        FLANN_INDEX_KDTREE = 0
+        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+        search_params = dict(checks=50)   # or pass empty dictionary
+  
+        flann = cv2.FlannBasedMatcher(index_params,search_params)
+        matches = flann.knnMatch(des1,des2,K)
 
-    if homography:
-        pass
+    #Probably not needed yet (i.e., find specific object in the image)
+    #if homography:
+        
 
-    return  
+    #Return list of matches between the 2 input descriptors
+    return matches 
 
         
 if __name__ == '__main__':
@@ -213,6 +276,7 @@ if __name__ == '__main__':
     parser.add_argument("modelpath", help="Provide path to the reference models")
     #parser.add_argument("pathtomasks", help="Provide path to the segmented objects to be evaluated")
     parser.add_argument("outpath", help="Provide path to output the similarity scores")
+    parser.add_argument("method", help="Choose between SIFT, SURF, BRIEF, ORB")
     parser.add_argument('--skipfolders', required=False, nargs='*', 
     help='Optional: name of folders to be skipped. For example to skip folders named images1 and images4 type "--skipfolders images1 images4" Please do not provide a full path but just the folder name')
 
@@ -260,15 +324,10 @@ if __name__ == '__main__':
             row=[]
             l = filep.split("/")
             fname = l[len(l)-1]
-            #objcat = l[len(l)-2]
 
             #Read image in grayscale
             objimg = cv2.imread(filep, 0) 
-    
             objrgb = cv2.imread(filep, 1) 
-
-            gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-
 
  
             glob_min =1000.0
@@ -276,71 +335,69 @@ if __name__ == '__main__':
         
             row.append(fname)
             row.append(objcat)
-
-
-            #Extract shape
-            try:
-
-                shape1 = mainContour(objimg, 'input')
-
-                #cv2.drawContours(objrgb, [shape1], 0, (0,255,0), 3)
-                objrgb = cropToC(objrgb, shape1)
-
-             
-    
-                #cv2.imshow('', objrgb)
-                #cv2.waitKey(8000)
-                #sys.exit(0)
-            except Exception as e:
-
-                #Empty masks 
-                print('Problem while processing image %s' % fname)
-                print(str(e))
             
-                continue
-    
             avgs =[] 
 
 
-
-                #Compare with all Shapenet models
-                scores =[]    
+            #Compare with all Shapenet models
+            scores =[]    
     
-                for modelp in modelpaths: 
+            for modelp in modelpaths: 
 
             
-                    lm = modelp.split('/')             
-                    modname = lm[len(lm)-1]
+                lm = modelp.split('/')             
+                modname = lm[len(lm)-1]
 
 
-                    #comparison["similarities"] =[]   
-
-                    mimage = cv2.imread(modelp, 0)
-                    mrgb = cv2.imread(modelp, 1)
+                mimage = cv2.imread(modelp, 0) #reads in grayscale
+                mrgb = cv2.imread(modelp, 1)
             
-                    shape2 = mainContour(mimage, 'reference')
-            
-                    #Perform a pointwise comparison within each couple
-                    shapescore= shapeMatch(shape1, shape2) 
-                    
-                    mrgb = cropToC(mrgb, shape2)
-             
-                    #score = clrscore #shapescore
-                    score = alpha*shapescore + beta*clrscore
 
-                    if score < glob_min:
-                        glob_min = score
-                        obj_min = modname
+                if args.method == 'SIFT':
+
+                    kp, des = SIFT(objimg)
+                    kpm, desm = SIFT(mimg)                    
+                    #Get list of matches that passed ratio test
+
+                elif args.method == 'ORB':
+
+                    kp, des = ORB(objimg)
+                    kpm, desm = ORB(mimg)
+
+                elif args.method == 'SURF':
+
+                    kp, des = SURF(objimg)
+                    kpm, desm = SURF(mimg)
+
+                elif args.method == 'BRIEF':
+
+                    kp, des = BRIEF(objimg)
+                    kpm, desm = BRIEF(mimg)
+
+                elif args.method == 'FAST':
+
+                    kp, des = FAST(objimg)
+                    kpm, desm = FAST(mimg)
+     
+                good_ones = featureMatch(des, desm, args.method)
+
+     
+                #TO_DO: redefine strategy to compute winner
+                            
+
+                score = alpha*shapescore + beta*clrscore
+
+                if score < glob_min:
+                    glob_min = score
+                    obj_min = modname
          
                     
-                    scores.append(score)
+                scores.append(score)
 
                 
                 if randomized:
 
                     obj_min = baseline_method(all_ids)
-
-                
 
                 row.append(obj_min)
                 row.append(glob_min)
@@ -420,7 +477,6 @@ if __name__ == '__main__':
 
                 wrtr.writerow(row) 
 
-        
                  
 
         print(correct)

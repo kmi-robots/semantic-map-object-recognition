@@ -62,6 +62,7 @@ sofa2=['87f103e24f91af8d4343db7d677fae7b-0.png', '87f103e24f91af8d4343db7d677fae
 lamp1=['3dw.3c5db21345130f0290f1eb8f29abcea8.png', '3dw.3c5db21345130f0290f1eb8f29abcea8-2.png']
 lamp2=['6770adca6c298f68fc3f90c1b551a0f7-4.png', '6770adca6c298f68fc3f90c1b551a0f7-6.png', '6770adca6c298f68fc3f90c1b551a0f7-8.png', '6770adca6c298f68fc3f90c1b551a0f7-12.png']
 
+:w
 
 
 #Macro, i.e., same object class
@@ -90,73 +91,9 @@ flags =  ["chairs", 'bottles', 'papers', 'books', 'tables', 'boxes', 'windows', 
 
 micro_object_list = [(chair1, chair2), (bottle1, bottle2), (paper1, paper2), (book1, book2), (table1, table2), (box1, box2), (window1, window2), (door1, door2), (sofa1, sofa2), (lamp1, lamp2)]
 
+#Flag to trigger baseline random classification
 randomized = False
 
-def mainContour(image, flag):
-
-    '''
-    Extract most prominent shape from given image
-    '''
-    if flag =='input':
-        ret, thresh = cv2.threshold(image, 0, 255,0)
-    elif flag=='reference':
-        ret, thresh = cv2.threshold(image, 127, 255,1)
-
-    _, contours,hierarchy = cv2.findContours(thresh,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    areas = [cv2.contourArea(cnt) for cnt in contours]
-  
-    try: 
-        idx = areas.index(max(areas))    
-
-    except Exception as e:
-
-        return contours[0]
-
-    return contours[idx]
-
-
-
-def cropToC(image, contour):
-
-    alpha=0.0 # transparent overlay
-    mask = np.zeros_like(image) # Create mask where white is what we want, black otherwise
-    
-    #print(type(mask))
-    #print(type(contour))
-    cv2.drawContours(mask, [contour], 0, 255, -1) # Draw filled contour in mask
-        
-
-    mask = np.invert(mask)
-    #out = np.zeros_like(image) # Extract out the object and place into output image
-    #Invert Black  with White (ShapeNets backgrounds are white) 
-    #out = np.invert(out)
-    out = image.copy()
-    #overlay = image.copy()
-    #Add transarent mask on top
-    cv2.addWeighted(mask, alpha, out, 1 - alpha,
-		0, out)
-    out[np.where((mask == [255,255,255]).all(axis = 2))] = [255,255,255]
-    
-    # Now crop
-    x = np.where(mask == [0,0,0])[0]
-    y = np.where(mask == [0,0,0])[1]
-    try:
-        (topx, topy) = (np.min(x), np.min(y))
-        (bottomx, bottomy) = (np.max(x), np.max(y))
-
-        out= out[topx:bottomx+1, topy:bottomy+1]
-
-
-    except Exception as e:
-        print(str(e))
-        sys.exit(0)
-    '''    
-    cv2.imshow('', out)
-    cv2.waitKey(8000)
-    sys.exit(0)
-    '''
-    return out
 
 ###########################################
 #Methods for feature description
@@ -218,28 +155,22 @@ def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.75):
     with or without homography
 
     '''
-    if flag == 0 and method =='SIFT':
+    ratio_test=False
+
+
+    if flag == 0 and (method =='SIFT' or method=='SURF' or method=='FAST'):
 
         #Brute force for SIFT
         # BFMatcher with default params
 
-        bf = cv2.BFMatcher()
+        bf = cv2.BFMatcher(crossCheck=True)
         
         matches = bf.knnMatch(des1,des2, K)
   
-        '''
-        # Apply ratio test
-        good = []
-        for m,n in matches:
-
-            if m.distance < thresh*n.distance:
-
-                good.append([m])
-
-        return good
-        '''
-
-    elif flag == 0  and method =='ORB':
+        ratio_test =True
+        
+        
+    elif flag == 0  and (method =='ORB' or method=='BRIEF' ):
     
         bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
     
@@ -249,22 +180,48 @@ def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.75):
         # Sort them in the order of their distance.
         matches = sorted(matches, key = lambda x:x.distance)
      
-    else:
+    else: 
+
         #FLANN 
+        if method =='SIFT' or method=='SURF' or method=='FAST'):
         
-        # FLANN parameters
-        FLANN_INDEX_KDTREE = 0
-        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-        search_params = dict(checks=50)   # or pass empty dictionary
+            # FLANN parameters
+            FLANN_INDEX_KDTREE = 1
+            index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
   
+        else:
+            #For ORB and BRIEF
+
+            FLANN_INDEX_LSH = 6
+            index_params= dict(algorithm = FLANN_INDEX_LSH, table_number = 6, key_size = 12, multi_probe_level = 1) 
+
+
+        search_params = dict(checks=50)   # or pass empty dictionary
         flann = cv2.FlannBasedMatcher(index_params,search_params)
         matches = flann.knnMatch(des1,des2,K)
 
+        ratio_test=True
+
+    '''
     #Probably not needed yet (i.e., find specific object in the image)
     #if homography:
-        
+    '''
+    
+    if ratio_test:
 
-    #Return list of matches between the 2 input descriptors
+        # Apply ratio test
+        #To minimize false matches related to noise
+        good = []
+        for m,n in matches:
+
+            if m.distance < thresh*n.distance:
+
+                good.append([m])
+
+        #Return only matches that passed the ratio test
+        matches = good
+
+    #Return list of top matches between the 2 input descriptors
     return matches 
 
         
@@ -341,13 +298,15 @@ if __name__ == '__main__':
 
             #Compare with all Shapenet models
             scores =[]    
-    
+            matches = []
+            
+   
             for modelp in modelpaths: 
 
             
                 lm = modelp.split('/')             
                 modname = lm[len(lm)-1]
-
+                
 
                 mimage = cv2.imread(modelp, 0) #reads in grayscale
                 mrgb = cv2.imread(modelp, 1)
@@ -379,103 +338,112 @@ if __name__ == '__main__':
                     kp, des = FAST(objimg)
                     kpm, desm = FAST(mimg)
      
-                good_ones = featureMatch(des, desm, args.method)
+                try:
+                    matches.append((modname, featureMatch(des, desm, args.method[0])))
 
-     
-                #TO_DO: redefine strategy to compute winner
-                            
+                except:
+                    #Skip model if no candidate match is returned
+                    continue
+                '''  
 
                 score = alpha*shapescore + beta*clrscore
 
                 if score < glob_min:
+
                     glob_min = score
                     obj_min = modname
          
                     
                 scores.append(score)
-
-                
-                if randomized:
-
-                    obj_min = baseline_method(all_ids)
-
-                row.append(obj_min)
-                row.append(glob_min)
-        
-        
-                #Add stats on scores
-                row.append(stat.mean(scores))
-                row.append(stat.median(scores))
-                row.append(stat.stdev(scores))
-                row.append(max(scores))
-                
-                #Output predicted cat
-        
-                if obj_min in chairs:
-                    pred='chairs'
-
-                elif obj_min in bins:
-                    pred='bins'
-        
-                elif obj_min in plants:
-                    pred='plants'
-        
-                elif obj_min in bottles:
-                    pred='bottles'
-
-                elif obj_min in papers:
-                    pred='papers'
-
-                elif obj_min in books:
-                    pred='books'
-
-                elif obj_min in tables:
-                    pred='tables'
-
-
-                elif obj_min in boxes:
-                    pred='boxes'
-
-
-                elif obj_min in windows:
-                    pred='windows'
-
-
-                elif obj_min in doors:
-                    pred='doors'
-
-
-                elif obj_min in sofas:
-                    pred='sofas'
-
-
-                elif obj_min in lamps:
-                    pred='lamps'
-
-
                 '''
+           
+            #Sort selected matches across all models in ascending order
+            #(The closest distance the better)     
+            matches = sorted(matches, key = lambda x:x[1].distance)
 
-                if obj_max in chairs:
-                    pred='chairs'
+            obj_min, min_match = matches[0]
+            
 
-                elif obj_max in bins:
-                    pred='bins'
+            if randomized:
+
+                obj_min = baseline_method(all_ids)
+
+            row.append(obj_min)
+            row.append(glob_min)
         
-                elif obj_max in plants:
-                    pred='plants'
-                '''
+        
+            #Add stats on scores
+            row.append(stat.mean(scores))
+            row.append(stat.median(scores))
+            row.append(stat.stdev(scores))
+            row.append(max(scores))
+                
+            #Output predicted cat
+        
+            if obj_min in chairs:
+                pred='chairs'
+
+            elif obj_min in bins:
+               pred='bins'
+        
+            elif obj_min in plants:
+               pred='plants'
+        
+            elif obj_min in bottles:
+               pred='bottles'
+
+            elif obj_min in papers:
+               pred='papers'
+
+            elif obj_min in books:
+               pred='books'
+
+            elif obj_min in tables:
+               pred='tables'
+
+            elif obj_min in boxes:
+               pred='boxes'
+
+
+            elif obj_min in windows:
+               pred='windows'
+
+
+            elif obj_min in doors:
+               pred='doors'
+
+
+            elif obj_min in sofas:
+               pred='sofas'
+
+
+            elif obj_min in lamps:
+               pred='lamps'
+
+
+            '''
+
+            if obj_max in chairs:
+               pred='chairs'
+
+            elif obj_max in bins:
+               pred='bins'
+        
+            elif obj_max in plants:
+               pred='plants'
+            '''
         
 
-                row.append(pred)
+            row.append(pred)
 
-                if pred==objcat:
+            if pred==objcat:
  
-                    row.append(1)
-                    correct +=1 
-                else:
-                    row.append(0)
+                row.append(1)
+                correct +=1 
+            else:
+                row.append(0)
 
-                wrtr.writerow(row) 
+            wrtr.writerow(row) 
 
                  
 

@@ -209,10 +209,10 @@ def featureMatch(inimg, refimg, flag=0):
 	("Intersection", cv2.HISTCMP_INTERSECT), #the higher the better
 	("Hellinger", cv2.HISTCMP_BHATTACHARYYA)) #the smaller the better
 
-        d = cv2.compareHist(hist2, hist, OPENCV_METHODS[1][1])
+        d = cv2.compareHist(hist2, hist, OPENCV_METHODS[2][1])
         
         
-        if OPENCV_METHODS[1][1] == 0 or OPENCV_METHODS[1][1] == 2:
+        if OPENCV_METHODS[2][1] == 0 or OPENCV_METHODS[2][1] == 2:
             
             inverseNeeded = True
 
@@ -258,8 +258,8 @@ def microscore(namelist, path):
         #print(filep)
 
         #WEIGHTS are INITIALIZED HERE!
-        alpha = 0.3
-        beta=  0.7
+        alpha = 1.0
+        beta=  1.0
 
         clrscore, flag = featureMatch(objrgb, mrgb)
      
@@ -345,7 +345,7 @@ if __name__ == '__main__':
         objectpaths = [os.path.join(args.imgpath, folder, name) for name in objectn]
 
         #Recap all in a csv
-        wrtr = csv.writer(open(os.path.join(args.outpath, 'macro_l3chi_results_recap_%s_0307.csv' % objcat), 'w'))
+        wrtr = csv.writer(open(os.path.join(args.outpath, 'macro_l3int_results_recap_%s.csv' % objcat), 'w'))
         #Write header
         wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     

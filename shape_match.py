@@ -209,10 +209,10 @@ def featureMatch(inimg, refimg, flag=0):
 	("Intersection", cv2.HISTCMP_INTERSECT), #the higher the better
 	("Hellinger", cv2.HISTCMP_BHATTACHARYYA)) #the smaller the better
 
-        d = cv2.compareHist(hist2, hist, OPENCV_METHODS[2][1])
+        d = cv2.compareHist(hist2, hist, OPENCV_METHODS[3][1])
         
         
-        if OPENCV_METHODS[2][1] == 0 or OPENCV_METHODS[2][1] == 2:
+        if OPENCV_METHODS[3][1] == 0 or OPENCV_METHODS[3][1] == 2:
             
             inverseNeeded = True
 
@@ -345,7 +345,7 @@ if __name__ == '__main__':
         objectpaths = [os.path.join(args.imgpath, folder, name) for name in objectn]
 
         #Recap all in a csv
-        wrtr = csv.writer(open(os.path.join(args.outpath, 'macro_l3int_results_recap_%s.csv' % objcat), 'w'))
+        wrtr = csv.writer(open(os.path.join(args.outpath, 'shapevshape_macro_l3hell_results_recap_%s.csv' % objcat), 'w'))
         #Write header
         wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
     
@@ -377,7 +377,7 @@ if __name__ == '__main__':
             #Extract shape
             try:
 
-                shape1 = mainContour(objimg, 'input')
+                shape1 = mainContour(objimg, 'reference') #'input')
 
                 #cv2.drawContours(objrgb, [shape1], 0, (0,255,0), 3)
                 objrgb = cropToC(objrgb, shape1)

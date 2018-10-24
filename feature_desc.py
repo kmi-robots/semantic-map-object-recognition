@@ -62,7 +62,7 @@ sofa2=['87f103e24f91af8d4343db7d677fae7b-0.png', '87f103e24f91af8d4343db7d677fae
 lamp1=['3dw.3c5db21345130f0290f1eb8f29abcea8.png', '3dw.3c5db21345130f0290f1eb8f29abcea8-2.png']
 lamp2=['6770adca6c298f68fc3f90c1b551a0f7-4.png', '6770adca6c298f68fc3f90c1b551a0f7-6.png', '6770adca6c298f68fc3f90c1b551a0f7-8.png', '6770adca6c298f68fc3f90c1b551a0f7-12.png']
 
-:w
+
 
 
 #Macro, i.e., same object class
@@ -103,28 +103,27 @@ def SIFT(gray):
 
     #Returns kp = list of keypoints
     #des = numpy array of dimensions kp x 128    
-
-    sift = cv2.SIFT()
+    sift = cv2.xfeatures2d.SIFT_create()
+    #sift = cv2.SIFT()
     kp, des = sift.detectAndCompute(gray,None)
-    
     return kp, des
 
-def SURF():
+def SURF(gray):
     
     # Create SURF object. You can specify params here or later.
     # Here I set Hessian Threshold to 400
     surf = cv2.xfeatures2d.SURF_create(400)
     surf.extended = True  # making the size of the descriptor 128
     # Find keypoints and descriptors directly
-    kp, des = surf.detectAndCompute(img,None)    
+    kp, des = surf.detectAndCompute(gray,None)    
 
     return kp, des
 
 
-def BRIEF():
+def BRIEF(gray):
 
     brief = cv2.BriefDescriptorExtractor_create()
-    kp, des = brief.compute(img, kp)
+    kp, des = brief.compute(gray, kp)
 
     return kp, des
 
@@ -146,7 +145,7 @@ def FAST(gray):
 
 def baseline_method(list_allids):
     
-    return random.choice(lis_allids)
+    return random.choice(list_allids)
 
 def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.75):
 
@@ -156,14 +155,13 @@ def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.75):
 
     '''
     ratio_test=False
-
+    matches=[]
 
     if flag == 0 and (method =='SIFT' or method=='SURF' or method=='FAST'):
-
         #Brute force for SIFT
         # BFMatcher with default params
 
-        bf = cv2.BFMatcher(crossCheck=True)
+        bf = cv2.BFMatcher()
         
         matches = bf.knnMatch(des1,des2, K)
   
@@ -172,7 +170,7 @@ def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.75):
         
     elif flag == 0  and (method =='ORB' or method=='BRIEF' ):
     
-        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        bf = cv2.BFMatcher(cv2.NORM_HAMMING)
     
         # Match descriptors.
         matches = bf.match(des1,des2)
@@ -181,9 +179,11 @@ def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.75):
         matches = sorted(matches, key = lambda x:x.distance)
      
     else: 
+        
 
+        print("Using FLANN instead of Brute force")
         #FLANN 
-        if method =='SIFT' or method=='SURF' or method=='FAST'):
+        if method =='SIFT' or method=='SURF' or method=='FAST':
         
             # FLANN parameters
             FLANN_INDEX_KDTREE = 1
@@ -197,10 +197,12 @@ def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.75):
 
 
         search_params = dict(checks=50)   # or pass empty dictionary
-        flann = cv2.FlannBasedMatcher(index_params,search_params)
-        matches = flann.knnMatch(des1,des2,K)
 
-        ratio_test=True
+        if des1 is not None and des2 is not None:
+            flann = cv2.FlannBasedMatcher(index_params,search_params)
+            matches = flann.knnMatch(des1,des2,K)
+
+            ratio_test=True
 
     '''
     #Probably not needed yet (i.e., find specific object in the image)
@@ -216,7 +218,7 @@ def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.75):
 
             if m.distance < thresh*n.distance:
 
-                good.append([m])
+                good.append(m)
 
         #Return only matches that passed the ratio test
         matches = good
@@ -270,9 +272,9 @@ if __name__ == '__main__':
         objectpaths = [os.path.join(args.imgpath, folder, name) for name in objectn]
 
         #Recap all in a csv
-        wrtr = csv.writer(open(os.path.join(args.outpath, 'SIFT_BF_results_recap_%s.csv' % objcat), 'w'))
+        wrtr = csv.writer(open(os.path.join(args.outpath, 'sift_bf_results_recap_%s.csv' % objcat), 'w'))
         #Write header
-        wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'mean', 'median', 'stdev', 'max', 'predicted', 'correct?'])
+        wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'predicted', 'correct?'])
     
         print("Here we go, currently evaluating: %s" % objcat)
 
@@ -308,7 +310,7 @@ if __name__ == '__main__':
                 modname = lm[len(lm)-1]
                 
 
-                mimage = cv2.imread(modelp, 0) #reads in grayscale
+                mimg = cv2.imread(modelp, 0) #reads in grayscale
                 mrgb = cv2.imread(modelp, 1)
             
 
@@ -337,15 +339,33 @@ if __name__ == '__main__':
 
                     kp, des = FAST(objimg)
                     kpm, desm = FAST(mimg)
+
+                elif args.method == 'RANDOM':
+                    continue
+
      
                 try:
-                    matches.append((modname, featureMatch(des, desm, args.method[0])))
+                    #print("Starting feature matching")
+                    #matches.append((modname, featureMatch(des, desm, args.method)))
 
+                    matches = featureMatch(des, desm, args.method)
+                    #print(matches)
                 except:
                     #Skip model if no candidate match is returned
                     continue
-                '''  
+                  
+                if matches:
+ 
+                    matches = sorted(matches, key = lambda x:x.distance)
 
+                    #print(matches[0].distance)
+                      
+                    if matches[0].distance < glob_min:
+
+                        glob_min = matches[0].distance 
+                        obj_min = modname
+
+                '''
                 score = alpha*shapescore + beta*clrscore
 
                 if score < glob_min:
@@ -359,25 +379,30 @@ if __name__ == '__main__':
            
             #Sort selected matches across all models in ascending order
             #(The closest distance the better)     
-            matches = sorted(matches, key = lambda x:x[1].distance)
-
-            obj_min, min_match = matches[0]
             
 
             if randomized:
 
                 obj_min = baseline_method(all_ids)
 
+            '''
+            else:
+           
+                 
+                matches = sorted(matches, key = lambda x:x[1].distance)
+
+                obj_min, min_match = matches[0]
+            '''
             row.append(obj_min)
             row.append(glob_min)
         
-        
+            '''
             #Add stats on scores
-            row.append(stat.mean(scores))
-            row.append(stat.median(scores))
-            row.append(stat.stdev(scores))
-            row.append(max(scores))
-                
+            row.append(stat.mean(matches))
+            row.append(stat.median(matches))
+            row.append(stat.stdev(matches))
+            row.append(max())
+            '''    
             #Output predicted cat
         
             if obj_min in chairs:

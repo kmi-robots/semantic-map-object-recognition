@@ -111,9 +111,9 @@ def SIFT(gray):
 def SURF(gray):
     
     # Create SURF object. You can specify params here or later.
-    # Here I set Hessian Threshold to 400
-    surf = cv2.xfeatures2d.SURF_create(400)
-    surf.extended = True  # making the size of the descriptor 128
+    # Here we set Hessian Threshold to 400
+    surf = cv2.xfeatures2d.SURF_create(400, extended=True)
+    #surf.extended = True  # making the size of the descriptor 128
     # Find keypoints and descriptors directly
     kp, des = surf.detectAndCompute(gray,None)    
 
@@ -122,7 +122,9 @@ def SURF(gray):
 
 def BRIEF(gray):
 
-    brief = cv2.BriefDescriptorExtractor_create()
+    star= cv2.xfeatures2d.StarDetector_create()
+    brief = cv2.xfeatures2d.BriefDescriptorExtractor_create()
+    kp = star.detect(gray,None)
     kp, des = brief.compute(gray, kp)
 
     return kp, des
@@ -147,7 +149,9 @@ def baseline_method(list_allids):
     
     return random.choice(list_allids)
 
-def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.75):
+def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.5):
+
+    #flag=1
 
     '''
     Brute-force (0), FLANN matching (1)
@@ -170,7 +174,7 @@ def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.75):
         
     elif flag == 0  and (method =='ORB' or method=='BRIEF' ):
     
-        bf = cv2.BFMatcher(cv2.NORM_HAMMING)
+        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
     
         # Match descriptors.
         matches = bf.match(des1,des2)
@@ -181,7 +185,7 @@ def featureMatch(des1,des2, method, flag=0, homography= True, K=2, thresh=0.75):
     else: 
         
 
-        print("Using FLANN instead of Brute force")
+        #print("Using FLANN instead of Brute force")
         #FLANN 
         if method =='SIFT' or method=='SURF' or method=='FAST':
         
@@ -265,6 +269,10 @@ if __name__ == '__main__':
         start = time.time()
         accuracy = 0.0     
         correct =0
+        classified = 0
+        notclassified = 0
+        precision = 0.0 
+        recall = 0.0
 
         objectn = os.listdir(os.path.join(args.imgpath, folder))
         objcat = folder
@@ -274,7 +282,7 @@ if __name__ == '__main__':
         #Recap all in a csv
         wrtr = csv.writer(open(os.path.join(args.outpath, 'sift_bf_results_recap_%s.csv' % objcat), 'w'))
         #Write header
-        wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'predicted', 'correct?'])
+        wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'avg_iter_score','predicted', 'correct?'])
     
         print("Here we go, currently evaluating: %s" % objcat)
 
@@ -301,7 +309,7 @@ if __name__ == '__main__':
             #Compare with all Shapenet models
             scores =[]    
             matches = []
-            
+            distances =[]
    
             for modelp in modelpaths: 
 
@@ -355,7 +363,24 @@ if __name__ == '__main__':
                     continue
                   
                 if matches:
- 
+                     
+                    #distances = [m.distance for m in matches]
+                    
+                    '''
+                    #compute average distance across all matches
+                    # and combine with no of tot matches
+                    sum_dis = sum(distances)
+
+                    score = sum_dis/ (float(len(distances))*2.)
+
+                    if score < glob_min:
+
+                        glob_min = score
+                        obj_min = modname
+
+                    scores.append(score)
+                    '''
+                    #Uncomment to only take first best in each iter 
                     matches = sorted(matches, key = lambda x:x.distance)
 
                     #print(matches[0].distance)
@@ -364,7 +389,9 @@ if __name__ == '__main__':
 
                         glob_min = matches[0].distance 
                         obj_min = modname
-
+                        scores.append(glob_min)
+                
+                
                 '''
                 score = alpha*shapescore + beta*clrscore
 
@@ -395,71 +422,85 @@ if __name__ == '__main__':
             '''
             row.append(obj_min)
             row.append(glob_min)
+            
         
             '''
             #Add stats on scores
             row.append(stat.mean(matches))
             row.append(stat.median(matches))
             row.append(stat.stdev(matches))
-            row.append(max())
+            #row.append(max())
             '''    
             #Output predicted cat
         
-            if obj_min in chairs:
-                pred='chairs'
+            #If below average, we will say it is not confident enough to classify
+            avg_score = sum(scores)/ float(len(scores))
+            row.append(avg_score)
+            #sys.exit(0)
+             
+            if glob_min > float(avg_score/2.0):
+                #print(obj_min)
+                #print(avg_score)
+                pred = 'noclass'
+                notclassified +=1 
+            else:
 
-            elif obj_min in bins:
-               pred='bins'
+                if obj_min in chairs:
+                    pred='chairs'
+
+                elif obj_min in bins:
+                    pred='bins'
         
-            elif obj_min in plants:
-               pred='plants'
+                elif obj_min in plants:
+                    pred='plants'
         
-            elif obj_min in bottles:
-               pred='bottles'
+                elif obj_min in bottles:
+                    pred='bottles'
 
-            elif obj_min in papers:
-               pred='papers'
+                elif obj_min in papers:
+                    pred='papers'
 
-            elif obj_min in books:
-               pred='books'
+                elif obj_min in books:
+                    pred='books'
 
-            elif obj_min in tables:
-               pred='tables'
+                elif obj_min in tables:
+                    pred='tables'
 
-            elif obj_min in boxes:
-               pred='boxes'
-
-
-            elif obj_min in windows:
-               pred='windows'
+                elif obj_min in boxes:
+                    pred='boxes'
 
 
-            elif obj_min in doors:
-               pred='doors'
+                elif obj_min in windows:
+                    pred='windows'
 
 
-            elif obj_min in sofas:
-               pred='sofas'
+                elif obj_min in doors:
+                    pred='doors'
 
 
-            elif obj_min in lamps:
-               pred='lamps'
+                elif obj_min in sofas:
+                    pred='sofas'
 
 
-            '''
+                elif obj_min in lamps:
+                    pred='lamps'
 
-            if obj_max in chairs:
-               pred='chairs'
 
-            elif obj_max in bins:
-               pred='bins'
+                '''
+
+                if obj_max in chairs:
+                    pred='chairs'
+
+                elif obj_max in bins:
+                    pred='bins'
         
-            elif obj_max in plants:
-               pred='plants'
-            '''
-        
-
+                elif obj_max in plants:
+                    pred='plants'
+                '''
+                classified += 1 
+                
             row.append(pred)
+            
 
             if pred==objcat:
  
@@ -472,9 +513,13 @@ if __name__ == '__main__':
 
                  
 
-        print(correct)
-        print(len(objectn))
+        print("No of correct examples  %i" % correct)
+        print("No of classified examples %i" % classified)
+        print("Tot ground truth set %i" % len(objectn))
+
         accuracy = float(correct/ len(objectn)) 
+        #precision = float(correct/ classified)
+        
         print("Tot accuracy is %f " % accuracy )
 
         print("Object class complete...took %f seconds" % float(time.time() - start))

@@ -82,8 +82,10 @@ doors = list(set().union(door1, door2)) #bottle3))
 sofas = list(set().union(sofa1, sofa2)) #bottle3))
 lamps = list(set().union(lamp1, lamp2)) #bottle3))
 
+noclass = ['noclass']
+
 #all_ids = list(set().union(chairs,plants,bins)) # displays, printers))
-all_ids = list(set().union(chairs, bottles, papers, books, tables, boxes, windows, doors, sofas, lamps))
+all_ids = list(set().union(chairs, bottles, papers, books, tables, boxes, windows, doors, sofas, lamps, noclass))
 #############################################################################
 
 object_list = [chairs, bottles, papers, books, tables, boxes, windows, doors, sofas, lamps]
@@ -280,7 +282,7 @@ if __name__ == '__main__':
         objectpaths = [os.path.join(args.imgpath, folder, name) for name in objectn]
 
         #Recap all in a csv
-        wrtr = csv.writer(open(os.path.join(args.outpath, 'sift_bf_results_recap_%s.csv' % objcat), 'w'))
+        wrtr = csv.writer(open(os.path.join(args.outpath, 'base_results_recap_%s.csv' % objcat), 'w'))
         #Write header
         wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'avg_iter_score','predicted', 'correct?'])
     
@@ -438,7 +440,7 @@ if __name__ == '__main__':
             row.append(avg_score)
             #sys.exit(0)
              
-            if glob_min > float(avg_score/2.0):
+            if obj_min=='noclass' or glob_min > float(avg_score/2.0):
                 #print(obj_min)
                 #print(avg_score)
                 pred = 'noclass'

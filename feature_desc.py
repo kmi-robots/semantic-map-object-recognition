@@ -282,7 +282,7 @@ if __name__ == '__main__':
         objectpaths = [os.path.join(args.imgpath, folder, name) for name in objectn]
 
         #Recap all in a csv
-        wrtr = csv.writer(open(os.path.join(args.outpath, 'base_results_recap_%s.csv' % objcat), 'w'))
+        wrtr = csv.writer(open(os.path.join(args.outpath, '%s_results_recap_%s.csv' % (args.method,objcat)), 'w'))
         #Write header
         wrtr.writerow(["imageid", 'category', 'bestmatch', 'score', 'avg_iter_score','predicted', 'correct?'])
     
@@ -301,7 +301,9 @@ if __name__ == '__main__':
  
             glob_min =1000.0
             glob_max =0.0
-        
+            avg_score = 0.0 
+            obj_min = 'noclass'       
+ 
             row.append(fname)
             row.append(objcat)
             
@@ -312,6 +314,7 @@ if __name__ == '__main__':
             scores =[]    
             matches = []
             distances =[]
+
    
             for modelp in modelpaths: 
 
@@ -413,7 +416,7 @@ if __name__ == '__main__':
             if randomized:
 
                 obj_min = baseline_method(all_ids)
-
+                
             '''
             else:
            
@@ -436,11 +439,12 @@ if __name__ == '__main__':
             #Output predicted cat
         
             #If below average, we will say it is not confident enough to classify
-            avg_score = sum(scores)/ float(len(scores))
+            if scores:
+                avg_score = sum(scores)/ float(len(scores))
             row.append(avg_score)
             #sys.exit(0)
              
-            if obj_min=='noclass' or glob_min > float(avg_score/2.0):
+            if not randomized and glob_min > float(avg_score/2.0):
                 #print(obj_min)
                 #print(avg_score)
                 pred = 'noclass'
@@ -487,6 +491,10 @@ if __name__ == '__main__':
                 elif obj_min in lamps:
                     pred='lamps'
 
+                elif obj_min in noclass:
+                    pred='noclass'
+                    notclassified +=1 
+                    classified = classified - 1
 
                 '''
 

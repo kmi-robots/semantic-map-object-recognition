@@ -56,7 +56,7 @@ Implemented in the Python script broader_pipeline.py
 
    ### With Siamese-like nets 
  
-   Based on the tutorial illustrated here 
+   Based on the tutorial illustrated here https://software.intel.com/en-us/articles/intel-optimization-for-tensorflow-installation-guide
 
    we fixed their code ( layer dimensionality  and adjusted output shape for binary classification)
    and set up for training on a subsample of ShapeNet models.

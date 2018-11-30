@@ -44,17 +44,17 @@ Implemented in the Python script broader_pipeline.py
 
 ## 2. Image Matching against Shapenet (Classification only)
 
-   Assumes input images to be already segment to include one object at a time   
+   Assumes that input images were already segmented, i.e., one object at a time   
 
-   ### with Depth and color feature engineering
+   ### With Depth and color feature engineering
 
    Can be found in the shape_match.py script 
 
-   ### with Feature descriptors in OpenCV
+   ### With Feature descriptors in OpenCV
 
    Can be found in the feature_desc.py script
 
-   ### with Siamese-like nets 
+   ### With Siamese-like nets 
  
    Based on the tutorial illustrated here 
 
@@ -72,7 +72,7 @@ Implemented in the Python script broader_pipeline.py
    
    Each image contains a subfolder with Keras-based code for the architecture saved as siamese_normxcorr_fixed.py. The training samples used are saved under ./data
 
-   *** Prerequisites
+   ### Prerequisites
 
     * docker-ce
    

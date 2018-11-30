@@ -6,21 +6,23 @@ being:
 
 ## 1. Full pipeline (WIP)
 
-broader_pipeline.py
+Implemented in the Python script broader_pipeline.py 
 
 ### Stages
 
    * Supported Inputs: rosbag, npy matrix of image vectors, or path to image folder
 
-   * OpenCV based Segmentation  (WIP)
+   * OpenCV based Segmentation: currently reads the image frames as RGB and supports
+     calc of histogram bins based on GMM Dirichlet process  (WIP)
 
-   *  Bounding boxes from YOLO
+   * Cluster merging is supported too, post GMM Dirichlet-based segmentation
 
-   * Cropping to main bbox
+   * The RGB image is also passed to a Python wrapper for a pre-trained version of YOLO
+     to retrieve the bounding boxes for that image
 
-   * Clustering by GMM Dirichlet
+     The YOLO bbox format is converted back to ROI form
 
-   * Post merge of clusters 
+   * Images are then cropped to the bounding box of maximum area
 
 
 ### Prerequisites
@@ -28,8 +30,11 @@ broader_pipeline.py
    * OpenCV
    * rosbag
    * lightnet
+   * skimage (for RAG and cluster merging)
 
-###TO-DOs
+### TO-DOs
+
+   * double check segmentation part based on archive branch
 
    * Add planar surface extraction and integration with point cloud input
      As started under ./pcl-plane-extraction/plane_extraction.py
@@ -41,24 +46,58 @@ broader_pipeline.py
 
    Assumes input images to be already segment to include one object at a time   
 
-   with depth and color feature engineering
+   ### with Depth and color feature engineering
 
-   with feature descriptors in OpenCV
+   Can be found in the shape_match.py script 
 
-   with Siamese nets 
+   ### with Feature descriptors in OpenCV
+
+   Can be found in the feature_desc.py script
+
+   ### with Siamese-like nets 
  
-   (via Docker)
+   Based on the tutorial illustrated here 
 
+   we fixed their code ( layer dimensionality  and adjusted output shape for binary classification)
+   and set up for training on a subsample of ShapeNet models.
 
+   One docker image is conceived to be run on GPUs
+   
+   `docker pull achiatti/semantic-map-docker:gpu `
+
+   Whereas another image is set-up for CPU-only training (Using Tensorflow with Intel Optimizer for ML) 
+   
+   `docker pull achiatti/semantic-map-docker:cpu `
+
+   
+   Each image contains a subfolder with Keras-based code for the architecture saved as siamese_normxcorr_fixed.py. The training samples used are saved under ./data
+
+   *** Prerequisites
+
+    * docker-ce
+   
 
 
 # Extras
 
 ## Matlab scripts to work with the NYUDepth dataset
 
+   Under the NYUDepth-processing subfolder 
+   To work with the 
+
+   * count_objects.m can be reused to get classes of tagged objects and their cardinalities
+   * maskfiles.m was used to mask objects belonging to a specific class out of each image and create
+     a separate image for each frame (RGB object over Black background)
+   
+   ### Prerequisites
+   
+   * the NYUDepth  Dataset V2   https://cs.nyu.edu/~silberman/datasets/nyu_depth_v2.html
+   * the NYUDepth Matlab toolbox http://cs.nyu.edu/~silberman/code/toolbox_nyu_depth_v2.zip
 
 ## Histogram Visualizations
 
+   Under the plot-histograms subfolder
+   with GMM Dirichlet as above but also plotting resulting histograms
 
-   with GMM Dirichlet
+   
 

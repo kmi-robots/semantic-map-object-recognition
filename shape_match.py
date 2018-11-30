@@ -17,12 +17,12 @@ import subprocess, yaml
 from cv_bridge import CvBridge, CvBridgeError
 import json
 from PIL import Image
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
+#from sklearn.cluster import KMeans
+#from sklearn.decomposition import PCA
 import random as rng
 import scipy.io as sio
 import logging
-import h5py
+#import h5py
 import csv
 import statistics as stat
 import random

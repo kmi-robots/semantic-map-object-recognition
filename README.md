@@ -55,6 +55,8 @@ Implemented in the Python script broader_pipeline.py
    Can be found in the feature_desc.py script
 
    ### With Siamese-like nets 
+
+   *Check docker branch for further details*.
  
    Based on the tutorial illustrated here https://software.intel.com/en-us/articles/intel-optimization-for-tensorflow-installation-guide
 

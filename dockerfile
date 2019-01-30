@@ -3,12 +3,13 @@ FROM ufoym/deepo:all-py36-cu90
 # Set the working directory to /app
 WORKDIR /app
 
-EXPOSE 443, 80
+#EXPOSE 443
 
 RUN apt-get update
 
 RUN apt-get -y install python-sklearn
 
+RUN apt-get -y install tmux
 # Copy the current directory contents into the container at /app
 COPY semantic-map-docker /app/semantic-map-docker
 

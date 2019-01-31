@@ -201,9 +201,9 @@ if __name__ == "__main__":
 
 
         #sys.exit(0)
-        np.savez_compressed('../google-derived/imgset_left.npz', a_)
-        np.savez_compressed('../google-derived/imgset_right.npz', b_)
-        np.savez_compressed('../google-derived/gt_labelset.npz', labels_)
+        np.savez_compressed('../google-derived/twoclass_train_val_set.npz', a=a_, b=b_, labels=labels_)
+        #np.savez_compressed('../google-derived/imgset_right.npz', b_)
+        #np.savez_compressed('../google-derived/gt_labelset.npz', labels_)
 
         print("Data sets and label sets saved to disk")
 

@@ -26,7 +26,7 @@ from itertools import combinations, product
 ##########
 
 #No. of examples to randomly pick from each folder
-SP= 100
+SP= 200
 
 # no of positive examples for each class  = n! / r!(n-r)!
 pos_labels = int(SP*(SP-1)) 
@@ -201,9 +201,9 @@ if __name__ == "__main__":
 
 
         #sys.exit(0)
-        np.save('../google-derived/imgset_left.npy', a_)
-        np.save('../google-derived/imgset_right.npy', b_)
-        np.save('../google-derived/gt_labelset.npy', labels_)
+        np.savez_compressed('../google-derived/imgset_left.npz', a_)
+        np.savez_compressed('../google-derived/imgset_right.npz', b_)
+        np.savez_compressed('../google-derived/gt_labelset.npz', labels_)
 
         print("Data sets and label sets saved to disk")
 

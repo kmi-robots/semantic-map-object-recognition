@@ -1,20 +1,21 @@
 from __future__ import division
-import rosbag
+#import rosbag
 #import matlab
 #from mat_segmenting import extract_masks
 #import matlab.engine
 import numpy as np
 import os
+'''
 import time
 import cv2
 import argparse 
-from PIL import Image
+#from PIL import Image
 import sys
 #from shapenet_select import findAndMatch
-from pylab import arange, array, uint8 
-from matplotlib import pyplot as plt
+#from pylab import arange, array, uint8 
+#from matplotlib import pyplot as plt
 import subprocess, yaml
-from cv_bridge import CvBridge, CvBridgeError
+#from cv_bridge import CvBridge, CvBridgeError
 import json
 from PIL import Image
 #from sklearn.cluster import KMeans
@@ -25,6 +26,7 @@ import logging
 #import h5py
 import csv
 import statistics as stat
+'''
 import random
 
 

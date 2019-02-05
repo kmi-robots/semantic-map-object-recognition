@@ -26,7 +26,7 @@ from itertools import combinations, product
 ##########
 
 #No. of examples to randomly pick from each folder
-SP= 100
+SP= 200
 
 # no of positive examples for each class  = n! / r!(n-r)!
 pos_labels = int(SP*(SP-1)) 
@@ -49,7 +49,7 @@ def display_img(img):
     img = Image.fromarray(formatted, 'RGB')
     img.save('/home/agni/test.png')
     img.show()
-    sys.exit(0)
+    #sys.exit(0)
 
 
 def img_preproc(path_to_image):
@@ -62,7 +62,7 @@ def img_preproc(path_to_image):
     #display_img(x)
     x = np.expand_dims(x, axis= 0)
 
-    display_img(x)
+    #display_img(x)
     return x
 
 
@@ -134,9 +134,10 @@ if __name__ == "__main__":
         
         #isfirst = True
 
+        
         train_examples1 = random_pick_from(train_examples1, sizepick=SP)
         train_examples2 = random_pick_from(train_examples2, sizepick=SP)
-
+        
         t1 = time.time()
 
         #path_pairs1 = combinations(train_examples1, 2)
@@ -200,9 +201,9 @@ if __name__ == "__main__":
 
 
         #sys.exit(0)
-        np.save('data/google-derived/imgset_left.npy', a_)
-        np.save('data/google-derived/imgset_right.npy', b_)
-        np.save('data/google-derived/gt_labelset.npy', labels_)
+        np.savez_compressed('../google-derived/twoclass_train_val_set.npz', a=a_, b=b_, labels=labels_)
+        #np.savez_compressed('../google-derived/imgset_right.npz', b_)
+        #np.savez_compressed('../google-derived/gt_labelset.npz', labels_)
 
         print("Data sets and label sets saved to disk")
 

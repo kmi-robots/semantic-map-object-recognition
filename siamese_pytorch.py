@@ -27,6 +27,8 @@ class BalancedMNIST(MNIST):
 
 
         self.train = train
+        self.transform = transform
+        self.target_transform = target_transform
 
         #Init as MNIST
         # It will be train or test set depending on passed params
@@ -44,7 +46,7 @@ class BalancedMNIST(MNIST):
 
             self.train_data, self.train_labels = self.generate_balanced_pairs(train_labels_class,train_data_class)
 
-            print(self.train_data.shape)
+            #print(self.train_data.shape)
 
         else:
 
@@ -54,12 +56,40 @@ class BalancedMNIST(MNIST):
 
             self.test_data, self.test_labels = self.generate_balanced_pairs(test_labels_class, test_data_class)
 
-            print(self.test_data.shape)
+            #print(self.test_data.shape)
 
 
     """
     Isolating only methods that are actually different from base MNIST class in Pytorch
     """
+
+    def __getitem__(self, index):
+
+        if self.train:
+
+            imgs, target = self.train_data[index], self.train_labels[index]
+
+        else:
+            imgs, target = self.test_data[index], self.test_labels[index]
+
+        img_ar = []
+        for i in range(len(imgs)):
+
+            img = Image.fromarray(imgs[i].numpy(), mode='L')
+
+            if self.transform is not None:
+
+                img = self.transform(img)
+
+            img_ar.append(img)
+
+        if self.target_transform is not None:
+
+            target = self.target_transform(target)
+
+
+        return img_ar, target
+
 
     def group_by_digit(self, data, labels):
 
@@ -92,7 +122,7 @@ class BalancedMNIST(MNIST):
         labels = []
 
         #Uncomment the following to check number of samples per class
-        print([x.shape[0] for x in labels_class])
+        #print([x.shape[0] for x in labels_class])
 
         #Check here for different sample number
         for i in range(10):
@@ -163,10 +193,13 @@ def train(model, device, train_loader, epoch, optimizer):
     #Sets the module in training mode
     model.train()
 
+
+
     for batch_idx, (data, target) in enumerate(train_loader):
 
         #Load data points on device
         for i in range(len(data)):
+
             data[i] = data[i].to(device)
 
         #Gradients are (re)set to zero at the beginning of each epoch
@@ -234,6 +267,8 @@ def test(model, device, test_loader):
             all_labels = all_labels + len(target_positive) + len(target_negative)
 
         accuracy = 100. * accurate_labels / all_labels
+
+
         print('Test accuracy: {}/{} ({:.3f}%)\tLoss: {:.6f}'.format(accurate_labels, all_labels, accuracy, loss))
 
 
@@ -258,6 +293,13 @@ def main():
 
     #Model is defined and passed to either GPU or CPU device
     model = Net().to(device)
+
+    import os
+
+    if not os.path.isdir('./pt_results'):
+
+        os.mkdir('pt_results')
+
 
     if do_learn:  # training mode
 

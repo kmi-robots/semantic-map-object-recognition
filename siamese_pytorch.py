@@ -23,6 +23,11 @@ weight_decay = 0.0001
 
 class BalancedMNIST(MNIST):
 
+    """
+    Extending MNIST Dataset class
+    For each sample (anchor) randomly chooses a positive and negative samples
+
+    """
     def __init__(self, root, train=True, transform=None, target_transform=None, download=False):
 
 
@@ -44,7 +49,7 @@ class BalancedMNIST(MNIST):
             # To then pass to new functions
             train_labels_class, train_data_class = self.group_by_digit(train_data, train_labels)
 
-            self.train_data, self.train_labels = self.generate_balanced_pairs(train_labels_class,train_data_class)
+            self.train_data, self.train_labels = self.generate_balanced_triplets(train_labels_class,train_data_class)
 
             #print(self.train_data.shape)
 
@@ -54,7 +59,7 @@ class BalancedMNIST(MNIST):
 
             test_labels_class, test_data_class = self.group_by_digit(test_data, test_labels)
 
-            self.test_data, self.test_labels = self.generate_balanced_pairs(test_labels_class, test_data_class)
+            self.test_data, self.test_labels = self.generate_balanced_triplets(test_labels_class, test_data_class)
 
             #print(self.test_data.shape)
 
@@ -116,7 +121,7 @@ class BalancedMNIST(MNIST):
         return labels_class, data_class
 
 
-    def generate_balanced_pairs(self, labels_class, data_class):
+    def generate_balanced_triplets(self, labels_class, data_class):
 
         data = []
         labels = []
@@ -127,7 +132,7 @@ class BalancedMNIST(MNIST):
         #Check here for different sample number
         for i in range(10):
 
-            for j in range(500):  # create 500*10 pairs
+            for j in range(500):  # create 500*10 triplets
 
                 # choose random class different from current one
 
@@ -143,44 +148,146 @@ class BalancedMNIST(MNIST):
                 #Append the pos neg labels for the two pairs
                 labels.append([1, 0])
 
+        #print(torch.stack(data).shape)
 
         return torch.stack(data), torch.tensor(labels)
 
 
-#TODO: change to reproduce NormXCorr model by Submariam et al. (2016)
+#Reproducing NormXCorr model by Submariam et al. (NIPS 2016)
+
+class NormXCorr(nn.Module):
+
+    def __init__(self):
+
+        super().__init__()
+
+
+    def forward(self, data, patch_size=5):
+
+        """
+        - data[1] output of one pipeline
+        - data[0] output of the other
+
+        Following the paper terminology:
+        data[1] = feature map X
+        data[0] = feature map Y
+
+        Except here grouped in batches
+        """
+        X = data[0]
+        Y = data[1]
+
+        out_depth= patch_size*X.shape[3]*X.shape[1]
+        output = torch.zeros([batch_size, out_depth,X.shape[2], X.shape[3]], dtype=torch.float32)
+
+
+        """
+        for each depth i in range(25):
+            
+            1. take the ith 37x12 feature map from X
+                1.a create copy of X with padding of two at each margin -> 41x16
+            2. take the ith 37x12 feature map from Y
+                2.a create copy of Y with same size of 1.a, but extra vertical padding of two each -> 45x16            
+            
+            # Create empty 37x12x60 matrix
+            
+            3.  For each jth pixel in X:
+                
+                3.a take related 5x5 patch in 1.a (E)
+                3.b take all possible 5x5 patches in 2.a. (all possible Fs)
+                3.c Init empty output vec of (area,1), where area = rect_area(3.b) -> (60,1)
+                3.d for each E,F pair:
+                    - reshape both to be (25,) --> E',F'
+                    - compute mean of E' and F'
+                    - compute std devs of E' and F'
+                    - add 0.01 to each std dev to avoid division by 0
+                    - compute normcrosscorr between E'F'
+                    - add obtained scalar to vector in 3.c    
+                    
+                3.e add result of 3.d to 37x12x60 matrix, at jth position
+            
+            #stack along depth    
+        # so that final output after each depth is 37x12x60*25 -> 37*12*1500
+         
+        """
+
+        return output
+
+
+
+#The whole feed-forward architecture
 class Net(nn.Module):
 
     def __init__(self):
+
         super().__init__()
+        """
+        All variables defined here are ultimately
+        passed as params to the optimizer
+        
+        """
 
-        self.conv1 = nn.Conv2d(1, 64, 7)
-        self.pool1 = nn.MaxPool2d(2)
-        self.conv2 = nn.Conv2d(64, 128, 5)
-        self.conv3 = nn.Conv2d(128, 256, 5)
-        self.linear1 = nn.Linear(2304, 512)
+        #Redefining first part as a sequential model
+        self.sequential = nn.Sequential(
 
-        self.linear2 = nn.Linear(512, 2)
+            nn.Conv2d(3, 20, kernel_size=5),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(20, 25, kernel_size=5),
+            nn.ReLU(),
+            nn.MaxPool2d(2)
+        )
 
-    def forward(self, data):
+        self.normxcorr = NormXCorr()
+
+        self.normrelu = nn.ReLU()
+
+        self.dimredux = self.dimredux = nn.Sequential(
+
+            nn.Conv2d(1500, 25, kernel_size=1),
+            nn.ReLU(),
+            nn.Conv2d(25, 25, kernel_size=3),
+            nn.MaxPool2d(2)
+        )
+
+        self.linear1 = nn.Linear(25*17*5, 500)
+
+        self.linear2 = nn.Linear(500, 2)
+
+        #self.softmax = nn.Softmax()
+
+
+    def forward(self, input):
+
+
         res = []
+
+        # Defines the two pipelines
         for i in range(2):  # Siamese nets; sharing weights
-            x = data[i]
-            x = self.conv1(x)
-            x = F.relu(x)
-            x = self.pool1(x)
-            x = self.conv2(x)
-            x = F.relu(x)
-            x = self.conv3(x)
-            x = F.relu(x)
 
-            x = x.view(x.shape[0], -1)
-            x = self.linear1(x)
-            res.append(F.relu(x))
+            x = input[i]
+            #print(x.shape)
+            res.append(self.sequential(x))
+            #print(self.sequential(x).shape)
 
-        res = torch.abs(res[1] - res[0])
+
+        res = self.normxcorr(res)
+        res = self.normrelu(res)
+
+        res = self.dimredux(res)
+
+        res =  res.view(res.size()[0], -1) # (batch_size. 2125) , i.e. flattened
+        res = self.linear1(res)
         res = self.linear2(res)
-        return res
+        #print(res.shape)
+        #res = self.softmax(res)
+        
 
+        #res = torch.abs(res[1] - res[0])
+        #Final linear layer w/ 2 output unit for binary cross-entropy
+        #res = self.linear2(res)
+
+        return res
 
 
 """
@@ -193,10 +300,9 @@ def train(model, device, train_loader, epoch, optimizer):
     #Sets the module in training mode
     model.train()
 
-
-
     for batch_idx, (data, target) in enumerate(train_loader):
 
+        # Data is a list of three image batches defined as before
         #Load data points on device
         for i in range(len(data)):
 
@@ -229,7 +335,7 @@ def train(model, device, train_loader, epoch, optimizer):
 
         optimizer.step()
 
-        #Log status every 10 epochs
+        #Log status every 10 batches
         if batch_idx % 10 == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * batch_size, len(train_loader.dataset),
@@ -245,6 +351,7 @@ def test(model, device, test_loader):
         all_labels = 0
         loss = 0
         for batch_idx, (data, target) in enumerate(test_loader):
+
             for i in range(len(data)):
                 data[i] = data[i].to(device)
 
@@ -287,13 +394,19 @@ def main():
     into a torch.FloarTensor in range [0.0, 1.0]
     2) It is here combined with a Normalize transform, normalizing each input channel
     w.r.t. mean 0.5 and std dev 1.0
+    ADDED: 3) transforming to 3-channel images. Placed first as PIL Images needed 
+    4) Resizing to 160x60
     """
 
-    trans = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (1.0,))])
+    trans = transforms.Compose([transforms.Resize((160,60)),
+                                transforms.Grayscale(3),
+                                transforms.ToTensor(),
+                                transforms.Normalize((0.5,),(1.0,))])
 
     #Model is defined and passed to either GPU or CPU device
     model = Net().to(device)
 
+    #Create subfolder to store results, if not already there
     import os
 
     if not os.path.isdir('./pt_results'):

@@ -1,7 +1,3 @@
-import codecs
-import errno
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 from PIL import Image
 import random
@@ -11,7 +7,8 @@ from torch import optim
 import torch.nn.functional as F
 from torchvision.datasets import MNIST
 from torchvision import transforms
-from tqdm import tqdm
+import itertools
+
 
 do_learn = True
 save_frequency = 2
@@ -162,7 +159,7 @@ class NormXCorr(nn.Module):
         super().__init__()
 
 
-    def forward(self, data, patch_size=5):
+    def forward(self, data, patch_size=5, stride=1):
 
         """
         - data[1] output of one pipeline
@@ -177,18 +174,57 @@ class NormXCorr(nn.Module):
         X = data[0]
         Y = data[1]
 
-        out_depth= patch_size*X.shape[3]*X.shape[1]
-        output = torch.zeros([batch_size, out_depth,X.shape[2], X.shape[3]], dtype=torch.float32)
+        X_ = torch.tensor(X)
+        Y_ = torch.tensor(Y)
+
+        in_depth = X.shape[1]
+        in_height= X.shape[2]
+        in_width= X.shape[3]
+
+        out_depth= patch_size*in_width*in_depth
+
+        d = int(patch_size/2)
+
+        output = torch.zeros([batch_size, out_depth,in_height,in_width], dtype=torch.float32)
+
+        """
+                for each depth i in range(25):
+
+                    1. take the ith 37x12 feature map from X
+                        1.a create copy of X with padding of two at each margin -> 41x16
+                    2. take the ith 37x12 feature map from Y
+                        2.a create copy of Y with same size of 1.a, but extra vertical padding of two each -> 45x16            
+        """
+
+        for i in range(in_depth):
+
+            X_i = X_[:, i, :]
+            Y_i = Y_[:, i, :]
+
+            # print(Y_i.shape) #16x37x12
+            print(X_i.shape)
+
+            X_pad =F.pad(X_i, (d, d, d, d))
+            Y_pad = F.pad(Y_i, (d, d, 2*d, 2*d))
+
+            #3.  For each jth pixel in X:
+            for x,y in itertools.product(range(d, in_height+d), range(d,in_width+d)):
+
+                #3.a take related 5x5 patch in 1.a (E)
+
+                E_ = X_pad[:, x-d:x+d+1, y-d:y+d+1]
+
+                print(E_.shape)
+                b_val = [b for b in range(y - 2, y + 3)]
+
+
+                #patches = x.unfold(1, size, stride).unfold(2, size, stride).unfold(3, size, stride)
+
+
+
 
 
         """
-        for each depth i in range(25):
-            
-            1. take the ith 37x12 feature map from X
-                1.a create copy of X with padding of two at each margin -> 41x16
-            2. take the ith 37x12 feature map from Y
-                2.a create copy of Y with same size of 1.a, but extra vertical padding of two each -> 45x16            
-            
             # Create empty 37x12x60 matrix
             
             3.  For each jth pixel in X:

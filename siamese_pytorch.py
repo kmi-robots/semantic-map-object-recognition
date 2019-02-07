@@ -171,8 +171,10 @@ class NormXCorr(nn.Module):
 
         Except here grouped in batches
         """
-        X = data[0]
-        Y = data[1]
+
+        X = data[0] #.double() #Trying float64 in case more precision needed
+        Y = data[1] #.double()
+
 
         X_ = torch.tensor(X)
         Y_ = torch.tensor(Y)
@@ -185,69 +187,128 @@ class NormXCorr(nn.Module):
 
         d = int(patch_size/2)
 
-        output = torch.zeros([batch_size, out_depth,in_height,in_width], dtype=torch.float32)
 
         """
-                for each depth i in range(25):
+            for each depth i in range(25):
 
-                    1. take the ith 37x12 feature map from X
-                        1.a create copy of X with padding of two at each margin -> 41x16
-                    2. take the ith 37x12 feature map from Y
-                        2.a create copy of Y with same size of 1.a, but extra vertical padding of two each -> 45x16            
+                1. take the ith 37x12 feature map from X
+                    1.a create copy of X with padding of two at each margin -> 41x16
+                2. take the ith 37x12 feature map from Y
+                    2.a create copy of Y with same size of 1.a, but extra vertical padding of two each -> 45x16            
         """
+
+        output = []
 
         for i in range(in_depth):
 
             X_i = X_[:, i, :]
             Y_i = Y_[:, i, :]
 
-            # print(Y_i.shape) #16x37x12
-            print(X_i.shape)
+            # print(Y_i.shape) #batch_sizexHxW, e.g., 16x37x12
+            #print(X_i.shape)
 
             X_pad =F.pad(X_i, (d, d, d, d))
             Y_pad = F.pad(Y_i, (d, d, 2*d, 2*d))
 
+            #Empty matrix to preserve original positions
+
+            M_i = torch.zeros([batch_size, in_width*patch_size, in_height, in_width], dtype=torch.float32)
+
             #3.  For each jth pixel in X:
-            for x,y in itertools.product(range(d, in_height+d), range(d,in_width+d)):
+            for y,x in itertools.product(range(d, in_height+d), range(d,in_width+d)):
+
+                y_orig = y-d
+                x_orig = x-d
 
                 #3.a take related 5x5 patch in 1.a (E)
 
-                E_ = X_pad[:, x-d:x+d+1, y-d:y+d+1]
+                E_ = X_pad[:, y-d:y+d+1, x-d:x+d+1]
 
-                print(E_.shape)
-                b_val = [b for b in range(y - 2, y + 3)]
+                #print(E_.shape)
 
+                # Wider rectangular (inexact) search area, width is fixed at 12
+                #rect_area = Y_pad[:, y:y+2*d+1, d:in_width+d]
 
-                #patches = x.unfold(1, size, stride).unfold(2, size, stride).unfold(3, size, stride)
+                #Extra padding of 2 to extract 5x5 patches
+                padded_width = Y_pad.shape[1]
+                rect_area = Y_pad[:, y-d:y + 3*d + 1, d-2:padded_width+1]
+                #print(rect_area.shape)
 
+                # 3.b take all possible 5x5 patches in 2.a. (all possible Fs)
 
+                F_values = rect_area.unfold(1, patch_size, stride).unfold(2, patch_size, stride)
 
+                #print(F_values.shape)
 
+                #3.c Init empty output vec of (area,1), where area = rect_area(3.b) -> (60,1)
+
+                normxcorrs = self.compute_normxcorr(E_, F_values, patch_size, in_width)
+
+                # print(normxcorr_values.shape) #batch_sizex1 , i.e., each similarity value is a scalar
+                # stack normxcorr_values, there will be 60 in the end
+
+                normxcorrs = torch.stack(normxcorrs, 1)
+
+                #print(normxcorrs.shape) # shape batch_sizex 60 x 1
+
+                M_i[:, :, y_orig, x_orig] = normxcorrs  # Assign to original position in feature map
+
+            #for all y and x
+            # This for ends with a 37x12x60 matrix
+            output.append(M_i)
+
+        #print(len(output))  #25
+        #for all depths, yielding output -> 37x12x60*25 = 37x12x1500
+        out = torch.stack(output, 1)
+
+        return out.reshape((batch_size, out_depth,in_height,in_width))
+
+    def compute_normxcorr(self, E_, F_values, patch_size, in_width, epsilon=0.01):
 
         """
-            # Create empty 37x12x60 matrix
-            
-            3.  For each jth pixel in X:
-                
-                3.a take related 5x5 patch in 1.a (E)
-                3.b take all possible 5x5 patches in 2.a. (all possible Fs)
-                3.c Init empty output vec of (area,1), where area = rect_area(3.b) -> (60,1)
-                3.d for each E,F pair:
-                    - reshape both to be (25,) --> E',F'
-                    - compute mean of E' and F'
-                    - compute std devs of E' and F'
-                    - add 0.01 to each std dev to avoid division by 0
-                    - compute normcrosscorr between E'F'
-                    - add obtained scalar to vector in 3.c    
-                    
-                3.e add result of 3.d to 37x12x60 matrix, at jth position
-            
-            #stack along depth    
-        # so that final output after each depth is 37x12x60*25 -> 37*12*1500
-         
+            3.d for each E,F pair:
+                - reshape both to be (25,) --> E',F'
+                - compute mean of E' and F'
+                - compute std devs of E' and F'
+                - add 0.01 to each std dev to avoid division by 0
+                - compute normcrosscorr between E'F'
         """
+        normxcorrs = []
 
-        return output
+        E_ = E_.reshape((batch_size, E_.shape[1] * E_.shape[2]))
+
+        # For each patch in rectangular search window: 5x12 patches of size 5x5 each
+
+        for y__, x__ in itertools.product(range(patch_size), range(in_width)):
+
+            F_ = F_values[:, y__, x__, : ]
+
+            #print(F_.shape)  # batch_sizex5x5
+            #print(E_.shape)
+
+            F_ = F_.reshape((batch_size, F_.shape[1] * F_.shape[2]))
+
+            #print(F_.shape)  # batch_sizex25, i.e., N-dimensional vector
+
+            # Batch-wise computations
+            E_mean = E_.view(batch_size, -1).mean(1, keepdim=True)
+            F_mean = E_.view(batch_size, -1).mean(1, keepdim=True)
+            # print(E_mean.shape) #batch_sizex1
+
+            E_std = E_.view(batch_size, -1).std(1, keepdim=True)
+            F_std = F_.view(batch_size, -1).std(1, keepdim=True)
+            E_std = E_std + epsilon
+            F_std = F_std + epsilon
+            # print(E_std.shape) #batch_sizex1
+
+            E_norm = (E_ - E_mean) / (E_std * E_.shape[1])
+            F_norm = (F_ - F_mean) / F_std
+
+            #print((E_norm * F_norm).shape)
+
+            normxcorrs.append(torch.sum(E_norm * F_norm, 1))
+
+        return normxcorrs
 
 
 
@@ -307,21 +368,20 @@ class Net(nn.Module):
             #print(self.sequential(x).shape)
 
 
-        res = self.normxcorr(res)
+        res = self.normxcorr(res) # batch_size x 1500 x 37 x 12
+
         res = self.normrelu(res)
 
-        res = self.dimredux(res)
+        res = self.dimredux(res) # batch_size x 25 x 17 x 5
 
         res =  res.view(res.size()[0], -1) # (batch_size. 2125) , i.e. flattened
-        res = self.linear1(res)
-        res = self.linear2(res)
-        #print(res.shape)
-        #res = self.softmax(res)
-        
 
-        #res = torch.abs(res[1] - res[0])
-        #Final linear layer w/ 2 output unit for binary cross-entropy
-        #res = self.linear2(res)
+        res = self.linear1(res) # batch_size x 2121 x 500
+
+        res = self.linear2(res) # batch_size x 500 x 2
+
+        #print(res.shape)
+        #res = self.softmax(res) #Calculated in train loop later
 
         return res
 

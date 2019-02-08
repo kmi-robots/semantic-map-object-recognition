@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torchvision.datasets import MNIST
 from torchvision import transforms
 import itertools
-
+from torch.autograd import Variable
 
 do_learn = True
 save_frequency = 2
@@ -16,6 +16,9 @@ batch_size = 16
 lr = 0.001
 num_epochs = 10
 weight_decay = 0.0001
+
+#Variables and models to be loaded on GPU or CPU?
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class BalancedMNIST(MNIST):
@@ -92,6 +95,15 @@ class BalancedMNIST(MNIST):
 
         return img_ar, target
 
+    def __len__(self):
+
+        if self.train:
+
+            return len(self.train_data)
+
+        else:
+
+            return len(self.test_data)
 
     def group_by_digit(self, data, labels):
 
@@ -175,6 +187,11 @@ class NormXCorr(nn.Module):
         X = data[0] #.double() #Trying float64 in case more precision needed
         Y = data[1] #.double()
 
+        if device == 'cuda'
+
+            X = data[0].cuda()
+            Y = data[1].cuda()
+
 
         X_ = torch.tensor(X)
         Y_ = torch.tensor(Y)
@@ -212,7 +229,13 @@ class NormXCorr(nn.Module):
 
             #Empty matrix to preserve original positions
 
-            M_i = torch.zeros([batch_size, in_width*patch_size, in_height, in_width], dtype=torch.float32)
+            M_i = Variable(X.new_zeros([batch_size, in_width*patch_size, in_height, in_width],
+                                           dtype=torch.float32)) #batch_size x 60 x 37 x 12
+
+            if device =='cuda':
+
+                M_i = Variable(X.new_zeros([batch_size, in_width * patch_size, in_height, in_width],
+                                           dtype=torch.float32)).cuda()  # batch_size x 60 x 37 x 12
 
             #3.  For each jth pixel in X:
             for y,x in itertools.product(range(d, in_height+d), range(d,in_width+d)):
@@ -261,7 +284,7 @@ class NormXCorr(nn.Module):
         #for all depths, yielding output -> 37x12x60*25 = 37x12x1500
         out = torch.stack(output, 1)
 
-        return out.reshape((batch_size, out_depth,in_height,in_width))
+        return out.reshape((batch_size, out_depth, in_height, in_width))
 
     def compute_normxcorr(self, E_, F_values, patch_size, in_width, epsilon=0.01):
 
@@ -335,7 +358,7 @@ class Net(nn.Module):
             nn.MaxPool2d(2)
         )
 
-        self.normxcorr = NormXCorr()
+        self.normxcorr = NormXCorr().to(device)
 
         self.normrelu = nn.ReLU()
 
@@ -356,13 +379,17 @@ class Net(nn.Module):
 
     def forward(self, input):
 
-
         res = []
 
         # Defines the two pipelines
         for i in range(2):  # Siamese nets; sharing weights
 
             x = input[i]
+
+            if device == 'cuda':
+
+                x = input[i].cuda()
+
             #print(x.shape)
             res.append(self.sequential(x))
             #print(self.sequential(x).shape)
@@ -374,7 +401,7 @@ class Net(nn.Module):
 
         res = self.dimredux(res) # batch_size x 25 x 17 x 5
 
-        res =  res.view(res.size()[0], -1) # (batch_size. 2125) , i.e. flattened
+        res = res.view(res.size()[0], -1) # (batch_size. 2125) , i.e. flattened
 
         res = self.linear1(res) # batch_size x 2121 x 500
 
@@ -409,6 +436,9 @@ def train(model, device, train_loader, epoch, optimizer):
 
         #Take first two images in each triple, i.e., positive pair
         output_positive = model(data[:2])
+        #print(model.state_dict().keys())
+        #print(model.state_dict()['dimredux.0.weight'])
+
         #Take first and third image in each triple, i.e., negative pair
         output_negative = model(data[0:3:2])
 
@@ -478,10 +508,9 @@ def test(model, device, test_loader):
 
 def main():
 
-    #If cuda device not available it runs of GPU
-    #major difference with Keras
+    if device == 'cuda':
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
     """
     Pytorch transforms passed to the data Loader
@@ -516,17 +545,12 @@ def main():
         Train and test data will be downloaded and normalized
         """
 
-        #BalancedMNIST('./data', train=True, download=True, transform=trans)
-        #BalancedMNIST('./data', train=False, download=True, transform=trans)
-
-
         train_loader = torch.utils.data.DataLoader(
-            BalancedMNIST('./data', train=True, download=True, transform=trans), batch_size=batch_size,
+            BalancedMNIST(os.getcwd(), train=True, download=True, transform=trans), batch_size=batch_size,
             shuffle=True)
 
-
         test_loader = torch.utils.data.DataLoader(
-            BalancedMNIST('./data', train=False, download=True, transform=trans), batch_size=batch_size,
+            BalancedMNIST(os.getcwd(), train=False, download=True, transform=trans), batch_size=batch_size,
             shuffle=False)
 
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -538,7 +562,7 @@ def main():
 
             if epoch & save_frequency == 0:
 
-                #Here it saves model at each epoch
+                #Here it saves model
                 torch.save(model.state_dict(), 'pt_results/siamese_{:03}.pt'.format(epoch))
 
 

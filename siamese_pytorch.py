@@ -141,7 +141,7 @@ class BalancedMNIST(MNIST):
         #Check here for different sample number
         for i in range(10):
 
-            for j in range(10):  # create 500*10 triplets
+            for j in range(500):  # create 500*10 triplets
 
                 # choose random class different from current one
 

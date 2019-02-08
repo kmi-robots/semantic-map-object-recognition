@@ -141,7 +141,7 @@ class BalancedMNIST(MNIST):
         #Check here for different sample number
         for i in range(10):
 
-            for j in range(500):  # create 500*10 triplets
+            for j in range(10):  # create 500*10 triplets
 
                 # choose random class different from current one
 
@@ -187,7 +187,7 @@ class NormXCorr(nn.Module):
         X = data[0] #.double() #Trying float64 in case more precision needed
         Y = data[1] #.double()
 
-        if device == 'cuda'
+        if device == 'cuda':
 
             X = data[0].cuda()
             Y = data[1].cuda()
@@ -418,7 +418,25 @@ Series of methods for the learning settings
 train/test/one-shot learning
 """
 
-def train(model, device, train_loader, epoch, optimizer):
+def check_for_NaNs(model):
+
+    model_dict = model.state_dict()
+
+    for key in model_dict.keys():
+
+        curr_tensor = model_dict[key]
+
+        #Find indices of all NaNs, if any
+        nan_idxs = torch.nonzero(torch.isnan(curr_tensor))
+
+
+        #Print warning in case any is found
+        if nan_idxs.nelement() != 0:
+
+            print("NaN value found in Tensor %s" % key)
+            print(curr_tensor)
+
+def train(model, train_loader, epoch, optimizer):
 
     #Sets the module in training mode
     model.train()
@@ -436,11 +454,13 @@ def train(model, device, train_loader, epoch, optimizer):
 
         #Take first two images in each triple, i.e., positive pair
         output_positive = model(data[:2])
-        #print(model.state_dict().keys())
-        #print(model.state_dict()['dimredux.0.weight'])
+
+        check_for_NaNs(model)
 
         #Take first and third image in each triple, i.e., negative pair
         output_negative = model(data[0:3:2])
+
+        check_for_NaNs(model)
 
         target = target.type(torch.LongTensor).to(device)
 
@@ -469,7 +489,8 @@ def train(model, device, train_loader, epoch, optimizer):
                 loss.item()))
 
 
-def test(model, device, test_loader):
+def test(model, test_loader):
+
     model.eval()
 
     with torch.no_grad():
@@ -557,8 +578,8 @@ def main():
 
         for epoch in range(num_epochs):
 
-            train(model, device, train_loader, epoch, optimizer)
-            test(model, device, test_loader)
+            train(model, train_loader, epoch, optimizer)
+            test(model, test_loader)
 
             if epoch & save_frequency == 0:
 

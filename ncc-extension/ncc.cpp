@@ -24,6 +24,9 @@ torch::Tensor ncc_forward(
   //cout << X.sizes();
   //cout << Y.sizes();
 
+  X.set_requires_grad(false);
+  Y.set_requires_grad(false);
+
   int sample_size = X.size(0);
   int in_depth = X.size(1);
   int in_height= X.size(2);
@@ -46,6 +49,8 @@ torch::Tensor ncc_forward(
   auto X_pad = at::constant_pad_nd(X, {d, d, d, d}, 0);
   auto Y_pad = at::constant_pad_nd(X, {d, d, 2 * d, 2 * d}, 0);
 
+  X_pad.set_requires_grad(false);
+  Y_pad.set_requires_grad(false);
 
   //cout << "Sizes after padding are: ";
   //cout << X_pad.sizes();
@@ -54,6 +59,8 @@ torch::Tensor ncc_forward(
 
   torch::Tensor output = torch::empty({in_depth,in_height,in_width, sample_size, in_width*patch_size });  //25*37*12* batch_size * 60
   //auto out_access = output.accessor<float,5>();
+
+  output.set_requires_grad(false);
 
   for (int i=0; i< in_depth; i++){
 
@@ -157,6 +164,8 @@ torch::Tensor ncc_forward(
 
 
               torch::Tensor stacked = at::stack(ncc_vector, 1); //batch_size x 60, where 60 = 12*5
+
+              stacked.set_requires_grad(false);
 
               //add result to position x,y w.r.t. to current depth, in output tensor
 

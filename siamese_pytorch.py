@@ -168,10 +168,9 @@ class BalancedMNIST(MNIST):
         return torch.stack(data), torch.tensor(labels)
 
 
-#Reproducing NormXCorr model by Submariam et al. (NIPS 2016)
-#TODO make norm x corr computation more efficient by implementing C++ extension
 
 import ncc  #Our built extension
+#Reproducing NormXCorr model by Submariam et al. (NIPS 2016)
 
 class NormXCorr(nn.Module):
 
@@ -407,19 +406,19 @@ class Net(nn.Module):
 
     def forward(self, input):
 
-        burden_start = time.time()
+        #burden_start = time.time()
 
         # Defines the two pipelines, one for each input, i.e., siamese-like
-        print("Passed first pipeline in %f seconds" % (time.time() - burden_start))
+        #print("Passed first pipeline in %f seconds" % (time.time() - burden_start))
 
-        reset = time.time()
+        #reset = time.time()
 
 
-        res = self.normxcorr(self.forward_once(input[0]),self.forward_once(input[1]) ) # batch_size x 1500 x 37 x 12
+        res = self.normxcorr(self.forward_once(input[0] ),self.forward_once(input[1]) ) # batch_size x 1500 x 37 x 12
 
-        print("Passed NormXCorr in %f seconds" % (time.time() - reset))
+        #print("Passed NormXCorr in %f seconds" % (time.time() - reset))
 
-        reset = time.time()
+        #reset = time.time()
 
         res = self.normrelu(res)
 
@@ -431,7 +430,7 @@ class Net(nn.Module):
 
         res = self.linear2(res) # batch_size x 500 x 2
 
-        print("Passed through remaining layers in %f seconds" % (time.time() - reset))
+        #print("Passed through remaining layers in %f seconds" % (time.time() - reset))
         #print(res.shape)
         #res = self.softmax(res) #Calculated in train loop later
 
@@ -468,6 +467,8 @@ def train(model, train_loader, epoch, optimizer):
 
     for batch_idx, (data, target) in enumerate(train_loader):
 
+        print("Currently processing batch no %i" % batch_idx)
+
         # Data is a list of three image batches defined as before
         #Load data points on device
         for i in range(len(data)):
@@ -481,11 +482,13 @@ def train(model, train_loader, epoch, optimizer):
         output_positive = model(data[:2])
 
         check_for_NaNs(model)
+        #print("Checked for NaNs")
 
         #Take first and third image in each triple, i.e., negative pair
         output_negative = model(data[0:3:2])
 
         check_for_NaNs(model)
+        #print("Checked for NaNs")
 
         target = target.type(torch.LongTensor).to(device)
 
@@ -502,7 +505,10 @@ def train(model, train_loader, epoch, optimizer):
 
         loss = loss_positive + loss_negative
 
+        start = time.time()
+        print("Starting back prop")
         loss.backward()
+        print("Backward complete in %f seconds" % float(time.time()-start))
 
         optimizer.step()
 

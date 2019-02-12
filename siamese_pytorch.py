@@ -9,6 +9,9 @@ from torchvision.datasets import MNIST
 from torchvision import transforms
 import itertools
 from torch.autograd import Variable
+import time
+
+
 
 do_learn = True
 save_frequency = 2
@@ -16,6 +19,7 @@ batch_size = 16
 lr = 0.001
 num_epochs = 10
 weight_decay = 0.0001
+
 
 #Variables and models to be loaded on GPU or CPU?
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -78,6 +82,7 @@ class BalancedMNIST(MNIST):
             imgs, target = self.test_data[index], self.test_labels[index]
 
         img_ar = []
+
         for i in range(len(imgs)):
 
             img = Image.fromarray(imgs[i].numpy(), mode='L')
@@ -126,6 +131,7 @@ class BalancedMNIST(MNIST):
             # And add them to related list
             labels_class.append(torch.index_select(labels, 0, indices))
             data_class.append(torch.index_select(data, 0, indices))
+            data_class.append(torch.index_select(data, 0, indices))
 
         return labels_class, data_class
 
@@ -163,17 +169,34 @@ class BalancedMNIST(MNIST):
 
 
 #Reproducing NormXCorr model by Submariam et al. (NIPS 2016)
+#TODO make norm x corr computation more efficient by implementing C++ extension
+
+import ncc  #Our built extension
 
 class NormXCorr(nn.Module):
 
-    def __init__(self):
+    def __init__(self,  ):
 
-        super().__init__()
+        super(NormXCorr, self).__init__()
+
+    def forward(self, X_, Y_, patch_size=5, stride=1, epsilon=0.01):
+
+        return ncc.forward(X_, Y_, patch_size, stride, epsilon)
 
 
-    def forward(self, data, patch_size=5, stride=1):
+"""
+#Basically same as above, but defined as Custom Pytorch Module
+#Not computationally efficient in this case
 
-        """
+class NormXCorr(nn.Module):
+
+    def __init__(self,  ):
+
+        super(NormXCorr, self).__init__()
+
+    def forward(self, X_, Y_, patch_size = 5, stride =1, epsilon = 0.01):
+
+        \"""
         - data[1] output of one pipeline
         - data[0] output of the other
 
@@ -182,60 +205,46 @@ class NormXCorr(nn.Module):
         data[0] = feature map Y
 
         Except here grouped in batches
-        """
+        \"""
 
-        X = data[0] #.double() #Trying float64 in case more precision needed
-        Y = data[1] #.double()
+        #X_ = torch.tensor(X)
+        #Y_ = torch.tensor(Y)
 
-        if device == 'cuda':
-
-            X = data[0].cuda()
-            Y = data[1].cuda()
-
-
-        X_ = torch.tensor(X)
-        Y_ = torch.tensor(Y)
-
-        in_depth = X.shape[1]
-        in_height= X.shape[2]
-        in_width= X.shape[3]
+        sample_size = X_.shape[0]
+        in_depth = X_.shape[1]
+        in_height= X_.shape[2]
+        in_width= X_.shape[3]
 
         out_depth= patch_size*in_width*in_depth
 
         d = int(patch_size/2)
 
 
-        """
+        \"""
             for each depth i in range(25):
 
                 1. take the ith 37x12 feature map from X
                     1.a create copy of X with padding of two at each margin -> 41x16
                 2. take the ith 37x12 feature map from Y
                     2.a create copy of Y with same size of 1.a, but extra vertical padding of two each -> 45x16            
-        """
+        \"""
 
-        output = []
+        #output = []
+
+        X_pad = F.pad(X_, (d, d, d, d))
+
+
+        Y_pad = F.pad(Y_, (d, d, 2 * d, 2 * d))
+
+        # Empty matrix to preserve original positions
+
+        M_out = Variable(X_.new_zeros([sample_size, in_depth, in_width * patch_size, in_height, in_width],
+                                   dtype=torch.float32)).to(device, non_blocking=True)  # batch_size x 60 x 37 x 12
 
         for i in range(in_depth):
 
-            X_i = X_[:, i, :]
-            Y_i = Y_[:, i, :]
-
-            # print(Y_i.shape) #batch_sizexHxW, e.g., 16x37x12
-            #print(X_i.shape)
-
-            X_pad =F.pad(X_i, (d, d, d, d))
-            Y_pad = F.pad(Y_i, (d, d, 2*d, 2*d))
-
-            #Empty matrix to preserve original positions
-
-            M_i = Variable(X.new_zeros([batch_size, in_width*patch_size, in_height, in_width],
-                                           dtype=torch.float32)) #batch_size x 60 x 37 x 12
-
-            if device =='cuda':
-
-                M_i = Variable(X.new_zeros([batch_size, in_width * patch_size, in_height, in_width],
-                                           dtype=torch.float32)).cuda()  # batch_size x 60 x 37 x 12
+            X_i = X_pad[:, i, :]
+            Y_i = Y_pad[:, i, :]
 
             #3.  For each jth pixel in X:
             for y,x in itertools.product(range(d, in_height+d), range(d,in_width+d)):
@@ -245,27 +254,35 @@ class NormXCorr(nn.Module):
 
                 #3.a take related 5x5 patch in 1.a (E)
 
-                E_ = X_pad[:, y-d:y+d+1, x-d:x+d+1]
+                E_ = X_i[:, y-d:y+d+1, x-d:x+d+1]
+
+
+                E_ = E_.reshape((sample_size, E_.shape[1] * E_.shape[2])) # batch_size x 25
+
+                E_mean = E_.mean(1, keepdim=True)
+                E_std = E_.std(1, keepdim=True)
+
+                E_norm = (E_ - E_mean) / ((E_std + epsilon) * (E_.shape[1]-1))
 
                 #print(E_.shape)
+                #print(E_mean.shape)
 
                 # Wider rectangular (inexact) search area, width is fixed at 12
-                #rect_area = Y_pad[:, y:y+2*d+1, d:in_width+d]
 
                 #Extra padding of 2 to extract 5x5 patches
-                padded_width = Y_pad.shape[1]
-                rect_area = Y_pad[:, y-d:y + 3*d + 1, d-2:padded_width+1]
+                padded_width = Y_i.shape[1]
+
+                rect_area = Y_i[:, y-d:y + 3*d + 1, d-2:padded_width+1]
                 #print(rect_area.shape)
 
                 # 3.b take all possible 5x5 patches in 2.a. (all possible Fs)
 
                 F_values = rect_area.unfold(1, patch_size, stride).unfold(2, patch_size, stride)
-
-                #print(F_values.shape)
+                # print(F_values.shape) # batch_size x 5 x 12 x 5 x 5
 
                 #3.c Init empty output vec of (area,1), where area = rect_area(3.b) -> (60,1)
 
-                normxcorrs = self.compute_normxcorr(E_, F_values, patch_size, in_width)
+                normxcorrs = self.compute_normxcorr(E_norm, F_values, patch_size, in_width, epsilon)
 
                 # print(normxcorr_values.shape) #batch_sizex1 , i.e., each similarity value is a scalar
                 # stack normxcorr_values, there will be 60 in the end
@@ -274,31 +291,31 @@ class NormXCorr(nn.Module):
 
                 #print(normxcorrs.shape) # shape batch_sizex 60 x 1
 
-                M_i[:, :, y_orig, x_orig] = normxcorrs  # Assign to original position in feature map
+                M_out[:,i, :, y_orig, x_orig] = normxcorrs  # Assign to original position in feature map
 
             #for all y and x
             # This for ends with a 37x12x60 matrix
-            output.append(M_i)
 
         #print(len(output))  #25
         #for all depths, yielding output -> 37x12x60*25 = 37x12x1500
-        out = torch.stack(output, 1)
+        #print(M_out.shape)
 
-        return out.reshape((batch_size, out_depth, in_height, in_width))
+        return M_out.reshape((sample_size, out_depth, in_height, in_width))
 
-    def compute_normxcorr(self, E_, F_values, patch_size, in_width, epsilon=0.01):
 
-        """
+    def compute_normxcorr(self, E_norm, F_values, patch_size, in_width, epsilon):
+
+        \"""
             3.d for each E,F pair:
                 - reshape both to be (25,) --> E',F'
                 - compute mean of E' and F'
                 - compute std devs of E' and F'
                 - add 0.01 to each std dev to avoid division by 0
                 - compute normcrosscorr between E'F'
-        """
-        normxcorrs = []
+        \"""
+        normxcorrs = [] #Variable(X.new_zeros([batch_size, in_depth, in_width * patch_size, in_height, in_width],
+                                  # dtype=torch.float32)).to(device)       ###    #[]
 
-        E_ = E_.reshape((batch_size, E_.shape[1] * E_.shape[2]))
 
         # For each patch in rectangular search window: 5x12 patches of size 5x5 each
 
@@ -309,38 +326,45 @@ class NormXCorr(nn.Module):
             #print(F_.shape)  # batch_sizex5x5
             #print(E_.shape)
 
-            F_ = F_.reshape((batch_size, F_.shape[1] * F_.shape[2]))
+            F_ = F_.reshape((F_.shape[0], F_.shape[1] * F_.shape[2]))
 
             #print(F_.shape)  # batch_sizex25, i.e., N-dimensional vector
 
             # Batch-wise computations
-            E_mean = E_.view(batch_size, -1).mean(1, keepdim=True)
-            F_mean = E_.view(batch_size, -1).mean(1, keepdim=True)
-            # print(E_mean.shape) #batch_sizex1
 
-            E_std = E_.view(batch_size, -1).std(1, keepdim=True)
-            F_std = F_.view(batch_size, -1).std(1, keepdim=True)
-            E_std = E_std + epsilon
-            F_std = F_std + epsilon
-            # print(E_std.shape) #batch_sizex1
+            \"""
+            F_norm = E_norm.clone().detach()
+            F.normalize(F_, p=2, dim=-1, eps=epsilon, out=F_norm)           
+            
+            \"""
 
-            E_norm = (E_ - E_mean) / (E_std * E_.shape[1])
-            F_norm = (F_ - F_mean) / F_std
+            F_mean = F_.mean(1, keepdim=True)
+            #print(len(F_mean.tolist()) )#batch_sizex1
 
+            F_std = F_.std(1, keepdim=True) + epsilon
+
+            #F_norm = transforms.ToTensor(inv_normalize)
+
+            #print(F_norm.shape)
+            #print(F_norm[0])
+
+            F_norm = (F_ - F_mean) / (F_std)
+
+            #print(F_norm2.shape)
+            #print(F_norm2[0])
             #print((E_norm * F_norm).shape)
 
             normxcorrs.append(torch.sum(E_norm * F_norm, 1))
 
         return normxcorrs
 
-
-
+"""
 #The whole feed-forward architecture
 class Net(nn.Module):
 
     def __init__(self):
 
-        super().__init__()
+        super(Net, self).__init__()
         """
         All variables defined here are ultimately
         passed as params to the optimizer
@@ -376,26 +400,26 @@ class Net(nn.Module):
 
         #self.softmax = nn.Softmax()
 
+    def forward_once(self, x):
+
+        return self.sequential(x)
+
 
     def forward(self, input):
 
-        res = []
+        burden_start = time.time()
 
-        # Defines the two pipelines
-        for i in range(2):  # Siamese nets; sharing weights
+        # Defines the two pipelines, one for each input, i.e., siamese-like
+        print("Passed first pipeline in %f seconds" % (time.time() - burden_start))
 
-            x = input[i]
-
-            if device == 'cuda':
-
-                x = input[i].cuda()
-
-            #print(x.shape)
-            res.append(self.sequential(x))
-            #print(self.sequential(x).shape)
+        reset = time.time()
 
 
-        res = self.normxcorr(res) # batch_size x 1500 x 37 x 12
+        res = self.normxcorr(self.forward_once(input[0]),self.forward_once(input[1]) ) # batch_size x 1500 x 37 x 12
+
+        print("Passed NormXCorr in %f seconds" % (time.time() - reset))
+
+        reset = time.time()
 
         res = self.normrelu(res)
 
@@ -407,6 +431,7 @@ class Net(nn.Module):
 
         res = self.linear2(res) # batch_size x 500 x 2
 
+        print("Passed through remaining layers in %f seconds" % (time.time() - reset))
         #print(res.shape)
         #res = self.softmax(res) #Calculated in train loop later
 
@@ -447,7 +472,7 @@ def train(model, train_loader, epoch, optimizer):
         #Load data points on device
         for i in range(len(data)):
 
-            data[i] = data[i].to(device)
+            data[i] = data[i].to(device, non_blocking=True)
 
         #Gradients are (re)set to zero at the beginning of each epoch
         optimizer.zero_grad()
@@ -527,11 +552,14 @@ def test(model, test_loader):
 
 
 
+
 def main():
 
     if device == 'cuda':
 
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
+        from torch.backends import cudnn
+        cudnn.benchmark = True
 
     """
     Pytorch transforms passed to the data Loader
@@ -550,10 +578,14 @@ def main():
                                 transforms.Normalize((0.5,),(1.0,))])
 
     #Model is defined and passed to either GPU or CPU device
-    model = Net().to(device)
+    model = Net().to(device, non_blocking=True )
 
     #Create subfolder to store results, if not already there
     import os
+
+    if not os.path.isdir('./data'):
+
+        os.mkdir('data')
 
     if not os.path.isdir('./pt_results'):
 
@@ -567,11 +599,11 @@ def main():
         """
 
         train_loader = torch.utils.data.DataLoader(
-            BalancedMNIST(os.getcwd(), train=True, download=True, transform=trans), batch_size=batch_size,
+            BalancedMNIST('./data', train=True, download=True, transform=trans), batch_size=batch_size,
             shuffle=True)
 
         test_loader = torch.utils.data.DataLoader(
-            BalancedMNIST(os.getcwd(), train=False, download=True, transform=trans), batch_size=batch_size,
+            BalancedMNIST('./data', train=False, download=True, transform=trans), batch_size=batch_size,
             shuffle=False)
 
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -584,6 +616,7 @@ def main():
             if epoch & save_frequency == 0:
 
                 #Here it saves model
+
                 torch.save(model.state_dict(), 'pt_results/siamese_{:03}.pt'.format(epoch))
 
 

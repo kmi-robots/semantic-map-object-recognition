@@ -169,18 +169,55 @@ class BalancedMNIST(MNIST):
 
 
 
-import ncc  #Our built extension
+
 #Reproducing NormXCorr model by Submariam et al. (NIPS 2016)
+from torch.autograd import Function
+
+import ncc  #Our built extension
+
+
+class normxcorr(Function):
+
+    @staticmethod
+    def forward(ctx, X_, Y_, patch_size=5, stride=1, epsilon=0.01):
+
+        ctx.saved_for_backward = [X_, Y_]
+        ctx.patch_size = patch_size
+        ctx.stride = stride
+        ctx.epsilon = epsilon
+
+        return ncc.forward(X_, Y_, ctx.patch_size, ctx.stride, ctx.epsilon)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+
+        input1, input2 = ctx.saved_for_backward
+
+        #grad_input1 = torch.zeros(input1.size()).to(device)
+        #grad_input2 = torch.zeros(input2.size()).to(device)
+
+        # grad_input = [derivate forward(input) wrt parameters] * grad_output
+        grad_input1, grad_input2 = ncc.backward(input1,
+                                                 input2,
+                                                grad_output,
+                                                ctx.patch_size,
+                                                ctx.stride,
+                                                ctx.epsilon)
+
+        print(grad_output.size())
+
+        return grad_input1, grad_input2
+
 
 class NormXCorr(nn.Module):
 
-    def __init__(self,  ):
+    def __init__(self):
 
         super(NormXCorr, self).__init__()
 
-    def forward(self, X_, Y_, patch_size=5, stride=1, epsilon=0.01):
+    def forward(self, X_, Y_):
 
-        return ncc.forward(X_, Y_, patch_size, stride, epsilon)
+        return normxcorr.apply(X_, Y_)
 
 
 """
@@ -358,6 +395,7 @@ class NormXCorr(nn.Module):
         return normxcorrs
 
 """
+
 #The whole feed-forward architecture
 class Net(nn.Module):
 
@@ -411,12 +449,12 @@ class Net(nn.Module):
         # Defines the two pipelines, one for each input, i.e., siamese-like
         #print("Passed first pipeline in %f seconds" % (time.time() - burden_start))
 
-        #reset = time.time()
+        reset = time.time()
 
 
         res = self.normxcorr(self.forward_once(input[0] ),self.forward_once(input[1]) ) # batch_size x 1500 x 37 x 12
 
-        #print("Passed NormXCorr in %f seconds" % (time.time() - reset))
+        print("Passed NormXCorr in %f seconds" % (time.time() - reset))
 
         #reset = time.time()
 

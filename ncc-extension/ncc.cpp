@@ -207,7 +207,7 @@ std::vector<torch::Tensor> ncc_backward(
   torch::Tensor gradY = torch::zeros({in_depth, in_height, in_width, sample_size });
   //torch::Tensor gradY_ = gradY.unsqueeze_(-1);
 
-  cout<< gradX.sizes();
+  //cout<< gradX.sizes();
 
   auto X_pad = at::constant_pad_nd(X, {d, d, d, d}, /*pad with value:*/ 0);
   auto Y_pad = at::constant_pad_nd(X, {d, d, 2 * d, 2 * d}, /*pad with value:*/ 0);
@@ -390,8 +390,8 @@ std::vector<torch::Tensor> ncc_backward(
               auto gradout_F = at::sum(at::sum(curr_gradout_F,1),1);
 
 
-              //gradX[i][j][k]= gradout_E;
-              //gradY[i][j][k]= gradout_F;
+              gradX[i][j][k]= gradout_E;
+              gradY[i][j][k]= gradout_F;
           }
 
 

@@ -15,9 +15,11 @@ import time
 do_learn = True
 save_frequency = 2
 batch_size = 16
-lr = 0.001
+lr = 0.05
 num_epochs = 10
-weight_decay = 0.0001
+lr_decay = 0.0001
+weight_decay = 0.0005
+momentum = 0.9
 
 
 #Variables and models to be loaded on GPU or CPU?
@@ -137,16 +139,23 @@ class BalancedMNIST(MNIST):
 
     def generate_balanced_triplets(self, labels_class, data_class):
 
+        print(labels_class)
+        print(data_class)
+
         data = []
         labels = []
 
         #Uncomment the following to check number of samples per class
-        #print([x.shape[0] for x in labels_class])
+        min_ = min([x.shape[0] for x in labels_class])
 
         #Check here for different sample number
         for i in range(10):
 
-            for j in range(500): #500  # create 500*10 triplets
+            print(i)
+
+            for j in range(min_): #500  # create 500*10 triplets
+
+                print(j)
 
                 # choose random class different from current one
 
@@ -154,15 +163,20 @@ class BalancedMNIST(MNIST):
 
                 rnd_cls = random.choice(other_cls)
 
-                rnd_dist = random.randint(0, 100)
+                rnd_dist= 0
+
+                while(rnd_dist==j):
+
+                    rnd_dist = random.randint(0,min_)
 
                 #Append one positive example followed by one negative example
-                data.append(torch.stack([data_class[i][j], data_class[i][j + rnd_dist], data_class[rnd_cls][j]]))
+                data.append(torch.stack([data_class[i][j], data_class[i][rnd_dist], data_class[rnd_cls][j]]))
 
                 #Append the pos neg labels for the two pairs
                 labels.append([1, 0])
 
         #print(torch.stack(data).shape)
+
 
         return torch.stack(data), torch.tensor(labels)
 
@@ -195,6 +209,12 @@ class normxcorr(Function):
         #grad_input1 = torch.zeros(input1.size()).to(device)
         #grad_input2 = torch.zeros(input2.size()).to(device)
 
+        nan_idxs = torch.nonzero(torch.isnan(grad_output))
+
+        # Print warning in case any NaN is found
+        if nan_idxs.nelement() != 0:
+            print("NaN value found in grad_output ")
+
         # grad_input = [derivate forward(input) wrt parameters] * grad_output
         grad_input1, grad_input2 = ncc.backward(input1,
                                                  input2,
@@ -203,8 +223,19 @@ class normxcorr(Function):
                                                 ctx.stride,
                                                 ctx.epsilon)
 
-        #print(grad_output)
-        #print(grad_input1)
+
+
+        nan_idxs = torch.nonzero(torch.isnan(grad_input1))
+
+        # Print warning in case any is found
+        if nan_idxs.nelement() != 0:
+            print("NaN value found in grad_input1 ")
+
+        nan_idxs = torch.nonzero(torch.isnan(grad_input2))
+
+        # Print warning in case any is found
+        if nan_idxs.nelement() != 0:
+            print("NaN value found in grad_input2")
 
         return grad_input1, grad_input2
 
@@ -248,7 +279,7 @@ class Net(nn.Module):
 
         self.linear2 = nn.Linear(500, 2)
 
-        #self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax()
 
 
     def forward_once(self, x):
@@ -284,9 +315,9 @@ class Net(nn.Module):
 
         #print("Passed through remaining layers in %f seconds" % (time.time() - reset))
         #print(res.shape)
-        #res = self.softmax(res) #Calculated in train loop later
+        res2 = self.softmax(res) #Calculated in train loop later
 
-        return res
+        return res, res2
 
 
 """
@@ -358,16 +389,24 @@ def train(model, train_loader, epoch, optimizer):
         optimizer.zero_grad()
 
         #Take first two images in each triple, i.e., positive pair
-        output_positive = model(data[:2])
+        output_positive, out_pos_soft = model(data[:2])
 
         check_for_NaNs(model)
         #print("Checked for NaNs")
 
         #Take first and third image in each triple, i.e., negative pair
-        output_negative = model(data[0:3:2])
+        output_negative, out_neg_soft = model(data[0:3:2])
 
         check_for_NaNs(model)
         #print("Checked for NaNs")
+
+
+        print("Output positive")
+        print(output_positive)
+        print(out_pos_soft)
+        print("Output negative")
+        print(torch.nn.Softmax(output_positive))
+        print(out_neg_soft)
 
         target = target.type(torch.LongTensor).to(device)
 
@@ -384,7 +423,7 @@ def train(model, train_loader, epoch, optimizer):
 
         loss = loss_positive + loss_negative
 
-        start = time.time()
+        #start = time.time()
         #print("Starting back prop")
         loss.backward()
         #print("Backward complete in %f seconds" % float(time.time()-start))
@@ -507,8 +546,7 @@ def main():
             BalancedMNIST('./data', train=False, download=True, transform=trans), batch_size=batch_size,
             shuffle=False)
 
-
-        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay, momentum=momentum)
 
         for epoch in range(num_epochs):
 

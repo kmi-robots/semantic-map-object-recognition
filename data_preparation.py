@@ -10,7 +10,6 @@
 import sys, os 
 import numpy as np
 
-from shape_match import mainContour, cropToC, random_pick_from
 import cv2
 
 import time
@@ -21,8 +20,6 @@ from itertools import combinations, product
 
 ##########
 # Select the input set to generate couples from: google-search, shapenet, nyu or kmi
-#
-#
 ##########
 
 #No. of examples to randomly pick from each folder

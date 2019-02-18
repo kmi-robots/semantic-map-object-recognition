@@ -11,12 +11,17 @@ from collections import OrderedDict
 from torchvision.datasets import MNIST
 import cv2
 
+import visdom #For data viz
+
 do_learn = True
 save_frequency = 2
-batch_size = 16
+batch_size = 64
 lr = 0.001
-num_epochs = 10
+num_epochs = 2
 weight_decay = 0.0001
+
+vis = visdom.Visdom() #Define main session once
+
 
 class BalancedTriplets(torch.utils.data.Dataset):
 
@@ -29,6 +34,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
     processed_folder = 'processed'
     training_file = 'training.pt'
     test_file = 'test.pt'
+
 
 
     def __init__(self, root, train=True, transform=None, target_transform=None):
@@ -54,18 +60,17 @@ class BalancedTriplets(torch.utils.data.Dataset):
                 os.path.join(self.root, self.processed_folder, self.training_file))
 
             # To then pass to new functions
-            train_labels_class, train_data_class = group_by_digit(train_data, train_labels)
+            train_labels_class, train_data_class = group_by_class(train_data, train_labels)
 
             self.train_data, self.train_labels = generate_balanced_triplets(train_labels_class, train_data_class)
 
-            # print(self.train_data.shape)
 
         else:
 
             test_data, test_labels = torch.load(
                 os.path.join(self.root, self.processed_folder, self.test_file))
 
-            test_labels_class, test_data_class = group_by_digit(test_data, test_labels)
+            test_labels_class, test_data_class = group_by_class(test_data, test_labels)
 
             self.test_data, self.test_labels = generate_balanced_triplets(test_labels_class, test_data_class)
 
@@ -82,8 +87,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
         for i in range(len(imgs)):
 
-            #print(type(imgs[i]))
-            #print(imgs[i].shape)
+
             img = imgs[i] #Image.fromarray(imgs[i].numpy(), mode='L')
             if self.transform is not None:
                 img = self.transform(img)
@@ -145,6 +149,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
     def read_files(self, path, total=100):
 
+
         class_ = 0
 
         data = torch.empty((total, 3, 160, 60))
@@ -156,7 +161,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
             if files:
 
-                for file in files:
+               for file in files:
 
                    data[iter,:] = torch.from_numpy(img_preproc(os.path.join(root, file)))
 
@@ -164,7 +169,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
                    iter +=1
 
-                class_ += 1
+               class_ += 1
 
 
         return data, labels
@@ -186,7 +191,7 @@ def img_preproc(path_to_image):
     return x/255.
 
 
-def group_by_digit(data, labels):
+def group_by_class(data, labels, classes=10):
 
     """
     Returns lists of len 10 grouping tensors
@@ -198,8 +203,9 @@ def group_by_digit(data, labels):
     data_class = []
 
 
+
     # For each digit in the data
-    for i in range(10):
+    for i in range(classes):
         # Check location of data labeled as current digit
         # and reduce to one-dimensional LongTensor
 
@@ -222,23 +228,27 @@ def generate_balanced_triplets(labels_class, data_class):
     # Uncomment the following to check number of samples per class
     min_ = min([x.shape[0] for x in labels_class])
 
+
     # Check here for different sample number
-    for i in range(10):
+    for i in range(len(labels_class)):
 
         for j in range(min_):  # 500  # create 500*10 triplets
 
-            # choose random class different from current one
-            other_cls = [y for y in range(10) if y != i]
+            r = [y for y in range(min_) if y != j]  # excluding j
 
-            rnd_cls = random.choice(other_cls)
+            for idx in r:
 
-            rnd_dist = random.randint(0, min_-1)
-            # Append one positive example followed by one negative example
+                # choose random class different from current one
+                other_cls = [y for y in range(len(labels_class)) if y != i]
 
-            data.append(torch.stack([data_class[i][j], data_class[i][rnd_dist], data_class[rnd_cls][j]]))
+                rnd_cls = random.choice(other_cls)
+                rnd_idx = random.randint(0,min_-1)
 
-            # Append the pos neg labels for the two pairs
-            labels.append([1, 0])
+                data.append(torch.stack([data_class[i][j], data_class[i][idx], data_class[rnd_cls][rnd_idx]]))
+                #data.append(torch.stack([data_class[i][j], data_class[i][rnd_dist], data_class[rnd_cls][j]]))
+
+                # Append the pos neg labels for the two pairs
+                labels.append([1, 0])
 
     # print(torch.stack(data).shape)
 
@@ -271,7 +281,7 @@ class BalancedMNIST(MNIST):
             train_data, train_labels= torch.load(os.path.join(mnist_set.root, mnist_set.processed_folder, mnist_set.training_file))
 
             # To then pass to new functions
-            train_labels_class, train_data_class = group_by_digit(train_data, train_labels)
+            train_labels_class, train_data_class = group_by_class(train_data, train_labels)
 
             self.train_data, self.train_labels =generate_balanced_triplets(train_labels_class,train_data_class)
 
@@ -281,7 +291,7 @@ class BalancedMNIST(MNIST):
 
             test_data, test_labels = torch.load(os.path.join(mnist_set.root, mnist_set.processed_folder, mnist_set.test_file))
 
-            test_labels_class, test_data_class = group_by_digit(test_data, test_labels)
+            test_labels_class, test_data_class = group_by_class(test_data, test_labels)
 
             self.test_data, self.test_labels = generate_balanced_triplets(test_labels_class, test_data_class)
 
@@ -368,7 +378,13 @@ class Net(nn.Module):
 
 
 def train(model, device, train_loader, epoch, optimizer):
+
     model.train()
+
+    accurate_labels = 0
+    all_labels = 0
+    epoch_loss = 0
+
 
     for batch_idx, (data, target) in enumerate(train_loader):
 
@@ -389,19 +405,37 @@ def train(model, device, train_loader, epoch, optimizer):
         #print("Output negative")
         #print(output_negative)
 
+
         loss_positive = F.cross_entropy(output_positive, target_positive)
         loss_negative = F.cross_entropy(output_negative, target_negative)
         #print(loss_positive)
         #print(loss_negative)
         loss = loss_positive + loss_negative
+
         loss.backward()
 
         optimizer.step()
-        if batch_idx % 10 == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * batch_size, len(train_loader.dataset),
-                       100. * batch_idx * batch_size / len(train_loader.dataset),
-                loss.item()))
+
+        norm_loss_p = output_positive.shape[0] * loss_positive.item()
+        norm_loss_n = output_negative.shape[0] * loss_negative.item()
+
+        epoch_loss += norm_loss_p + norm_loss_n
+
+        accurate_labels_positive = torch.sum(torch.argmax(output_positive, dim=1) == target_positive).cpu()
+        accurate_labels_negative = torch.sum(torch.argmax(output_negative, dim=1) == target_negative).cpu()
+
+        accurate_labels = accurate_labels + accurate_labels_positive + accurate_labels_negative
+        all_labels = all_labels + len(target_positive) + len(target_negative)
+
+
+    accuracy = 100 * accurate_labels / all_labels
+
+
+    print("Epoch {}/{}, Loss: {:.3f}, Accuracy: {:.3f}%".format(epoch+1,num_epochs, epoch_loss,accuracy))
+
+    return torch.Tensor([epoch_loss, accuracy])
+
+
 
 
 def test(model, device, test_loader):
@@ -410,7 +444,7 @@ def test(model, device, test_loader):
     with torch.no_grad():
         accurate_labels = 0
         all_labels = 0
-        loss = 0
+        epoch_loss = 0
         for batch_idx, (data, target) in enumerate(test_loader):
             for i in range(len(data)):
                 data[i] = data[i].to(device)
@@ -425,7 +459,12 @@ def test(model, device, test_loader):
             loss_positive = F.cross_entropy(output_positive, target_positive)
             loss_negative = F.cross_entropy(output_negative, target_negative)
 
-            loss = loss + loss_positive + loss_negative
+            #loss = loss_positive + loss_negative
+
+            norm_loss_p = output_positive.shape[0] * loss_positive.item() #as cross_entropy loss is the mean over batch size by default
+            norm_loss_n = output_negative.shape[0] * loss_negative.item() #as cross_entropy  loss is the mean over batch size by default
+
+            epoch_loss += norm_loss_p + norm_loss_n
 
             accurate_labels_positive = torch.sum(torch.argmax(output_positive, dim=1) == target_positive).cpu()
             accurate_labels_negative = torch.sum(torch.argmax(output_negative, dim=1) == target_negative).cpu()
@@ -434,7 +473,11 @@ def test(model, device, test_loader):
             all_labels = all_labels + len(target_positive) + len(target_negative)
 
         accuracy = 100. * accurate_labels / all_labels
-        print('Test accuracy: {}/{} ({:.3f}%)\tLoss: {:.6f}'.format(accurate_labels, all_labels, accuracy, loss))
+        print('Test accuracy: {}/{} ({:.3f}%)\t Loss: {:.6f}'.format(accurate_labels, all_labels, accuracy, epoch_loss))
+
+
+
+        return torch.Tensor([epoch_loss, accuracy])
 
 
 def oneshot(model, device, data):
@@ -449,7 +492,9 @@ def oneshot(model, device, data):
 
 
 def main():
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 
     """
 
@@ -483,11 +528,37 @@ def main():
             shuffle=False)
 
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+
+        epoch_train_metrics= torch.empty((num_epochs, 2))
+        epoch_test_metrics = torch.empty_like(epoch_train_metrics)
+
+
         for epoch in range(num_epochs):
-            train(model, device, train_loader, epoch, optimizer)
-            test(model, device, test_loader)
+
+            epoch_train_metrics[epoch, :] = train(model, device, train_loader, epoch, optimizer)
+
+            epoch_test_metrics[epoch, :] = test(model, device, test_loader)
+
+
             if epoch & save_frequency == 0:
                 torch.save(model, 'pt_results/siamese_{:03}.pt'.format(epoch))
+
+
+        print(epoch_train_metrics.shape)
+        print(epoch_train_metrics[:,1].shape)
+        print(epoch_train_metrics[:, 2].shape)
+        print(torch.stack((epoch_train_metrics[:,1], epoch_test_metrics[:,1]), dim=1).shape)
+
+        epoch_losses = torch.stack((epoch_train_metrics[:,:2], epoch_test_metrics[:,:2]), dim=1)
+        epoch_accs = torch.stack((epoch_train_metrics[:, 0:3:2], epoch_test_metrics[:, 0:3:2]), dim=1)
+
+        #Metric over epoch plots
+
+        vis.line(Y=epoch_losses, X=epoch_losses[:,0], opts={
+                'showlegend': True,
+                'title': 'Loss per epoch plot'
+                 }
+                 )
 
     else:  # prediction
         prediction_loader = torch.utils.data.DataLoader(

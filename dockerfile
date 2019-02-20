@@ -7,7 +7,7 @@ WORKDIR /app
 
 RUN apt-get update
 
-RUN apt-get -y install python-sklearn
+#RUN apt-get -y install python-sklearn
 
 RUN apt-get -y install tmux
 # Copy the current directory contents into the container at /app

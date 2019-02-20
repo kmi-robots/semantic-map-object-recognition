@@ -8,14 +8,16 @@ import os
 from plot_results import gen_plots
 import data_loaders
 from siamese_models import SimplerNet, NCCNet
+from pytorchtools import EarlyStopping
 
 
 do_learn = True
 save_frequency = 2
-batch_size = 64
+batch_size = 16
 lr = 0.001
-num_epochs = 2
+num_epochs = 300
 weight_decay = 0.0001
+patience = 30
 
 
 
@@ -27,6 +29,8 @@ def train(model, device, train_loader, epoch, optimizer):
     all_labels = 0
     running_loss = 0
 
+    #Requires early-stopping tool provided at https://github.com/Bjarten/early-stopping-pytorch
+    early_stopping = EarlyStopping(patience=patience, verbose=True)
 
     for batch_idx, (data, target) in enumerate(train_loader):
 
@@ -72,7 +76,6 @@ def train(model, device, train_loader, epoch, optimizer):
 
 
 
-
 def test(model, device, test_loader):
     model.eval()
 
@@ -113,6 +116,13 @@ def test(model, device, test_loader):
         epoch_loss = running_loss/all_labels
         print('Test accuracy: {}/{} ({:.3f}%)\t Loss: {:.6f}'.format(accurate_labels, all_labels, accuracy, epoch_loss))
 
+        #Monitor validation loss for early stopping
+        early_stopping(epoch_loss, model)
+
+        if early_stopping.early_stop:
+            print("Early stopping")
+            break
+
         return torch.Tensor([epoch_loss, accuracy])
 
 
@@ -131,15 +141,10 @@ def main():
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-
-    """
-
-    trans = transforms.Compose([transforms.Resize((160, 60)),
+    mnist_trans = transforms.Compose([transforms.Resize((160, 60)),
                                 transforms.Grayscale(3),
                                 transforms.ToTensor(),
                                 transforms.Normalize((0.5,), (1.0,))])
-
-    """
 
     trans = transforms.Compose([
                                 transforms.Normalize((0.5,), (1.0,))
@@ -157,16 +162,20 @@ def main():
 
     if do_learn:  # training mode
 
+        #train_loader = torch.utils.data.DataLoader(
+        #   data_loaders.BalancedTriplets('./data', train=True, transform=trans), batch_size=batch_size,
+        #   shuffle=True)
+
         train_loader = torch.utils.data.DataLoader(
-           data_loaders.BalancedTriplets('/home/agni', train=True, transform=trans), batch_size=batch_size,
+          data_loaders.BalancedMNIST('./data', train=True, transform=mnist_trans, download=False), batch_size=batch_size,
            shuffle=True)
 
-        #train_loader = torch.utils.data.DataLoader(
-        #   data_loaders.BalancedMNIST('../data', train=True, transform=trans), batch_size=batch_size,
-        #    shuffle=True)
+        #test_loader = torch.utils.data.DataLoader(
+        #    data_loaders.BalancedTriplets('./data', train=False, transform=trans), batch_size=batch_size,
+        #    shuffle=False)
 
         test_loader = torch.utils.data.DataLoader(
-            data_loaders.BalancedTriplets('/home/agni', train=False, transform=trans), batch_size=batch_size,
+            data_loaders.BalancedMNIST('./data', train=False, transform=mnist_trans, download=False), batch_size=batch_size,
             shuffle=False)
 
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)

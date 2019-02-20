@@ -56,7 +56,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
             self.train_data, self.train_labels = generate_balanced_triplets(train_labels_class, train_data_class)
 
-
+            #print(self.train_data.shape)
         else:
 
             test_data, test_labels = torch.load(
@@ -194,7 +194,7 @@ class BalancedMNIST(MNIST):
             # To then pass to new functions
             train_labels_class, train_data_class = group_by_class(train_data, train_labels)
 
-            self.train_data, self.train_labels =generate_balanced_triplets(train_labels_class,train_data_class)
+            self.train_data, self.train_labels =generate_balanced_triplets(train_labels_class,train_data_class, mnist=True)
 
             #print(self.train_data.shape)
 
@@ -204,7 +204,7 @@ class BalancedMNIST(MNIST):
 
             test_labels_class, test_data_class = group_by_class(test_data, test_labels)
 
-            self.test_data, self.test_labels = generate_balanced_triplets(test_labels_class, test_data_class)
+            self.test_data, self.test_labels = generate_balanced_triplets(test_labels_class, test_data_class, mnist=True)
 
             #print(self.test_data.shape)
 
@@ -294,13 +294,18 @@ def group_by_class(data, labels, classes=10):
     return labels_class, data_class
 
 
-def generate_balanced_triplets(labels_class, data_class):
+def generate_balanced_triplets(labels_class, data_class, mnist=False):
 
     data = []
     labels = []
 
     # Uncomment the following to check number of samples per class
-    min_ = min([x.shape[0] for x in labels_class])
+    if mnist:
+
+       min_ = 500
+    else:
+
+       min_ = min([x.shape[0] for x in labels_class])
 
 
     # Check here for different sample number
@@ -308,26 +313,39 @@ def generate_balanced_triplets(labels_class, data_class):
 
         for j in range(min_):  # 500  # create 500*10 triplets
 
-            r = [y for y in range(min_) if y != j]  # excluding j
+            if mnist:
 
-            for idx in r:
+                idx = random.randint(0, min_ - 1)
 
-                # choose random class different from current one
-                other_cls = [y for y in range(len(labels_class)) if y != i]
+                data, labels = pick_samples(data_class, labels_class, data, labels, i, j, idx, min_)
 
-                rnd_cls = random.choice(other_cls)
-                rnd_idx = random.randint(0,min_-1)
+            else:
 
-                data.append(torch.stack([data_class[i][j], data_class[i][idx], data_class[rnd_cls][rnd_idx]]))
-                #data.append(torch.stack([data_class[i][j], data_class[i][rnd_dist], data_class[rnd_cls][j]]))
+                #Oversample   Fewer examples available
+                r = [y for y in range(min_) if y != j]  # excluding j
 
-                # Append the pos neg labels for the two pairs
-                labels.append([1, 0])
+                for idx in r:
+
+                    data, labels = pick_samples(data_class, labels_class, data, labels, i, j, idx, min_)
 
     # print(torch.stack(data).shape)
 
     return torch.stack(data), torch.tensor(labels)
 
 
+def pick_samples(data_class, labels_class, data, labels, i, j, idx, min_):
 
+    # choose random class different from current one
+    other_cls = [y for y in range(len(labels_class)) if y != i]
+
+    rnd_cls = random.choice(other_cls)
+    rnd_idx = random.randint(0, min_ - 1)
+
+    data.append(torch.stack([data_class[i][j], data_class[i][idx], data_class[rnd_cls][rnd_idx]]))
+    # data.append(torch.stack([data_class[i][j], data_class[i][rnd_dist], data_class[rnd_cls][j]]))
+
+    # Append the pos neg labels for the two pairs
+    labels.append([1, 0])
+
+    return data, labels
 

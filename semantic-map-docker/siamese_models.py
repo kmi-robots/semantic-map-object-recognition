@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from collections import OrderedDict
-
+import time
 
 class SimplerNet(nn.Module):
     def __init__(self):
@@ -100,7 +100,7 @@ class normxcorr(Function):
 class NCCNet(nn.Module):
 
     def __init__(self):
-        super(Net, self).__init__()
+        super(NCCNet, self).__init__()
         """
         All variables defined here are ultimately
         passed as params to the optimizer
@@ -144,11 +144,11 @@ class NCCNet(nn.Module):
         # Defines the two pipelines, one for each input, i.e., siamese-like
         # print("Passed first pipeline in %f seconds" % (time.time() - burden_start))
 
-        # reset = time.time()
+        reset = time.time()
 
         res = normxcorr.apply(self.forward_once(input[0]), self.forward_once(input[1]))  # batch_size x 1500 x 37 x 12
 
-        # print("Passed NormXCorr in %f seconds" % (time.time() - reset))
+        #print("Passed NormXCorr in %f seconds" % (time.time() - reset))
 
         # reset = time.time()
 
@@ -164,9 +164,9 @@ class NCCNet(nn.Module):
 
         # print("Passed through remaining layers in %f seconds" % (time.time() - reset))
         # print(res.shape)
-        res2 = self.softmax(res)  # Calculated in train loop later
+        #res2 = self.softmax(res)  # Calculated in train loop later
 
-        return res, res2
+        return res
 
 
 def check_for_NaNs(model):

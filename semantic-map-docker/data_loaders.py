@@ -25,8 +25,8 @@ class BalancedTriplets(torch.utils.data.Dataset):
     #Local paths
     raw_folder = 'shapenet'
     processed_folder = 'processed'
-    training_file = 'training.pt'
-    test_file = 'test.pt'
+    training_file = 'shapenet_training.pt'
+    test_file = 'shapenet_test.pt'
 
 
 
@@ -168,6 +168,11 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
 class BalancedMNIST(MNIST):
 
+    raw_folder = 'raw'
+    processed_folder = 'processed'
+    training_file = 'training.pt'
+    test_file = 'test.pt'
+
     """
     Extending MNIST Dataset class
     For each sample (anchor) randomly chooses a positive and negative samples
@@ -307,7 +312,7 @@ def generate_balanced_triplets(labels_class, data_class, mnist=False):
 
        min_ = min([x.shape[0] for x in labels_class])
 
-
+    #print([x.shape[0] for x in labels_class])
     # Check here for different sample number
     for i in range(len(labels_class)):
 

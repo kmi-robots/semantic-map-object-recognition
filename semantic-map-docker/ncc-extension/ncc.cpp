@@ -11,6 +11,10 @@ using namespace std;
 
 #include <vector>
 
+// C++ interface for cpu
+
+
+
 torch::Tensor ncc_forward(
     torch::Tensor X,
     torch::Tensor Y,
@@ -190,8 +194,6 @@ std::vector<torch::Tensor> ncc_backward(
     int patch_size = 5,
     int stride =1,
     float epsilon = 0.01) {
-
-
 
 
   int sample_size = X.size(0);

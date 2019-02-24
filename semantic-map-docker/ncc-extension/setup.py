@@ -15,3 +15,4 @@ setuptools.Extension(
    sources=['ncc.cpp'],
    include_dirs=torch.utils.cpp_extension.include_paths(),
    language='c++')
+

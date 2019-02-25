@@ -1,6 +1,6 @@
 // Agnese Chiatti 2019-02-09
-// ncc.cpp
-// C++ extension for Pytorch to compute Normalized Cross Correlation
+// ncc_cuda.cpp
+// CUDA C++ extension for Pytorch to compute Normalized Cross Correlation
 // of 2 input feature maps, as illustrated by Submariam et al. (NIPS 2016)
 
 #include <torch/extension.h>

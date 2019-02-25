@@ -6,19 +6,16 @@
 #include <vector>
 
 
-
 std::vector<at::Tensor> ncc_cuda_forward(
-    at::Tensor input,
-    at::Tensor weights,
-    at::Tensor bias,
-    at::Tensor old_h,
-    at::Tensor old_cell) {
-
+    torch::Tensor X,
+    torch::Tensor Y,
+    int patch_size = 5,
+    int stride =1,
+    float epsilon = 0.01) {
 
 
   X.set_requires_grad(false);
   Y.set_requires_grad(false);
-
 
   int sample_size = X.size(0);
   int in_depth = X.size(1);
@@ -27,71 +24,35 @@ std::vector<at::Tensor> ncc_cuda_forward(
 
   int d = patch_size/2;
 
-
-  //int out_depth= patch_size*in_width*in_depth;
-
-  /*
-
-        for each depth i in range(25):
-
-
-
-            1. take the ith 37x12 feature map from X
-
-                1.a create copy of X with padding of two at each margin -> 41x16
-
-            2. take the ith 37x12 feature map from Y
-
-                2.a create copy of Y with same size of 1.a, but extra vertical padding of two each -> 45x16
-
-*/
-
-
-
-
-
   auto X_pad = at::constant_pad_nd(X, {d, d, d, d}, 0);
   auto Y_pad = at::constant_pad_nd(X, {d, d, 2 * d, 2 * d}, 0);
 
-
-
-  //X_pad.set_requires_grad(false);
-
-  //Y_pad.set_requires_grad(false);
-
-
-
-  //cout << "Sizes after padding are: ";
-
-  //cout << X_pad.sizes();
-
-  //cout << Y_pad.sizes();
-
-
-
   torch::Tensor output = torch::empty({in_depth,in_height,in_width, sample_size, in_width*patch_size });  //25*37*12* batch_size * 60
-
-  //auto out_access = output.accessor<float,5>();
-
-
 
   output.set_requires_grad(false);
 
+  //const int threads = patch_size*patch_size; \\ no of pixels in a block
 
-  const int threads = 1024;
-  const dim3 blocks((sample_size + threads - 1) / threads, in_height);
 
+  //const dim3 grid( iDivUp( X_pad.size(1), patch_size ), iDivUp( X_pad.size(0), patch_size ), sample_size );
+  //const dim3 threadBlock( pach_size, patch_size, sample_size);
+
+  const dim3 grid = 1;
+  const dim3 threadBlock = 1;
+
+
+  //calling the kernel to be run on GPU
   AT_DISPATCH_ALL__TYPES("ncc_forward_cuda", ([&] {
-    ncc_cuda_forward_kernel<scalar_t><<<blocks, threads>>>(
+    ncc_cuda_forward_kernel<scalar_t><<<grid, threadBlock>>>(
         
         X_pad.data<scalar_t>(),
         Y_pad.data<scalar_t>(),
         output.data<scalar_t>(),
-	sample_size,
-	in_depth,
-	in_width,
-	in_height,
-	d;
+	    sample_size,
+	    in_depth,
+	    in_width,
+	    in_height,
+	    d;
   }));
 
 
@@ -112,10 +73,6 @@ __global__ void ncc_cuda_forward_kernel(
     size_t in_height,
     size_t d
     ) {
-
-
-  int index = threadIdx.x;
-  int stride = blockDim.x;
 
 
   for (int i=0; i< in_depth; i++){
@@ -149,9 +106,6 @@ __global__ void ncc_cuda_forward_kernel(
       auto Esr = Es.reshape({Es.size(0),Es.size(1), Es.size(2), patch_size*patch_size}); //reshaping neighbourhoods as 25x25
 
 
-
-
-
       auto E_means = Esr.mean(/*dim=*/-1, /*keepdim=*/true);
 
 
@@ -163,16 +117,9 @@ __global__ void ncc_cuda_forward_kernel(
       auto E_stdr = E_std.reshape(E_means.sizes());
 
 
-
-
-
       // Normalize all E matrices
 
       auto E_norm = (Esr - E_means)/((Esr.size(-1)-1)* E_stdr);
-
-
-
-
 
 
 
@@ -185,11 +132,9 @@ __global__ void ncc_cuda_forward_kernel(
       */
 
 
-
       //cout << "Y_i size: ";
 
       //cout << Y_i.sizes();
-
 
 
       auto Fs = Y_i.unfold( /*dim=*/ 1, /*size=*/ patch_size, /*step=*/ stride).unfold(/*dim=*/ 2, /*size=*/ patch_size, /*step=*/ stride);
@@ -201,9 +146,6 @@ __global__ void ncc_cuda_forward_kernel(
       auto Fsr = Fs.reshape({Fs.size(0),Fs.size(1), Fs.size(2), patch_size*patch_size}); //reshaping neighbourhoods as 25x1
 
 
-
-
-
       auto F_means = Fsr.mean(/*dim=*/-1, /*keepdim=*/true);
 
       auto F_std = Fsr.std(/*dim=*/-1, /*keepdim=*/true) + epsilon;
@@ -211,12 +153,9 @@ __global__ void ncc_cuda_forward_kernel(
       auto F_stdr = F_std.reshape(F_means.sizes());
 
 
-
       // Normalize all E matrices
 
       auto F_norm = (Fsr - F_means)/ F_stdr;
-
-
 
       /*
 
@@ -226,14 +165,9 @@ __global__ void ncc_cuda_forward_kernel(
 
       */
 
-
-
       //cout << "Fnorm size: ";
 
       //cout << F_norm.sizes();
-
-
-
 
 
       for(int j=0; j<E_norm.size(1);j++){   //37 times
@@ -271,17 +205,9 @@ __global__ void ncc_cuda_forward_kernel(
               for(int y=j; y<j+5; y++){  //5 times
 
 
-
-
-
                       for(int n=0; n<in_width;n++){ //12 times
 
-
-
-
-
                           auto  F= F_norm.select(/*dim=*/1, /*index=*/y).select(/*dim=*/1, /*index=*/n);
-
 
 
                           //cout << "Single F size: ";
@@ -359,7 +285,6 @@ __global__ void ncc_cuda_forward_kernel(
 
 
 
-
 std::vector<torch::Tensor> ncc_cuda_backward(
 
     torch::Tensor X,
@@ -416,8 +341,8 @@ std::vector<torch::Tensor> ncc_cuda_backward(
   torch::Tensor grad_out_r = grad_out.reshape({in_depth,in_height,in_width, sample_size, in_width*patch_size, 1}); //25*37*12* batch_size * 60
 
 
-  const int threads = 1024;
-  const dim3 blocks((sample_size + threads - 1) / threads, in_height);
+  const dim3 grid = 1;
+  const dim3 threadBlock = 1;
 
   AT_DISPATCH_ALL__TYPES("ncc_backward_cuda", ([&] {
     ncc_cuda_forward_kernel<scalar_t><<<blocks, threads>>>(

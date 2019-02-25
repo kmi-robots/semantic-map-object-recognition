@@ -267,11 +267,11 @@ def main(NCC=False, MNIST=True):
 
 if __name__ == '__main__':
 
-    print("Running simple net on MNIST")
-    main(NCC=False, MNIST=True)
-    print("Running simple net on SNS2")
-    main(NCC=False, MNIST=False)
-    print("Running NCC net on MNIST")
-    main(NCC=True, MNIST=True)
+    #print("Running simple net on MNIST")
+    #main(NCC=False, MNIST=True)
+    #print("Running simple net on SNS2")
+    #main(NCC=False, MNIST=False)
+    #print("Running NCC net on MNIST")
+    #main(NCC=True, MNIST=True)
     print("Running NCC net on SNS2")
     main(NCC=True, MNIST=False)

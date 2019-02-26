@@ -4,6 +4,7 @@
 #include <cuda_runtime.h>
 
 #include <vector>
+using namespace std;
 
 
 std::vector<at::Tensor> ncc_cuda_forward(
@@ -52,7 +53,7 @@ std::vector<at::Tensor> ncc_cuda_forward(
 	    in_depth,
 	    in_width,
 	    in_height,
-	    d;
+	    d);
   }));
 
 
@@ -61,6 +62,8 @@ std::vector<at::Tensor> ncc_cuda_forward(
 
 }
 
+
+/*
 
 template <typename scalar_t>
 __global__ void ncc_cuda_forward_kernel(
@@ -751,3 +754,6 @@ for (int i=0; i< in_depth; i++){
 
 
 }
+
+
+/*

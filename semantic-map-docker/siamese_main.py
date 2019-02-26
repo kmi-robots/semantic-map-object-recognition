@@ -3,6 +3,7 @@ from torch import optim
 import torch.nn.functional as F
 from torchvision import transforms
 import os
+from sklearn.metrics import precision_recall_fscore_support
 
 #custom classes and methods
 from plot_results import gen_plots
@@ -31,6 +32,8 @@ def train(model, device, train_loader, epoch, optimizer):
 
     #Requires early-stopping tool provided at https://github.com/Bjarten/early-stopping-pytorch
 
+    labels = []
+    predictions = []
 
     for batch_idx, (data, target) in enumerate(train_loader):
 
@@ -71,10 +74,13 @@ def train(model, device, train_loader, epoch, optimizer):
     accuracy = 100 * accurate_labels / all_labels
     epoch_loss = running_loss / all_labels
 
+    #Compute epoch-level metrics with sklearn
+    p, r, f1, sup = precision_recall_fscore_support(labels, predictions)
+
     print("Epoch {}/{}, Loss: {:.3f}, Accuracy: {:.3f}%".format(epoch+1,num_epochs, epoch_loss,accuracy))
     #print(torch.Tensor([epoch_loss, accuracy]))
 
-    return torch.Tensor([epoch_loss, accuracy])
+    return torch.Tensor([epoch_loss, accuracy, p, r, f1, sup])
 
 
 
@@ -117,10 +123,11 @@ def test(model, device, test_loader):
 
         accuracy = 100. * accurate_labels / all_labels
         epoch_loss = running_loss/all_labels
+        p, r, f1, sup = precision_recall_fscore_support(labels, predictions)
         print('Test accuracy: {}/{} ({:.3f}%)\t Loss: {:.6f}'.format(accurate_labels, all_labels, accuracy, epoch_loss))
 
 
-        return torch.Tensor([epoch_loss, accuracy])
+        return torch.Tensor([epoch_loss, accuracy,p, r, f1, sup])
 
 
 def oneshot(model, device, data):
@@ -154,10 +161,13 @@ def main(NCC=False, MNIST=True):
     trans = transforms.Compose([
                                 transforms.Normalize((0.5,), (1.0,))
                                 ])
+
     if NCC:
 
         model = NCCNet().to(device)
+
     else:
+
         model = SimplerNet().to(device)
 
     if not os.path.isdir('./data'):
@@ -249,7 +259,13 @@ def main(NCC=False, MNIST=True):
         epoch_losses = torch.stack((epoch_train_metrics[:,0], epoch_test_metrics[:,0]), dim=1)
         epoch_accs = torch.stack((epoch_train_metrics[:,1], epoch_test_metrics[:,1]), dim=1)
 
+        epoch_ps = torch.stack((epoch_train_metrics[:,2], epoch_test_metrics[:,2]), dim=1)
+        epoch_rs = torch.stack((epoch_train_metrics[:,3], epoch_test_metrics[:,3]), dim=1)
+
         gen_plots(epoch_losses, epoch_accs, num_epochs, MNIST, NCC)
+
+        #Gen precision and recall plots
+        gen_plots(epoch_ps, epoch_rs, num_epochs, MNIST, NCC, precrec=True)
 
     else:  # prediction
         prediction_loader = torch.utils.data.DataLoader(
@@ -268,10 +284,10 @@ def main(NCC=False, MNIST=True):
 if __name__ == '__main__':
 
     #print("Running simple net on MNIST")
-    #main(NCC=False, MNIST=True)
+    main(NCC=False, MNIST=True)
     #print("Running simple net on SNS2")
-    #main(NCC=False, MNIST=False)
+    main(NCC=False, MNIST=False)
     #print("Running NCC net on MNIST")
     #main(NCC=True, MNIST=True)
-    print("Running NCC net on SNS2")
-    main(NCC=True, MNIST=False)
+    #print("Running NCC net on SNS2")
+    #main(NCC=True, MNIST=False)

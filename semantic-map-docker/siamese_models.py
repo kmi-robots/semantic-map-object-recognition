@@ -2,6 +2,9 @@ import torch
 from torch import nn
 from collections import OrderedDict
 import time
+from torchvision import models
+import torch.nn.functional as F
+
 
 class SimplerNet(nn.Module):
     def __init__(self):
@@ -38,12 +41,10 @@ class SimplerNet(nn.Module):
 
 
 
-
 #Reproducing NormXCorr model by Submariam et al. (NIPS 2016)
 from torch.autograd import Function
 
 import ncc  #Our built extension
-
 
 class normxcorr(Function):
 
@@ -96,10 +97,41 @@ class normxcorr(Function):
         return grad_input1, grad_input2
 
 
+#Trying version that exploits Conv2D
+class normxcorrConv(nn.Module):
+
+    def __init__(self):
+        super(normxcorrConv, self).__init__()
+
+    def forward_once(self, X, Y):
+
+
+        return X
+
+    def pad(self, X, Y, d=2):
+
+        return F.pad(X, (d, d, d, d)), F.pad(Y, (d, d, 2 * d, 2 * d))
+
+    def forward(self, input):
+
+        X = input[0]
+        Y = input[1]
+
+        X_pad, Y_pad = self.pad(X,Y)
+
+        all_Es = X_pad.unfold(2, 5, 1).unfold(3, 5, 1)
+
+        print(X.shape)
+
+        return self.forward_once(X,Y)
+
+
 # The whole feed-forward architecture
 class NCCNet(nn.Module):
 
     def __init__(self):
+
+
         super(NCCNet, self).__init__()
         """
         All variables defined here are ultimately
@@ -129,6 +161,8 @@ class NCCNet(nn.Module):
             nn.MaxPool2d(2)
         )
 
+        self.normxcorrconv = normxcorrConv()
+
         self.linear1 = nn.Linear(25 * 17 * 5, 500)
 
         self.linear2 = nn.Linear(500, 2)
@@ -144,9 +178,18 @@ class NCCNet(nn.Module):
         # Defines the two pipelines, one for each input, i.e., siamese-like
         # print("Passed first pipeline in %f seconds" % (time.time() - burden_start))
 
-        reset = time.time()
+        #reset = time.time()
 
         res = normxcorr.apply(self.forward_once(input[0]), self.forward_once(input[1]))  # batch_size x 1500 x 37 x 12
+
+        #print("Passed NormXCorr in %f seconds" % (time.time() - reset))
+        #reset = time.time()
+
+        #res2 = self.normxcorrconv(input)
+        #print("Passed NormXCorr in %f seconds" % (time.time() - reset))
+
+        #print(res[0,0,:])
+        #print(res2[0,0,:])
 
         #print("Passed NormXCorr in %f seconds" % (time.time() - reset))
 
@@ -181,7 +224,6 @@ def check_for_NaNs(model):
 
         #Find indices of all NaNs, if any
         nan_idxs = torch.nonzero(torch.isnan(curr_tensor))
-
 
         #Print warning in case any is found
         if nan_idxs.numel() != 0:

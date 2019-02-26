@@ -69,7 +69,6 @@ std::vector<torch::Tensor> ncc_backward(
 
 
 
-
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("forward", &ncc_forward, "NCC forward (CUDA)");
   m.def("backward", &ncc_backward, "NCC backward (CUDA)");

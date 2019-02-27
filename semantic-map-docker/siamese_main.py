@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torchvision import transforms
 import os
 from sklearn.metrics import precision_recall_fscore_support
+import numpy as np
 
 #custom classes and methods
 from plot_results import gen_plots
@@ -18,8 +19,8 @@ batch_size = 16
 lr = 0.001
 num_epochs = 300
 weight_decay = 0.0001
-patience = 30
-
+patience = 5
+metric_avg= 'micro'
 
 
 def train(model, device, train_loader, epoch, optimizer):
@@ -64,23 +65,43 @@ def train(model, device, train_loader, epoch, optimizer):
 
         running_loss += norm_loss_p + norm_loss_n
 
+
         accurate_labels_positive = torch.sum(torch.argmax(output_positive, dim=1) == target_positive).cpu()
         accurate_labels_negative = torch.sum(torch.argmax(output_negative, dim=1) == target_negative).cpu()
+
+        # To then calculate epoch-level precision recall F1
+        predictions.extend(torch.argmax(output_positive, dim=1).tolist())
+        predictions.extend(torch.argmax(output_negative, dim=1).tolist())
+        labels.extend(target_positive.tolist())
+        labels.extend(target_negative.tolist())
 
         accurate_labels = accurate_labels + accurate_labels_positive + accurate_labels_negative
         all_labels = all_labels + len(target_positive) + len(target_negative)
 
-
     accuracy = 100 * accurate_labels / all_labels
     epoch_loss = running_loss / all_labels
 
+    #print(predictions[0].shape)
+    #print(labels[0].shape)
+
     #Compute epoch-level metrics with sklearn
-    p, r, f1, sup = precision_recall_fscore_support(labels, predictions)
+    """
+    'micro': Calculate metrics globally 
+    by counting the total true positives, 
+    false negatives and false positives
+    
+    'macro': Calculate metrics for each label, 
+    and find their unweighted mean. 
+    This does not take label imbalance into account.
+    
+    """
+    p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
+
 
     print("Epoch {}/{}, Loss: {:.3f}, Accuracy: {:.3f}%".format(epoch+1,num_epochs, epoch_loss,accuracy))
     #print(torch.Tensor([epoch_loss, accuracy]))
 
-    return torch.Tensor([epoch_loss, accuracy, p, r, f1, sup])
+    return torch.Tensor([epoch_loss, accuracy, float(p), float(r)])
 
 
 
@@ -91,6 +112,9 @@ def test(model, device, test_loader):
         accurate_labels = 0
         all_labels = 0
         running_loss = 0
+
+        labels=[]
+        predictions=[]
 
         for batch_idx, (data, target) in enumerate(test_loader):
 
@@ -118,16 +142,24 @@ def test(model, device, test_loader):
             accurate_labels_positive = torch.sum(torch.argmax(output_positive, dim=1) == target_positive).cpu()
             accurate_labels_negative = torch.sum(torch.argmax(output_negative, dim=1) == target_negative).cpu()
 
+            # To then calculate epoch-level precision recall F1
+            predictions.extend(torch.argmax(output_positive, dim=1).tolist())
+            predictions.extend(torch.argmax(output_negative, dim=1).tolist())
+            labels.extend(target_positive.tolist())
+            labels.extend(target_negative.tolist())
+
+
             accurate_labels = accurate_labels + accurate_labels_positive + accurate_labels_negative
             all_labels = all_labels + len(target_positive) + len(target_negative)
 
         accuracy = 100. * accurate_labels / all_labels
         epoch_loss = running_loss/all_labels
-        p, r, f1, sup = precision_recall_fscore_support(labels, predictions)
+        p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
+
         print('Test accuracy: {}/{} ({:.3f}%)\t Loss: {:.6f}'.format(accurate_labels, all_labels, accuracy, epoch_loss))
 
 
-        return torch.Tensor([epoch_loss, accuracy,p, r, f1, sup])
+        return torch.Tensor([epoch_loss, accuracy,float(p), float(r)])
 
 
 def oneshot(model, device, data):
@@ -275,6 +307,7 @@ def main(NCC=False, MNIST=True):
         data = []
         data.extend(next(iter(prediction_loader))[0][:3:2])
         same = oneshot(model, device, data)
+
         if same > 0:
             print('These two images are of the same number')
         else:
@@ -283,9 +316,9 @@ def main(NCC=False, MNIST=True):
 
 if __name__ == '__main__':
 
-    #print("Running simple net on MNIST")
+    print("Running simple net on MNIST")
     main(NCC=False, MNIST=True)
-    #print("Running simple net on SNS2")
+    print("Running simple net on SNS2")
     main(NCC=False, MNIST=False)
     #print("Running NCC net on MNIST")
     #main(NCC=True, MNIST=True)

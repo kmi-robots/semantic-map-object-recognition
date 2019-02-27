@@ -14,35 +14,43 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
     :param precrec: boolean flag for precision recall plots, defaults to False
     :return:
     """
+
+    ymin1 = 0.0
+    ymax1= 2.0
+
     if precrec:
         title_l_ = 'Precision'
         title_a_ = 'Recall'
+        ymin2 =ymin1
+        ymax2 = ymax1
 
     else:
         title_l_ = 'Loss'
         title_a_ = 'Accuracy [%]'
+        ymin2=0
+        ymax2 =100
 
 
     if MNIST & ( not NCC):
 
 
-        title_l = title_l_ + 'v. epoch - MNIST - Baseline'
-        title_a = title_a_ + 'v. epoch - MNIST - Baseline'
+        title_l = title_l_ + ' v. epoch - MNIST - Baseline'
+        title_a = title_a_ + ' v. epoch - MNIST - Baseline'
 
     elif MNIST & NCC:
 
-        title_l = title_l_ + 'v. epoch - MNIST - NCC'
-        title_a = title_a_ + 'v. epoch - MNIST - NCC'
+        title_l = title_l_ + ' v. epoch - MNIST - NCC'
+        title_a = title_a_ + ' v. epoch - MNIST - NCC'
 
     elif (not MNIST) & NCC:
 
-        title_l = title_l_ + 'v. epoch - SNS2 - NCC'
+        title_l = title_l_ + ' v. epoch - SNS2 - NCC'
         title_a = title_a_ + 'v. epoch - SNS2 - NCC'
 
     else:
 
-        title_l = title_l_ + 'v. epoch - SNS2 - Baseline'
-        title_a = title_a_ + 'v. epoch - SNS2 - Baseline'
+        title_l = title_l_ + ' v. epoch - SNS2 - Baseline'
+        title_a = title_a_ + ' v. epoch - SNS2 - Baseline'
 
     current_session.line(Y=epoch_losses, X= torch.Tensor(range(epoch_losses.shape[0])), opts={
         'showlegend': True,
@@ -53,8 +61,8 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
         'xtickmin': 1,
         'xtickmax': epochs,
         'xtickstep':1,
-        'ytickmin': 0.0,
-        'ytickmax': 2.0
+        'ytickmin': ymin1,
+        'ytickmax': ymax1
         })
 
 
@@ -67,7 +75,7 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
         'xtickmin': 1,
         'xtickmax': epochs,
         'xtickstep': 1,
-        'ytickmin': 0,
-        'ytickmax': 100
+        'ytickmin': ymin2,
+        'ytickmax': ymax2
     }
              )

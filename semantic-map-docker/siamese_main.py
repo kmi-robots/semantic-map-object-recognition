@@ -19,7 +19,7 @@ batch_size = 16
 lr = 0.001
 num_epochs = 300
 weight_decay = 0.0001
-patience = 5
+patience = 30
 metric_avg= 'micro'
 
 

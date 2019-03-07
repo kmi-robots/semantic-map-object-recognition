@@ -48,14 +48,22 @@ class ResSiamese(nn.Module):
     """
     Overall structure of a siamese again,
     but each pipeline here is a pre-trained ResNet
+    to exploit transfer learning
+    - if a False flag is passed, the network will be fine-tuned instead
     """
 
-    def __init__(self):
+    def __init__(self, feature_extraction=False):
 
         super().__init__()
         self.resnet = models.resnet18(pretrained=True)
         #Drop last FC layer
         self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-1])
+
+        if feature_extraction:
+
+            for param in self.mod_resnet.parameters():
+
+                param.requires_grad = False
 
         self.linear1 = nn.Linear(512, 512)
 

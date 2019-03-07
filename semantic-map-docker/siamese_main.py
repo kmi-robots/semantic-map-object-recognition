@@ -21,6 +21,7 @@ num_epochs = 300
 weight_decay = 0.0001
 patience = 30
 metric_avg= 'micro'
+feature_extraction=True
 
 
 
@@ -189,30 +190,50 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
     if ResNet:
 
-        mnist_trans = transforms.Compose([transforms.Resize((160, 60)),
+        # Add hardcoded mean and variance values for torchvision pre-trained modules
+        means = [0.485, 0.456, 0.406]
+        stds = [0.229, 0.224, 0.225]
+
+
+        mnist_trans = transforms.Compose([transforms.Resize((224, 224)),
                                           transforms.Grayscale(3),
                                           transforms.ToTensor(),
-                                          transforms.Normalize((0.5,), (1.0,))])
-
+                                          transforms.Normalize(means, stds)])
 
     else:
+
+        #simply standardize
+        means = (0.5,)
+        stds = (1.0,)
         mnist_trans = transforms.Compose([transforms.Resize((160, 60)),
                                     transforms.Grayscale(3),
                                     transforms.ToTensor(),
-                                    transforms.Normalize((0.5,), (1.0,))])
+                                    transforms.Normalize(means, stds)])
+
+    trans = transforms.Compose([ transforms.Normalize(means, stds)])
 
 
-    trans = transforms.Compose([
-                                transforms.Normalize((0.5,), (1.0,))
-                                    ])
 
     if NCC:
 
         model = NCCNet().to(device)
 
+        params_to_update = model.parameters()  # all params
     else:
 
-        model = ResSiamese().to(device) #SimplerNet().to(device)
+        model = ResSiamese(feature_extraction).to(device) #SimplerNet().to(device)
+
+        if feature_extraction:
+
+            params_to_update= [param for param in model.parameters() if param.requires_grad]
+
+            #only the last layers when doing feature extraction
+
+        else:
+
+            params_to_update = model.parameters()  # all params
+
+
 
     if not os.path.isdir('./data'):
 
@@ -252,7 +273,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
                 shuffle=False)
 
 
-        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        optimizer = optim.Adam(params_to_update, lr=lr, weight_decay=weight_decay)
 
         epoch_train_metrics = [] #torch.empty((1,2))#((num_epochs, 2))
         epoch_test_metrics = [] #torch.empty_like(epoch_train_metrics)

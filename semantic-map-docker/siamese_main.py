@@ -212,7 +212,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
     else:
 
-        model = ResSiamese() #SimplerNet().to(device)
+        model = ResSiamese().to(device) #SimplerNet().to(device)
 
     if not os.path.isdir('./data'):
 

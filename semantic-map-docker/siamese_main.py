@@ -9,7 +9,7 @@ import numpy as np
 #custom classes and methods
 from plot_results import gen_plots
 import data_loaders
-from siamese_models import SimplerNet, NCCNet
+from siamese_models import SimplerNet, NCCNet, ResSiamese
 from pytorchtools import EarlyStopping
 
 
@@ -21,6 +21,7 @@ num_epochs = 300
 weight_decay = 0.0001
 patience = 30
 metric_avg= 'micro'
+
 
 
 def train(model, device, train_loader, epoch, optimizer):
@@ -163,6 +164,7 @@ def test(model, device, test_loader):
 
 
 def oneshot(model, device, data):
+
     model.eval()
 
     with torch.no_grad():
@@ -173,7 +175,7 @@ def oneshot(model, device, data):
         return torch.squeeze(torch.argmax(output, dim=1)).cpu().item()
 
 
-def main(NCC=False, MNIST=True):
+def main(NCC=False, MNIST=True, ResNet=True):
 
     """
     Expects two command line arguments or flags
@@ -185,14 +187,24 @@ def main(NCC=False, MNIST=True):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    mnist_trans = transforms.Compose([transforms.Resize((160, 60)),
-                                transforms.Grayscale(3),
-                                transforms.ToTensor(),
-                                transforms.Normalize((0.5,), (1.0,))])
+    if ResNet:
+
+        mnist_trans = transforms.Compose([transforms.Resize((160, 60)),
+                                          transforms.Grayscale(3),
+                                          transforms.ToTensor(),
+                                          transforms.Normalize((0.5,), (1.0,))])
+
+
+    else:
+        mnist_trans = transforms.Compose([transforms.Resize((160, 60)),
+                                    transforms.Grayscale(3),
+                                    transforms.ToTensor(),
+                                    transforms.Normalize((0.5,), (1.0,))])
+
 
     trans = transforms.Compose([
                                 transforms.Normalize((0.5,), (1.0,))
-                                ])
+                                    ])
 
     if NCC:
 
@@ -200,7 +212,7 @@ def main(NCC=False, MNIST=True):
 
     else:
 
-        model = SimplerNet().to(device)
+        model = ResSiamese() #SimplerNet().to(device)
 
     if not os.path.isdir('./data'):
 
@@ -316,8 +328,8 @@ def main(NCC=False, MNIST=True):
 
 if __name__ == '__main__':
 
-    print("Running simple net on MNIST")
-    main(NCC=False, MNIST=True)
+    #print("Running simple net on MNIST")
+    #main(NCC=False, MNIST=True)
     print("Running simple net on SNS2")
     main(NCC=False, MNIST=False)
     #print("Running NCC net on MNIST")

@@ -1,4 +1,4 @@
-from torchvision.datasets import MNIST
+from torchvision.datasets import MNIST, CocoDetection
 import cv2
 import numpy as np
 import os
@@ -68,6 +68,8 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
             # print(self.test_data.shape)
 
+
+
     def __getitem__(self, index):
 
         if self.train:
@@ -91,6 +93,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         return img_ar, target
 
     def __len__(self):
+
         if self.train:
             return len(self.train_data)
         else:
@@ -124,6 +127,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         print('Done!')
 
     def __repr__(self):
+
         fmt_str = 'Dataset ' + self.__class__.__name__ + '\n'
         fmt_str += '    Number of datapoints: {}\n'.format(self.__len__())
         tmp = 'train' if self.train is True else 'test'
@@ -139,12 +143,17 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
 
 
-    def read_files(self, path, total=100):
+    def read_files(self, path, total=100, ResNet=True):
 
 
         class_ = 0
 
-        data = torch.empty((total, 3, 160, 60))
+        if ResNet:
+
+            data = torch.empty((total, 3, 224, 224))
+        else:
+
+            data = torch.empty((total, 3, 160, 60))
         labels = torch.empty((total))
 
         #Subfolders are named after classes here
@@ -165,6 +174,9 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
 
         return data, labels
+
+
+
 
 class BalancedMNIST(MNIST):
 
@@ -254,10 +266,18 @@ class BalancedMNIST(MNIST):
 
 
 
-def img_preproc(path_to_image):
+def img_preproc(path_to_image, ResNet=True):
 
     img = cv2.imread(path_to_image)
-    x = cv2.resize(img, (60,160))
+
+    if ResNet:
+        W= 224
+        H= 224
+    else:
+        W = 60
+        H = 160
+
+    x = cv2.resize(img, (W,H))
     x = np.asarray(x)
     #display_img(x)
     x = x.astype('float')

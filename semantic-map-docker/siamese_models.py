@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from collections import OrderedDict
 import time
-from torchvision import models
+import torchvision.models as models
 import torch.nn.functional as F
 
 
@@ -39,6 +39,40 @@ class SimplerNet(nn.Module):
         return res
 
 
+
+
+
+class ResSiamese(nn.Module):
+
+
+    """
+    Overall structure of a siamese again,
+    but each pipeline here is a pre-trained ResNet
+    """
+
+    def __init__(self):
+
+        super().__init__()
+        self.resnet = models.resnet18(pretrained=True)
+        #Drop last FC layer
+        self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-1])
+
+        self.linear1 = nn.Linear(512, 512)
+
+        self.linear2 = nn.Linear(512, 2)
+
+    def forward_once(self, x):
+
+        x = self.mod_resnet(x)
+
+        x = x.view(x.size(0), -1)
+
+        return self.linear1(x)
+
+    def forward(self, data):
+        res = torch.abs(self.forward_once(data[1]) - self.forward_once(data[0]))
+        res = self.linear2(res)
+        return res
 
 
 #Reproducing NormXCorr model by Submariam et al. (NIPS 2016)

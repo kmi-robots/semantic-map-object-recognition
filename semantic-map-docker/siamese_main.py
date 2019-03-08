@@ -16,12 +16,13 @@ from pytorchtools import EarlyStopping
 do_learn = True
 save_frequency = 2
 batch_size = 16
-lr = 0.001
+lr = 0.00005
 num_epochs = 300
 weight_decay = 0.0001
-patience = 30
-metric_avg= 'micro'
-feature_extraction=True
+patience = 80
+metric_avg = 'micro'
+feature_extraction = False
+momentum = 0.9
 
 
 
@@ -245,9 +246,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
     early_stopping = EarlyStopping(patience=patience, verbose=True)
 
-
     if do_learn:  # training mode
-
 
         if MNIST:
 
@@ -272,8 +271,8 @@ def main(NCC=False, MNIST=True, ResNet=True):
                 data_loaders.BalancedTriplets('./data', train=False, transform=trans), batch_size=batch_size,
                 shuffle=False)
 
-
-        optimizer = optim.Adam(params_to_update, lr=lr, weight_decay=weight_decay)
+        optimizer = optim.SGD(params_to_update, lr=lr, momentum=momentum)
+        #optimizer = optim.Adam(params_to_update, lr=lr, weight_decay=weight_decay)
 
         epoch_train_metrics = [] #torch.empty((1,2))#((num_epochs, 2))
         epoch_test_metrics = [] #torch.empty_like(epoch_train_metrics)

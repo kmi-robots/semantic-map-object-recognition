@@ -52,7 +52,7 @@ class ResSiamese(nn.Module):
     - if a False flag is passed, the network will be fine-tuned instead
     """
 
-    def __init__(self, feature_extraction=False):
+    def __init__(self, feature_extraction=False, p=0.4):
 
         super().__init__()
         self.resnet = models.resnet18(pretrained=True)
@@ -66,7 +66,7 @@ class ResSiamese(nn.Module):
                 param.requires_grad = False
 
         self.linear1 = nn.Linear(512, 512)
-
+        self.drop = nn.Dropout(p=p)
         self.linear2 = nn.Linear(512, 2)
 
     def forward_once(self, x):

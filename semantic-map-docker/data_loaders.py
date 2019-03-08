@@ -48,7 +48,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         if self.train:
 
             # Load explicitly from processed MNIST files created
-            train_data, train_labels = torch.load(
+            train_data, train_labels,_ = torch.load(
                 os.path.join(self.root, self.processed_folder, self.training_file))
 
             # To then pass to new functions
@@ -59,7 +59,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
             #print(self.train_data.shape)
         else:
 
-            test_data, test_labels = torch.load(
+            test_data, test_labels, _ = torch.load(
                 os.path.join(self.root, self.processed_folder, self.test_file))
 
             test_labels_class, test_data_class = group_by_class(test_data, test_labels)
@@ -145,7 +145,6 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
     def read_files(self, path, total=100, ResNet=True):
 
-
         class_ = 0
 
         if ResNet:
@@ -155,25 +154,30 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
             data = torch.empty((total, 3, 160, 60))
         labels = torch.empty((total))
+        names = torch.empty((total))
 
         #Subfolders are named after classes here
         iter = 0
+
         for root, dirs, files in os.walk(path):
 
             if files:
+
+               classname = root.split('/')[-1]
 
                for file in files:
 
                    data[iter,:] = torch.from_numpy(img_preproc(os.path.join(root, file)))
 
                    labels[iter] = torch.LongTensor([class_])
+                   names[iter] = torch.LongTensor([classname])
 
                    iter +=1
 
                class_ += 1
 
 
-        return data, labels
+        return data, labels, names
 
 
 
@@ -300,7 +304,6 @@ def group_by_class(data, labels, classes=10):
     """
     labels_class = []
     data_class = []
-
 
 
     # For each digit in the data

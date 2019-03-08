@@ -1,9 +1,7 @@
 import torch
 from torch import nn
 from collections import OrderedDict
-import time
 import torchvision.models as models
-import torch.nn.functional as F
 
 
 class SimplerNet(nn.Module):
@@ -40,6 +38,34 @@ class SimplerNet(nn.Module):
 
 
 
+class NetForEmbedding(nn.Module):
+
+    """
+    Pre-trained Net used to generate img embeddings
+    on each siamese pipeline
+    """
+
+    def __init__(self, feature_extraction=False):
+
+        super().__init__()
+        self.resnet = models.resnet18(pretrained=True)
+        # Drop last FC layer
+        self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-1])
+
+        if feature_extraction:
+
+            for param in self.mod_resnet.parameters():
+
+                param.requires_grad = False
+
+
+    def forward(self, x):
+
+        return self.mod_resnet(x)
+
+    def get_embedding(self, x):
+
+        return self.forward(x)
 
 
 class ResSiamese(nn.Module):
@@ -55,27 +81,17 @@ class ResSiamese(nn.Module):
     def __init__(self, feature_extraction=False, p=0.4):
 
         super().__init__()
-        self.resnet = models.resnet18(pretrained=True)
-        #Drop last FC layer
-        self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-1])
 
-        if feature_extraction:
-
-            for param in self.mod_resnet.parameters():
-
-                param.requires_grad = False
-
+        self.embed = NetForEmbedding(feature_extraction)
         #self.linear1 = nn.Linear(512, 512)
         self.drop = nn.Dropout(p=p)
         self.linear2 = nn.Linear(512, 2)
 
     def forward_once(self, x):
 
-        x = self.mod_resnet(x)
+        x = self.embed(x)
 
         #Flatten
-        #x = x.view(x.size(0), -1)
-
         return x.view(x.size(0), -1) #self.drop(self.linear2(x))
 
     def forward(self, data):
@@ -141,33 +157,7 @@ class normxcorr(Function):
         return grad_input1, grad_input2
 
 
-#Trying version that exploits Conv2D
-class normxcorrConv(nn.Module):
 
-    def __init__(self):
-        super(normxcorrConv, self).__init__()
-
-    def forward_once(self, X, Y):
-
-
-        return X
-
-    def pad(self, X, Y, d=2):
-
-        return F.pad(X, (d, d, d, d)), F.pad(Y, (d, d, 2 * d, 2 * d))
-
-    def forward(self, input):
-
-        X = input[0]
-        Y = input[1]
-
-        X_pad, Y_pad = self.pad(X,Y)
-
-        all_Es = X_pad.unfold(2, 5, 1).unfold(3, 5, 1)
-
-        print(X.shape)
-
-        return self.forward_once(X,Y)
 
 
 # The whole feed-forward architecture

@@ -75,7 +75,7 @@ class ResSiamese(nn.Module):
 
         x = x.view(x.size(0), -1)
 
-        return self.linear1(x)
+        return self.drop(self.linear1(x))
 
     def forward(self, data):
         res = torch.abs(self.forward_once(data[1]) - self.forward_once(data[0]))

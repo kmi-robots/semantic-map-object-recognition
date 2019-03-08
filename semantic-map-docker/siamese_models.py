@@ -65,7 +65,7 @@ class ResSiamese(nn.Module):
 
                 param.requires_grad = False
 
-        self.linear1 = nn.Linear(512, 512)
+        #self.linear1 = nn.Linear(512, 512)
         self.drop = nn.Dropout(p=p)
         self.linear2 = nn.Linear(512, 2)
 
@@ -73,13 +73,15 @@ class ResSiamese(nn.Module):
 
         x = self.mod_resnet(x)
 
-        x = x.view(x.size(0), -1)
+        #Flatten
+        #x = x.view(x.size(0), -1)
 
-        return self.drop(self.linear1(x))
+        return x.view(x.size(0), -1) #self.drop(self.linear2(x))
 
     def forward(self, data):
+
         res = torch.abs(self.forward_once(data[1]) - self.forward_once(data[0]))
-        res = self.linear2(res)
+        res = self.drop(self.linear2(res))
         return res
 
 

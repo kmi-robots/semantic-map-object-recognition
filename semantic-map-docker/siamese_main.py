@@ -11,7 +11,7 @@ from plot_results import gen_plots
 import data_loaders
 from siamese_models import SimplerNet, NCCNet, ResSiamese
 from pytorchtools import EarlyStopping
-
+from custom_utils import save_embeddings
 
 do_learn = True
 save_frequency = 2
@@ -227,7 +227,6 @@ def main(NCC=False, MNIST=True, ResNet=True):
         if feature_extraction:
 
             params_to_update= [param for param in model.parameters() if param.requires_grad]
-
             #only the last layers when doing feature extraction
 
         else:
@@ -281,6 +280,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
             if early_stopping.early_stop:
                 print("Early stopping")
+
                 break
 
             epoch_train_metrics.append(train(model, device, train_loader, epoch, optimizer))
@@ -317,6 +317,9 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
                     torch.save(model, 'pt_results/SNS2/siamese_{:03}.pt'.format(epoch))
 
+
+
+        ## Plotting ##################################################################
         epoch_train_metrics = torch.stack(epoch_train_metrics, dim=0)
         epoch_test_metrics = torch.stack(epoch_test_metrics, dim=0)
 
@@ -330,6 +333,10 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
         #Gen precision and recall plots
         gen_plots(epoch_ps, epoch_rs, num_epochs, MNIST, NCC, precrec=True)
+
+        # Save image vectors
+        print("Saving last best embeddings")
+        save_embeddings(model)
 
     else:  # prediction
         prediction_loader = torch.utils.data.DataLoader(

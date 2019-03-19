@@ -29,7 +29,6 @@ class BalancedTriplets(torch.utils.data.Dataset):
     test_file = 'shapenet_test.pt'
 
 
-
     def __init__(self, root, train=True, transform=None, target_transform=None):
 
         self.root = os.path.expanduser(root)
@@ -48,7 +47,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         if self.train:
 
             # Load explicitly from processed MNIST files created
-            train_data, train_labels,_ = torch.load(
+            train_data, train_labels, _ = torch.load(
                 os.path.join(self.root, self.processed_folder, self.training_file))
 
             # To then pass to new functions
@@ -67,7 +66,6 @@ class BalancedTriplets(torch.utils.data.Dataset):
             self.test_data, self.test_labels = generate_balanced_triplets(test_labels_class, test_data_class)
 
             # print(self.test_data.shape)
-
 
 
     def __getitem__(self, index):
@@ -153,6 +151,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         else:
 
             data = torch.empty((total, 3, 160, 60))
+
         labels = torch.empty((total))
         names = torch.empty((total))
 
@@ -163,23 +162,24 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
             if files:
 
-               classname = root.split('/')[-1]
+                classname = str(root.split('/')[-1])
+                #NOTE: the assumption is that images are grouped in subfolders by class
+                example_no = 1
 
-               for file in files:
+                for file in files:
 
-                   data[iter,:] = torch.from_numpy(img_preproc(os.path.join(root, file)))
-
+                   data[iter, :] = torch.from_numpy(img_preproc(os.path.join(root, file)))
                    labels[iter] = torch.LongTensor([class_])
-                   names[iter] = torch.LongTensor([classname])
 
+                   # ID = <classname_sequentialnumber>
+                   names[iter] = torch.LongTensor([classname+'_'+str(example_no)])
+
+                   example_no+=1
                    iter +=1
 
-               class_ += 1
-
+                class_ += 1
 
         return data, labels, names
-
-
 
 
 class BalancedMNIST(MNIST):
@@ -223,7 +223,7 @@ class BalancedMNIST(MNIST):
 
             test_data, test_labels = torch.load(os.path.join(mnist_set.root, mnist_set.processed_folder, mnist_set.test_file))
 
-            test_labels_class, test_data_class = group_by_class(test_data, test_labels)
+            test_labels_class, test_data_class= group_by_class(test_data, test_labels)
 
             self.test_data, self.test_labels = generate_balanced_triplets(test_labels_class, test_data_class, mnist=True)
 
@@ -289,12 +289,12 @@ def img_preproc(path_to_image, ResNet=True):
     x = np.expand_dims(x, axis= 0)
 
     x = np.reshape(x, (x.shape[0], x.shape[3], x.shape[1], x.shape[2]))
-
     #display_img(x)
+
     return x/255.
 
 
-def group_by_class(data, labels, classes=10):
+def group_by_class(data, labels, classes=10):   #ids=None
 
     """
     Returns lists of len 10 grouping tensors
@@ -304,7 +304,7 @@ def group_by_class(data, labels, classes=10):
     """
     labels_class = []
     data_class = []
-
+    #id_class = []
 
     # For each digit in the data
     for i in range(classes):
@@ -317,7 +317,9 @@ def group_by_class(data, labels, classes=10):
         # And add them to related list
         labels_class.append(torch.index_select(labels, 0, indices))
         data_class.append(torch.index_select(data, 0, indices))
-        data_class.append(torch.index_select(data, 0, indices))
+
+        #if ids is not None:
+        #    id_class.append(torch.index_select(ids, 0, indices))
 
     return labels_class, data_class
 

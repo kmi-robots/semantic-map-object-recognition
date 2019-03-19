@@ -41,8 +41,10 @@ def main(NCC=False, MNIST=True, ResNet=True):
     if ResNet:
 
         # Add hardcoded mean and variance values for torchvision pre-trained modules
-        means = [0.485, 0.456, 0.406]
-        stds = [0.229, 0.224, 0.225]
+        #means = [0.485, 0.456, 0.406]
+        #stds = [0.229, 0.224, 0.225]
+        means = (0.5,)
+        stds = (1.0,)
 
         mnist_trans = transforms.Compose([transforms.Resize((224, 224)),
                                           transforms.Grayscale(3),
@@ -178,11 +180,16 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
 if __name__ == '__main__':
 
-    #print("Running siamese net on MNIST")
-    #main(NCC=False, MNIST=True)
+
     print("Running siamese net on SNS2")
     main(NCC=False, MNIST=False)
+
+    """
+    Reproduces old runs 
+    # print("Running siamese net on MNIST")
+    # main(NCC=False, MNIST=True)
     #print("Running NCC siamese net on MNIST")
     #main(NCC=True, MNIST=True)
     #print("Running NCC siamese net on SNS2")
     #main(NCC=True, MNIST=False)
+    """

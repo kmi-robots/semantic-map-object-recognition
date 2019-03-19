@@ -19,11 +19,11 @@ def save_embeddings(model, path_to_state, path_to_data,  device):
     #i.e., avgpool layer of embedding Net
     layer = model._modules.get('resnet')._modules.get('avgpool')
 
-    data, labels, names = torch.load(path_to_data)
+    data, labels, ids = torch.load(path_to_data)
 
     embeddings = {}
 
-    for img, target, obj_name in data:
+    for img, target, obj_id in data:
 
         img = img.to(device)
 
@@ -43,9 +43,7 @@ def save_embeddings(model, path_to_state, path_to_data,  device):
         #Detach copy function from the layer
         h.remove()
 
-        id_ = obj_name
-
         #Save embedding in dictionary under unique id
-        embeddings[id_] = embedding
+        embeddings[obj_id] = embedding
 
     return embeddings

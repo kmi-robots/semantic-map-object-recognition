@@ -48,7 +48,7 @@ class NetForEmbedding(nn.Module):
     def __init__(self, feature_extraction=False):
 
         super().__init__()
-        self.resnet = models.resnet18(pretrained=True)
+        self.resnet = models.resnet34(pretrained=True)
         # Drop last FC layer
         self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-1])
 
@@ -78,7 +78,7 @@ class ResSiamese(nn.Module):
     - if a False flag is passed, the network will be fine-tuned instead
     """
 
-    def __init__(self, feature_extraction=False, p=0.4):
+    def __init__(self, feature_extraction=False, p=0.5):
 
         super().__init__()
 

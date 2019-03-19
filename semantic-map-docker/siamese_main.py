@@ -14,10 +14,10 @@ from test import test
 
 do_learn = True
 feature_extraction = False
-keep_embeddings = False
+keep_embeddings = True
 save_frequency = 2
 batch_size = 16
-lr = 0.00005
+lr = 0.0001
 num_epochs = 300
 weight_decay = 0.0001
 patience = 80
@@ -44,12 +44,10 @@ def main(NCC=False, MNIST=True, ResNet=True):
         means = [0.485, 0.456, 0.406]
         stds = [0.229, 0.224, 0.225]
 
-
         mnist_trans = transforms.Compose([transforms.Resize((224, 224)),
                                           transforms.Grayscale(3),
                                           transforms.ToTensor(),
                                           transforms.Normalize(means, stds)])
-
     else:
 
         #simply standardize

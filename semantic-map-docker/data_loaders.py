@@ -47,7 +47,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         if self.train:
 
             # Load explicitly from processed MNIST files created
-            train_data, train_labels, _ = torch.load(
+            train_data, train_labels = torch.load(
                 os.path.join(self.root, self.processed_folder, self.training_file))
 
             # To then pass to new functions
@@ -58,7 +58,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
             #print(self.train_data.shape)
         else:
 
-            test_data, test_labels, _ = torch.load(
+            test_data, test_labels = torch.load(
                 os.path.join(self.root, self.processed_folder, self.test_file))
 
             test_labels_class, test_data_class = group_by_class(test_data, test_labels)
@@ -141,7 +141,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
 
 
-    def read_files(self, path, total=100, ResNet=True):
+    def read_files(self, path, total=100, train=True, ResNet=True):
 
         class_ = 0
 
@@ -153,7 +153,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
             data = torch.empty((total, 3, 160, 60))
 
         labels = torch.empty((total))
-        names = torch.empty((total))
+        names = {}
 
         #Subfolders are named after classes here
         iter = 0
@@ -168,18 +168,32 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
                 for file in files:
 
-                   data[iter, :] = torch.from_numpy(img_preproc(os.path.join(root, file)))
+                   vec = img_preproc(os.path.join(root, file))
+                   data[iter, :] = torch.from_numpy(vec)
                    labels[iter] = torch.LongTensor([class_])
 
                    # ID = <classname_sequentialnumber>
-                   names[iter] = torch.LongTensor([classname+'_'+str(example_no)])
+                   names[classname+'_'+str(example_no)] = vec
 
                    example_no+=1
                    iter +=1
 
                 class_ += 1
 
-        return data, labels, names
+        #Save serialized object separately for IDs
+        if train:
+
+            fname = 'shapenet_training.dat'
+
+        else:
+
+            fname = 'shapenet_test.dat'
+
+        with open(os.path.join(self.root, self.processed_folder, fname), 'wb') as f:
+
+            torch.save(obj=names, f=f)
+
+        return data, labels
 
 
 class BalancedMNIST(MNIST):

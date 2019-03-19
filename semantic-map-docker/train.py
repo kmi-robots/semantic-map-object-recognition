@@ -1,9 +1,9 @@
 import torch
 import torch.nn.functional as F
 from sklearn.metrics import precision_recall_fscore_support
+import numpy as np
 
-
-def train(model, device, train_loader, epoch, optimizer):
+def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg):
 
     model.train()
 

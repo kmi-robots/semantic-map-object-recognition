@@ -136,9 +136,9 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
                 break
 
-            epoch_train_metrics.append(train(model, device, train_loader, epoch, optimizer))
+            epoch_train_metrics.append(train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg))
 
-            test_m = test(model, device, test_loader)
+            test_m = test(model, device, test_loader, metric_avg)
             epoch_test_metrics.append(test_m)
 
             valid_loss = test_m[0]
@@ -170,7 +170,6 @@ def main(NCC=False, MNIST=True, ResNet=True):
     if keep_embeddings:
 
         #Warning: available for custom set only, no MNIST
-
         vecs = save_embeddings(model, 'pt_results/embed_checkpoint.pt', './data/processed/shapenet_training.dat', device)
 
 

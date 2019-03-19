@@ -1,9 +1,11 @@
 import torch
 import torch.nn.functional as F
 from sklearn.metrics import precision_recall_fscore_support
+import numpy as np
 
 
-def test(model, device, test_loader):
+def test(model, device, test_loader, metric_avg):
+
     model.eval()
 
     with torch.no_grad():
@@ -15,7 +17,6 @@ def test(model, device, test_loader):
         predictions=[]
 
         for batch_idx, (data, target) in enumerate(test_loader):
-
 
             for i in range(len(data)):
                 data[i] = data[i].to(device)
@@ -46,7 +47,6 @@ def test(model, device, test_loader):
             labels.extend(target_positive.tolist())
             labels.extend(target_negative.tolist())
 
-
             accurate_labels = accurate_labels + accurate_labels_positive + accurate_labels_negative
             all_labels = all_labels + len(target_positive) + len(target_negative)
 
@@ -56,5 +56,4 @@ def test(model, device, test_loader):
 
         print('Test accuracy: {}/{} ({:.3f}%)\t Loss: {:.6f}'.format(accurate_labels, all_labels, accuracy, epoch_loss))
 
-
-        return torch.Tensor([epoch_loss, accuracy,float(p), float(r)])
+        return torch.Tensor([epoch_loss, accuracy, float(p), float(r)])

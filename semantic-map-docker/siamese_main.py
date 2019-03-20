@@ -8,7 +8,7 @@ from plot_results import gen_plots
 import data_loaders
 from siamese_models import SimplerNet, NCCNet, ResSiamese
 from pytorchtools import EarlyStopping
-from custom_utils import save_embeddings
+from embedding_extractor import save_embeddings
 from train import train
 from test import test
 

@@ -8,7 +8,8 @@
 import torch
 target_dim = 512  # i.e. output size of the last layer kept in ResNet
 
-def save_embeddings(model, path_to_state, path_to_data,  device):
+
+def save_embeddings(model, path_to_state, path_to_data, device, transforms=None):
 
     #select the desired layer as of latest checkpoint
     model = model._modules.get('embed')
@@ -27,7 +28,8 @@ def save_embeddings(model, path_to_state, path_to_data,  device):
 
     for img_id, img in data.items():
 
-        img = img.to(device)
+        #Applying same normalization as on a training forward pass
+        img = transforms(img).to(device)
 
         embedding = torch.zeros(target_dim).to(device)
 

@@ -14,13 +14,13 @@ def save_embeddings(model, path_to_state, path_to_data, device, transforms=None)
 
 
     #select the desired layer as of latest checkpoint
-    model = model._modules.get('embed')
+    model = model._modules.get('embed').to(device)
     model.load_state_dict(torch.load(path_to_state))
 
     model.eval()
 
     #i.e., avgpool layer of embedding Net
-    layer = model._modules.get('resnet')._modules.get('avgpool')
+    layer = model._modules.get('resnet')._modules.get('avgpool').to(device)
 
     data = torch.load(path_to_data)
 
@@ -31,7 +31,8 @@ def save_embeddings(model, path_to_state, path_to_data, device, transforms=None)
 
 
         #Applying same normalization as on a training forward pass
-        img = transforms(img).to(device)
+        img[0,:] = transforms(img[0,:].float())\
+        img = img.float().to(device)
 
         embedding = torch.zeros(target_dim).to(device)
 
@@ -44,7 +45,7 @@ def save_embeddings(model, path_to_state, path_to_data, device, transforms=None)
         h = layer.register_forward_hook(copy_data)
 
         #Run model on each image
-        model.get_embeddings(img) #It is only one forward pass on one single pipeline of the original siamese
+        model.get_embedding(img) #It is only one forward pass on one single pipeline of the original siamese
 
         #Detach copy function from the layer
         h.remove()
@@ -54,6 +55,6 @@ def save_embeddings(model, path_to_state, path_to_data, device, transforms=None)
 
 
     #Save dictionary locally, as JSON file
-    with open('./out_embeddings.dat', encoding='utf-8', mode='w') as outf:
+    with open('./out_embeddings.dat', mode='wb') as outf:
         torch.save(obj=embeddings, f=outf)
 

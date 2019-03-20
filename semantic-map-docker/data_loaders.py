@@ -1,4 +1,4 @@
-from torchvision.datasets import MNIST, CocoDetection
+from torchvision.datasets import MNIST
 import cv2
 import numpy as np
 import os
@@ -78,7 +78,6 @@ class BalancedTriplets(torch.utils.data.Dataset):
         img_ar = []
 
         for i in range(len(imgs)):
-
 
             img = imgs[i] #Image.fromarray(imgs[i].numpy(), mode='L')
             if self.transform is not None:

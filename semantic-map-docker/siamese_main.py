@@ -170,7 +170,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
     if keep_embeddings:
 
         #Warning: available for custom set only, no MNIST
-        save_embeddings(model, 'pt_results/embed_checkpoint.pt', './data/processed/shapenet_training.dat', device, transforms=trans)
+        save_embeddings(model, 'pt_results/embed_checkpoint.pt', './data/processed/shapenet_training.dat', device)
 
 
 if __name__ == '__main__':

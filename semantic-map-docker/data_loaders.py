@@ -164,18 +164,20 @@ class BalancedTriplets(torch.utils.data.Dataset):
                 classname = str(root.split('/')[-1])
 
                 #NOTE: the assumption is that images are grouped in subfolders by class
-                example_no = 1
+                #example_no = 1
 
                 for file in files:
 
                     img_tensor = torch.from_numpy(img_preproc(os.path.join(root, file)))
 
+                    filename = str(file.split('/')[-1])
+
                     data[iteration, :] = img_tensor
                     labels[iteration] = torch.LongTensor([class_])
 
-                    # ID = <classname_sequentialnumber>
-                    names[classname+'_'+str(example_no)] = img_tensor
-                    example_no += 1
+                    # ID = <classname_filename>
+                    names[classname+'_'+filename] = img_tensor
+                    #example_no += 1
                     iteration += 1
 
                 class_ += 1

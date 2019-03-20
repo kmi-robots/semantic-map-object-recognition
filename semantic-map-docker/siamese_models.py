@@ -48,7 +48,7 @@ class NetForEmbedding(nn.Module):
     def __init__(self, feature_extraction=False):
 
         super().__init__()
-        self.resnet = models.resnet34(pretrained=True)
+        self.resnet = models.resnet50(pretrained=True)
         # Drop last FC layer
         self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-1])
 
@@ -85,7 +85,7 @@ class ResSiamese(nn.Module):
         self.embed = NetForEmbedding(feature_extraction)
         #self.linear1 = nn.Linear(512, 512)
         self.drop = nn.Dropout(p=p)
-        self.linear2 = nn.Linear(512, 2)
+        self.linear2 = nn.Linear(2048,2)  #(512, 2)
 
     def forward_once(self, x):
 

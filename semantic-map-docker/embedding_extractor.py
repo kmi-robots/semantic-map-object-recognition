@@ -9,7 +9,7 @@ of a ResNet
 import torch
 import cirtorch_functional as CF
 
-target_dim = 512  # i.e. output size of the last layer kept in ResNet
+target_dim = 2048 #512  # i.e. output size of the last layer kept in ResNet
 
 
 def save_embeddings(model, path_to_state, path_to_data, device, transforms=None):

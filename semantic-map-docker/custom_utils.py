@@ -7,6 +7,7 @@
 
 import torch
 from torchvision import transforms
+from PIL import Image
 
 target_dim = 512  # i.e. output size of the last layer kept in ResNet
 
@@ -28,11 +29,12 @@ def save_embeddings(model, path_to_state, path_to_data, device):
 
     data = torch.load(path_to_data)
 
-
     #embeddings = torch.Tensor((data.shape[0], 1, target_dim)).to(device)
     embeddings = {}
 
     for img_id, img in data.items():
+
+        img = Image.fromarray(img, mode='L')
 
         #Applying same normalization as on a training forward pass
         img = trans(img).to(device)
@@ -59,5 +61,5 @@ def save_embeddings(model, path_to_state, path_to_data, device):
 
     #Save dictionary locally, as JSON file
     with open('./out_embeddings.dat', encoding='utf-8', mode='w') as outf:
-        torchsave(obj=embeddings, f=outf)
+        torch.save(obj=embeddings, f=outf)
 

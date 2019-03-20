@@ -168,12 +168,13 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
                 for file in files:
 
-                    img_tensor = torch.from_numpy(img_preproc(os.path.join(root, file)))
-                    data[iteration, :] = img_tensor
+                    vec = img_preproc(os.path.join(root, file))
+
+                    data[iteration, :] = torch.from_numpy(vec)
                     labels[iteration] = torch.LongTensor([class_])
 
                     # ID = <classname_sequentialnumber>
-                    names[classname+'_'+str(example_no)] = img_tensor
+                    names[classname+'_'+str(example_no)] = vec
 
                     example_no += 1
                     iteration += 1

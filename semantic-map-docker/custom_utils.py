@@ -31,7 +31,7 @@ def save_embeddings(model, path_to_state, path_to_data, device, transforms=None)
 
 
         #Applying same normalization as on a training forward pass
-        img[0,:] = transforms(img[0,:].float())\
+        img[0,:] = transforms(img[0,:].float())
         img = img.float().to(device)
 
         embedding = torch.zeros(target_dim).to(device)

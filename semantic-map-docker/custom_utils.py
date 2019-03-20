@@ -6,7 +6,6 @@
 ######################################################################
 
 import torch
-import json
 target_dim = 512  # i.e. output size of the last layer kept in ResNet
 
 def save_embeddings(model, path_to_state, path_to_data,  device):
@@ -17,16 +16,16 @@ def save_embeddings(model, path_to_state, path_to_data,  device):
 
     model.eval()
 
-
     #i.e., avgpool layer of embedding Net
     layer = model._modules.get('resnet')._modules.get('avgpool')
 
-    data, labels, ids = torch.load(path_to_data)
+    data = torch.load(path_to_data)
+
 
     #embeddings = torch.Tensor((data.shape[0], 1, target_dim)).to(device)
     embeddings = {}
 
-    for img, target, obj_id in data:
+    for img_id, img in data.items():
 
         img = img.to(device)
 
@@ -47,11 +46,10 @@ def save_embeddings(model, path_to_state, path_to_data,  device):
         h.remove()
 
         #Save embedding in dictionary under unique id
-        embeddings[obj_id] = embedding
-        #embeddings[index, :] =
+        embeddings[img_id] = embedding
 
 
     #Save dictionary locally, as JSON file
-    with open('./out_embeddings.json', encoding='utf-8', mode='w') as outjson:
-        json.dump(embeddings, outjson)
+    with open('./out_embeddings.dat', encoding='utf-8', mode='w') as outf:
+        torchsave(obj=embeddings, f=outf)
 

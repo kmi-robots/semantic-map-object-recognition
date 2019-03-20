@@ -174,7 +174,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
                     labels[iteration] = torch.LongTensor([class_])
 
                     # ID = <classname_sequentialnumber>
-                    names[classname+'_'+str(example_no)] = vec
+                    names[classname+'_'+str(example_no)] = torch.from_numpy(vec[0]) #Removing first extra dim for batch no., i.e., only keeping single vectors
 
                     example_no += 1
                     iteration += 1

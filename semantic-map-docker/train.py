@@ -30,6 +30,7 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
         target_positive = torch.squeeze(target[:, 0])
         target_negative = torch.squeeze(target[:, 1])
 
+
         loss_positive = F.cross_entropy(output_positive, target_positive)
         loss_negative = F.cross_entropy(output_negative, target_negative)
 

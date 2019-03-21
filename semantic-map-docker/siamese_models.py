@@ -39,6 +39,40 @@ class SimplerNet(nn.Module):
 
 from rpooling import GeM, L2N
 
+#Contrastive loss as defined in https://github.com/adambielski/siamese-triplet/
+class ContrastiveLoss(nn.Module):
+    """
+    Contrastive loss
+    Takes embeddings of two samples and a target label == 1 if samples are from the same class and label == 0 otherwise
+    """
+
+    def __init__(self, margin):
+        super(ContrastiveLoss, self).__init__()
+        self.margin = margin
+        self.eps = 1e-9
+
+    def forward(self, output1, output2, target, size_average=True):
+        distances = (output2 - output1).pow(2).sum(1)  # squared distances
+        losses = 0.5 * (target.float() * distances +
+                        (1 + -1 * target).float() * F.relu(self.margin - (distances + self.eps).sqrt()).pow(2))
+        return losses.mean() if size_average else losses.sum()
+
+class TripletLoss(nn.Module):
+    """
+    Triplet loss
+    Takes embeddings of an anchor sample, a positive sample and a negative sample
+    """
+
+    def __init__(self, margin):
+        super(TripletLoss, self).__init__()
+        self.margin = margin
+
+    def forward(self, anchor, positive, negative, size_average=True):
+        distance_positive = (anchor - positive).pow(2).sum(1)  # .pow(.5)
+        distance_negative = (anchor - negative).pow(2).sum(1)  # .pow(.5)
+        losses = F.relu(distance_positive - distance_negative + self.margin)
+
+        return losses.mean() if size_average else losses.sum()
 
 class NetForEmbedding(nn.Module):
 
@@ -101,20 +135,34 @@ class ResSiamese(nn.Module):
 
         self.embed = NetForEmbedding(feature_extraction)
         #self.linear1 = nn.Linear(512, 512)
+
+
+        self.fc = nn.Sequential(OrderedDict({
+            'linear_1': nn.Linear(2048, 512),
+            'relu_1': nn.ReLU(),
+            'linear_2': nn.Linear(512, 512),
+            'relu_2': nn.ReLU()
+        }))
+
         self.drop = nn.Dropout(p=p)
-        self.linear2 = nn.Linear(2048,2)  #(512, 2)
+        self.linear3 = nn.Linear(512, 2)
+
+        #self.linear1 = (2048, 512)
+        #self.linear2 = nn.Linear(2048,2)  #(512, 2)
 
     def forward_once(self, x):
 
         x = self.embed(x)
-        #print(x.shape)
-        #Flatten
-        return x.view(x.size(0), -1) #self.drop(self.linear2(x))
+        #Flatten + FC + dropout
+        return self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
 
     def forward(self, data):
 
+        #res1 = self.forward_once(data[0])
+        #res2 = self.forward_once(data[1])
         res = torch.abs(self.forward_once(data[1]) - self.forward_once(data[0]))
-        res = self.drop(self.linear2(res))
+        res = self.drop(self.linear3(res))
+
         return res
 
 

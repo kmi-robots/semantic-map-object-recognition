@@ -7,7 +7,7 @@ of a ResNet
 """
 
 import torch
-import cirtorch_functional as CF
+
 
 target_dim = 2048 #512  # i.e. output size of the last layer kept in ResNet
 
@@ -54,10 +54,7 @@ def save_embeddings(model, path_to_state, path_to_data, device, transforms=None)
         #Run model on each image
         model.get_embedding(img) #It is only one forward pass on one single pipeline of the original siamese
 
-        #Applying RMAC pooling to the extracted embedding
-        print(embedding.shape)
-        embedding = CF.rmac(embedding)
-        print(embedding.shape)
+
 
         #Detach copy function from the layer
         h.remove()

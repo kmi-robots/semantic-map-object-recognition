@@ -37,6 +37,8 @@ class SimplerNet(nn.Module):
         return res
 
 
+from rpooling import GeM, L2N
+
 
 class NetForEmbedding(nn.Module):
 
@@ -49,8 +51,10 @@ class NetForEmbedding(nn.Module):
 
         super().__init__()
         self.resnet = models.resnet50(pretrained=True)
-        # Drop last FC layer
-        self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-1])
+        # Drop pooling + last FC layer
+        self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-2])
+        self.pooling = GeM() # no whitening for now, all params to default
+        self.norm = L2N()
 
         if feature_extraction:
 
@@ -58,10 +62,11 @@ class NetForEmbedding(nn.Module):
 
                 param.requires_grad = False
 
-
     def forward(self, x):
 
-        return self.mod_resnet(x)
+        x = self.norm(self.pooling(self.mod_resnet(x))).squeeze(-1).squeeze(-1)
+
+        return x #.permute(1,0)
 
     def get_embedding(self, x):
 
@@ -90,7 +95,7 @@ class ResSiamese(nn.Module):
     def forward_once(self, x):
 
         x = self.embed(x)
-
+        #print(x.shape)
         #Flatten
         return x.view(x.size(0), -1) #self.drop(self.linear2(x))
 

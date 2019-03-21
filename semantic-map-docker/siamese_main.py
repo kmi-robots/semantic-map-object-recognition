@@ -18,7 +18,7 @@ keep_embeddings = True
 save_frequency = 2
 batch_size = 16
 lr = 0.0001
-num_epochs = 300
+num_epochs = 1000
 weight_decay = 0.0001
 patience = 80
 metric_avg = 'micro'
@@ -113,7 +113,6 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
         else:
 
-            num_epochs = 1000
 
             train_loader = torch.utils.data.DataLoader(
                data_loaders.BalancedTriplets('./data', train=True, transform=trans), batch_size=batch_size,

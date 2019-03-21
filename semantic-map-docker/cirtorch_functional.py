@@ -5,9 +5,9 @@ https://github.com/filipradenovic/cnnimageretrieval-pytorch
 All credits for this script go to the contributors of the above project
 
 """
-
-import math
 import torch
+import math
+
 import torch.nn.functional as F
 
 
@@ -26,6 +26,9 @@ def spoc(x):
 
 
 def gem(x, p=3, eps=1e-6):
+    #Generalized version of mac and spoc
+    #Returns one value per feature map
+    #p can be manually set or learned, since this function is differentiable
     return F.avg_pool2d(x.clamp(min=eps).pow(p), (x.size(-2), x.size(-1))).pow(1. / p)
     # return F.lp_pool2d(F.threshold(x, eps, eps), p, (x.size(-2), x.size(-1))) # alternative
 
@@ -163,6 +166,5 @@ def contrastive_loss(x, label, margin=0.7, eps=1e-6):
 
     y = 0.5 * lbl * torch.pow(D, 2) + 0.5 * (1 - lbl) * torch.pow(torch.clamp(margin - D, min=0), 2)
     y = torch.sum(y)
-
 
     return y

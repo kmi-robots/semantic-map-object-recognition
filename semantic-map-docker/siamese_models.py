@@ -88,6 +88,7 @@ class NetForEmbedding(nn.Module):
         # Drop pooling + last FC layer
 
         if custom_pool:
+
            self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-2])  #-2 for GeM
            self.pooling = GeM() # no whitening for now, all params to default
 
@@ -112,6 +113,7 @@ class NetForEmbedding(nn.Module):
 
         else:
 
+            #print(self.mod_resnet(x).shape)
             return self.mod_resnet(x) #self.norm(self.mod_resnet(x)).squeeze(-1).squeeze(-1)
 
     def get_embedding(self, x):
@@ -148,22 +150,23 @@ class ResSiamese(nn.Module):
         self.linear3 = nn.Linear(512, 2)
 
         #self.linear1 = (2048, 512)
-        #self.linear2 = nn.Linear(2048,2)  #(512, 2)
+        self.linear2 = nn.Linear(2048,2)  #(512, 2)
 
     def forward_once(self, x):
 
         x = self.embed(x)
         #Flatten + FC + dropout
-        return self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
+
+        return x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
 
     def forward(self, data):
 
         #res1 = self.forward_once(data[0])
         #res2 = self.forward_once(data[1])
         res = torch.abs(self.forward_once(data[1]) - self.forward_once(data[0]))
-        res = self.drop(self.linear3(res))
+        #self.drop(self.linear3(res))
 
-        return res
+        return self.drop(self.linear2(res))
 
 
 #Reproducing NormXCorr model by Submariam et al. (NIPS 2016)

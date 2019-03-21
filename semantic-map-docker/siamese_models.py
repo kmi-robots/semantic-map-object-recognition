@@ -78,7 +78,7 @@ class NetForEmbedding(nn.Module):
 
         else:
 
-            return self.norm(self.mod_resnet(x)).squeeze(-1).squeeze(-1)
+            return self.mod_resnet(x) #self.norm(self.mod_resnet(x)).squeeze(-1).squeeze(-1)
 
     def get_embedding(self, x):
 

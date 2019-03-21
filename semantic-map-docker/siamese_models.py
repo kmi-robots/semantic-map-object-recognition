@@ -47,13 +47,19 @@ class NetForEmbedding(nn.Module):
     on each siamese pipeline
     """
 
-    def __init__(self, feature_extraction=False):
+    def __init__(self, feature_extraction=False, custom_pool=False):
 
         super().__init__()
         self.resnet = models.resnet50(pretrained=True)
         # Drop pooling + last FC layer
-        self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-2])
-        self.pooling = GeM() # no whitening for now, all params to default
+
+        if custom_pool:
+           self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-2])  #-2 for GeM
+           self.pooling = GeM() # no whitening for now, all params to default
+
+        else:
+            self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-1])
+
         self.norm = L2N()
 
         if feature_extraction:
@@ -62,11 +68,17 @@ class NetForEmbedding(nn.Module):
 
                 param.requires_grad = False
 
-    def forward(self, x):
+    def forward(self, x, custom_pool=False):
 
-        x = self.norm(self.pooling(self.mod_resnet(x))).squeeze(-1).squeeze(-1)
+        if custom_pool:
 
-        return x #.permute(1,0)
+            x = self.norm(self.pooling(self.mod_resnet(x))).squeeze(-1).squeeze(-1)
+
+            return x #.permute(1,0)
+
+        else:
+
+            return self.norm(self.mod_resnet(x)).squeeze(-1).squeeze(-1)
 
     def get_embedding(self, x):
 

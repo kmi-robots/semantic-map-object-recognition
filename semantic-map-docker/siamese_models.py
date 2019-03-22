@@ -74,6 +74,8 @@ class TripletLoss(nn.Module):
 
         return losses.mean() if size_average else losses.sum()
 
+
+
 class NetForEmbedding(nn.Module):
 
     """
@@ -117,6 +119,8 @@ class NetForEmbedding(nn.Module):
             return x.view(x.size(0), -1)  #self.norm(self.mod_resnet(x)).squeeze(-1).squeeze(-1)
 
 
+#L2 norm and weight norm on pre-training as derived by paper
+# by Qi et al. (CVPR 2018) - Google, but on ResNet here
 
 class ResSiamese(nn.Module):
 

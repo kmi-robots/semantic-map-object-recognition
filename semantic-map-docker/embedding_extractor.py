@@ -15,7 +15,7 @@ from data_loaders import img_preproc
 #target_dim = 256 #2048 #512  # i.e. output size of the last layer kept in ResNet
 
 
-def extract_embeddings(model, path_to_state, path_to_data, device, transforms=None, K=None):
+def extract_embeddings(model, path_to_state, path_to_data, device, outp, transforms=None, K=None):
 
     model.load_state_dict(torch.load(path_to_state))
 
@@ -50,9 +50,8 @@ def extract_embeddings(model, path_to_state, path_to_data, device, transforms=No
 
 
     #Save dictionary locally, as JSON file
-    with open('./out_embeddings.dat', mode='wb') as outf:
+    with open(outp, mode='wb') as outf:
         torch.save(obj=embeddings, f=outf)
-
 
 
 def query_embedding(model, path_to_state, path_to_img,  device, transforms=None):

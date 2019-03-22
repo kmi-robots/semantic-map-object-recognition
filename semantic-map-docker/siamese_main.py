@@ -24,6 +24,10 @@ patience = 80
 metric_avg = 'micro'
 momentum = 0.9
 
+#TODO limit hardcoded part
+path_to_query_data = './data/low_shot/test_chair.png'
+path_to_train_embeds = './out_embeddings.dat'
+K = 5
 
 
 def main(NCC=False, MNIST=True, ResNet=True):
@@ -162,11 +166,6 @@ def main(NCC=False, MNIST=True, ResNet=True):
     else:
 
         #Code for test/inference time on one(few) shot(s)
-        #TODO limit hardcoded part
-        path_to_query_data = './data/low_shot/test_chair.png'
-        path_to_train_embeds = './out_embeddings.dat'
-        K = 5
-
         # for each query image
         qembedding = query_embedding(model, 'pt_results/checkpoint.pt', path_to_query_data, \
                            device, transforms=trans)
@@ -180,18 +179,24 @@ def main(NCC=False, MNIST=True, ResNet=True):
         for emb_id, emb in train_embeds.items():
 
             # Cos sim reduces to dot product since embeddings are L2 normalized
-            similarities[emb_id]= torch.mm(qembedding, emb.t())
+            similarities[emb_id] = torch.mm(qembedding, emb.t()).item()
 
         #Return top-K results
-        ranking = sorted(similarities.items(), key=lambda kv: kv[1])
-        print(ranking[:K-1])
+        ranking = sorted(similarities.items(), key=lambda kv: kv[1], reverse=True)
+
+        print("The %i most similar objects to the provided image are: \n" % K)
+
+        for key, val in ranking[:K - 1]:
+
+            label = key.split("_")[0][:-1]
+            print(label + ": " + str(val) + "\n")
 
 
     if keep_embeddings:
 
         #Warning: available for custom set only, no MNIST
         extract_embeddings(model, 'pt_results/checkpoint.pt', './data/processed/shapenet_training.dat', \
-                        device, transforms=trans)
+                        device, out=path_to_train_embeds, transforms=trans)
 
 
 if __name__ == '__main__':

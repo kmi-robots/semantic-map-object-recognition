@@ -4,7 +4,7 @@ embeddings from the last conv layer
 of a ResNet, after L2-norm,
 inspired by paper by Qi et al. (CVPR 2018)
 
-The permutation and indexing part tries to
+The permutation and indexing part (not completed) tries to
 reproduce the efforts by Amato et al. (SIGIR 2018)
 
 """
@@ -15,7 +15,7 @@ from data_loaders import img_preproc
 #target_dim = 256 #2048 #512  # i.e. output size of the last layer kept in ResNet
 
 
-def extract_embeddings(model, path_to_state, path_to_data, device, outp, transforms=None, K=None):
+def extract_embeddings(model, path_to_state, path_to_data, device, outp, transforms=None):
 
     model.load_state_dict(torch.load(path_to_state))
 
@@ -52,6 +52,8 @@ def extract_embeddings(model, path_to_state, path_to_data, device, outp, transfo
     #Save dictionary locally, as JSON file
     with open(outp, mode='wb') as outf:
         torch.save(obj=embeddings, f=outf)
+
+    print("Trained embeddings saved under %s" % outp)
 
 
 def query_embedding(model, path_to_state, path_to_img,  device, transforms=None):

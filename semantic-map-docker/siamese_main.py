@@ -66,8 +66,6 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
     trans = transforms.Compose([transforms.Normalize(means, stds)])
 
-
-
     if NCC:
 
         model = NCCNet().to(device)
@@ -168,7 +166,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
         #Code for test/inference time on one(few) shot(s)
         # for each query image
         qembedding = query_embedding(model, 'pt_results/checkpoint.pt', path_to_query_data, \
-                           device, transforms=trans)
+            device,  transforms=trans)
 
         train_embeds = torch.load(path_to_train_embeds)
 
@@ -196,7 +194,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
         #Warning: available for custom set only, no MNIST
         extract_embeddings(model, 'pt_results/checkpoint.pt', './data/processed/shapenet_training.dat', \
-                        device, out=path_to_train_embeds, transforms=trans)
+                        device, path_to_train_embeds, transforms=trans)
 
 
 if __name__ == '__main__':

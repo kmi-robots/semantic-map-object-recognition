@@ -6,9 +6,9 @@ import os
 #custom classes and methods
 from plot_results import gen_plots
 import data_loaders
-from siamese_models import SimplerNet, NCCNet, ResSiamese, ContrastiveLoss
+from siamese_models import SimplerNet, NCCNet, ResSiamese #, ContrastiveLoss
 from pytorchtools import EarlyStopping
-from embedding_extractor import extract_embeddings
+from embedding_extractor import extract_embeddings, query_embedding
 from train import train
 from test import test
 
@@ -161,15 +161,31 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
     else:
 
-        #Code for test/inference time
-        #path_to_query_data= ''
-        #K= 1
-        #extract_embeddings(model, 'pt_results/checkpoint.pt', path_to_query_data, \
-                           #device, transforms=trans)
-        #for each query image
+        #Code for test/inference time on one(few) shot(s)
+        #TODO limit hardcoded part
+        path_to_query_data = './data/low_shot/test_chair.png'
+        path_to_train_embeds = './out_embeddings.dat'
+        K = 5
+
+        # for each query image
+        qembedding = query_embedding(model, 'pt_results/checkpoint.pt', path_to_query_data, \
+                           device, transforms=trans)
+
+        train_embeds = torch.load(path_to_train_embeds)
+
         #Similarity matching against indexed data
-        #Return top-K ranking
-        pass
+
+        similarities = {}
+
+        for emb_id, emb in train_embeds.items():
+
+            # Cos sim reduces to dot product since embeddings are L2 normalized
+            similarities[emb_id]= torch.mm(qembedding, emb.t())
+
+        #Return top-K results
+        ranking = sorted(similarities.items(), key=lambda kv: kv[1])
+        print(ranking[:K-1])
+
 
     if keep_embeddings:
 

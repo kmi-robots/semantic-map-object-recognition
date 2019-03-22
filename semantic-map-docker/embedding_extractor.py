@@ -10,12 +10,12 @@ reproduce the efforts by Amato et al. (SIGIR 2018)
 """
 
 import torch
-
+from data_loaders import img_preproc
 
 #target_dim = 256 #2048 #512  # i.e. output size of the last layer kept in ResNet
 
 
-def extract_embeddings(model, path_to_state, path_to_data, device, transforms=None):
+def extract_embeddings(model, path_to_state, path_to_data, device, transforms=None, K=None):
 
     model.load_state_dict(torch.load(path_to_state))
 
@@ -32,19 +32,19 @@ def extract_embeddings(model, path_to_state, path_to_data, device, transforms=No
 
         img = img.float().to(device)
 
-        base_embed = model.get_embedding(img)
-
-        print(base_embed.shape)
-
-        print(base_embed)
+        """
+        base_embed = model.get_embedding(img) #shape: 1x2048
 
         # permute it
         embedding = permute(base_embed)
 
-        print(embedding)
+        if K is not None:
+
+            embedding = truncate(embedding, K)
+
         # associate with codewords
         embedding = toText(embedding)
-
+        """
         #Save embedding in dictionary under unique id
         embeddings[img_id] = model.get_embedding(img) #embedding
 
@@ -54,10 +54,31 @@ def extract_embeddings(model, path_to_state, path_to_data, device, transforms=No
         torch.save(obj=embeddings, f=outf)
 
 
+
+def query_embedding(model, path_to_state, path_to_img,  device, transforms=None):
+
+    model.load_state_dict(torch.load(path_to_state))
+    model.eval()
+
+    #read image
+    img = torch.from_numpy(img_preproc(path_to_img))
+
+    img[0, :] = transforms(img[0, :].float())
+
+    img = img.float().to(device)
+
+    #Extract embedding for the query image
+    return model.get_embedding(img)
+
+
 def permute(embedding):
 
     #Returns the input embedding permutation
-    return torch.argsort(embedding, dim=0, descending=True)
+    return torch.argsort(embedding, dim=1, descending=True)
+
+def truncate(embedding, K=100):
+
+    return
 
 def toText(embedding):
 

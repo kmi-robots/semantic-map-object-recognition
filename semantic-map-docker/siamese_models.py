@@ -112,13 +112,10 @@ class NetForEmbedding(nn.Module):
             return x #.permute(1,0)
 
         else:
-
+            x = self.mod_resnet(x)
             #print(self.mod_resnet(x).shape)
-            return self.mod_resnet(x) #self.norm(self.mod_resnet(x)).squeeze(-1).squeeze(-1)
+            return x.view(x.size(0), -1)  #self.norm(self.mod_resnet(x)).squeeze(-1).squeeze(-1)
 
-    def get_embedding(self, x):
-
-        return self.forward(x)
 
 
 class ResSiamese(nn.Module):
@@ -131,7 +128,7 @@ class ResSiamese(nn.Module):
     - if a False flag is passed, the network will be fine-tuned instead
     """
 
-    def __init__(self, feature_extraction=False, p=0.5):
+    def __init__(self, feature_extraction=False, p=0.5, norm=True, scale=True):
 
         super().__init__()
 
@@ -147,26 +144,66 @@ class ResSiamese(nn.Module):
         }))
 
         self.drop = nn.Dropout(p=p)
-        self.linear3 = nn.Linear(512, 2)
 
-        #self.linear1 = (2048, 512)
+        self.linear3 = nn.Linear(256, 2, bias=False)
+
+        self.linear1 = nn.Linear(2048, 256) #set as weight imprinting example
         self.linear2 = nn.Linear(2048,2)  #(512, 2)
+
+        self.norm = norm
+        self.scale = scale
+        self.s = nn.Parameter(torch.FloatTensor([10]))
 
     def forward_once(self, x):
 
         x = self.embed(x)
         #Flatten + FC + dropout
+        if self.norm:
 
-        return x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
+            x = self.l2_norm(x)
+
+        if self.scale:
+            x = self.s * x
+
+        return self.linear1(x) #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
 
     def forward(self, data):
 
         #res1 = self.forward_once(data[0])
         #res2 = self.forward_once(data[1])
         res = torch.abs(self.forward_once(data[1]) - self.forward_once(data[0]))
-        #self.drop(self.linear3(res))
+        #self.drop(self.linear2(res))
 
-        return self.drop(self.linear2(res))
+        return self.linear3(res)
+
+    def l2_norm(self, x):
+        input_size = x.size()
+        buffer = torch.pow(x, 2)
+
+        normp = torch.sum(buffer, 1).add_(1e-10)
+        norm = torch.sqrt(normp)
+
+        _output = torch.div(x, norm.view(-1, 1).expand_as(x))
+
+        output = _output.view(input_size)
+
+        return output
+
+
+    def weight_norm(self):
+
+        w = self.linear2.weight.data
+        norm = w.norm(p=2, dim=1, keepdim=True)
+
+        self.linear2.weight.data = w.div(norm.expand_as(w))
+
+
+
+    def get_embedding(self, x):
+
+        x = self.embed(x)
+
+        return self.l2_norm(x)
 
 
 #Reproducing NormXCorr model by Submariam et al. (NIPS 2016)
@@ -207,7 +244,6 @@ class normxcorr(Function):
                                                 ctx.patch_size,
                                                 ctx.stride,
                                                 ctx.epsilon)
-
 
 
         nan_idxs = torch.nonzero(torch.isnan(grad_input1))

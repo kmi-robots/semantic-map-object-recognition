@@ -40,6 +40,16 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
 
         optimizer.step()
 
+        #Weight imprinting norm
+        try:
+            model.weight_norm()
+
+        except Exception as e:
+
+            print(str(e))
+            pass
+
+
         norm_loss_p = output_positive.shape[0] * loss_positive.item()
         norm_loss_n = output_negative.shape[0] * loss_negative.item()
 

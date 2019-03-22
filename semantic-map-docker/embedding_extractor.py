@@ -9,7 +9,7 @@ of a ResNet
 import torch
 
 
-target_dim = 2048 #512  # i.e. output size of the last layer kept in ResNet
+target_dim = 256 #2048 #512  # i.e. output size of the last layer kept in ResNet
 
 
 def save_embeddings(model, path_to_state, path_to_data, device, transforms=None):
@@ -19,15 +19,14 @@ def save_embeddings(model, path_to_state, path_to_data, device, transforms=None)
     https://github.com/christiansafka/img2vec
     """
 
-
     #select the desired layer as of latest checkpoint
-    model = model._modules.get('embed').to(device)
+    #model = model._modules.get('embed').to(device)
     model.load_state_dict(torch.load(path_to_state))
 
     model.eval()
 
     #i.e., avgpool layer of embedding Net
-    layer = model._modules.get('resnet')._modules.get('avgpool').to(device)
+    #layer = model._modules.get('resnet')._modules.get('avgpool').to(device)
 
     data = torch.load(path_to_data)
 
@@ -41,26 +40,24 @@ def save_embeddings(model, path_to_state, path_to_data, device, transforms=None)
 
         img = img.float().to(device)
 
-        embedding = torch.zeros(target_dim).to(device)
+        #embedding = torch.zeros(target_dim).to(device)
 
         #define a function to copy the output of a layer
-        def copy_data(m,i,o):
+        #def copy_data(m,i,o):
 
-            embedding.copy_(o.data.squeeze())
+        #    embedding.copy_(o.data.squeeze())
 
         #Attach the function to a selected layer
-        h = layer.register_forward_hook(copy_data)
+        #h = layer.register_forward_hook(copy_data)
 
         #Run model on each image
-        model.get_embedding(img) #It is only one forward pass on one single pipeline of the original siamese
-
-
+        #model.get_embedding(img) #It is only one forward pass on one single pipeline of the original siamese
 
         #Detach copy function from the layer
-        h.remove()
+        #h.remove()
 
         #Save embedding in dictionary under unique id
-        embeddings[img_id] = embedding
+        embeddings[img_id] = model.get_embedding(img) #embedding
 
 
     #Save dictionary locally, as JSON file

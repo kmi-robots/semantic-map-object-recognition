@@ -39,12 +39,13 @@ class SimplerNet(nn.Module):
 
 from rpooling import GeM, L2N
 
+"""
 #Contrastive loss as defined in https://github.com/adambielski/siamese-triplet/
 class ContrastiveLoss(nn.Module):
-    """
+    \"""
     Contrastive loss
     Takes embeddings of two samples and a target label == 1 if samples are from the same class and label == 0 otherwise
-    """
+    \"""
 
     def __init__(self, margin):
         super(ContrastiveLoss, self).__init__()
@@ -58,10 +59,10 @@ class ContrastiveLoss(nn.Module):
         return losses.mean() if size_average else losses.sum()
 
 class TripletLoss(nn.Module):
-    """
+    \"""
     Triplet loss
     Takes embeddings of an anchor sample, a positive sample and a negative sample
-    """
+    \"""
 
     def __init__(self, margin):
         super(TripletLoss, self).__init__()
@@ -74,7 +75,7 @@ class TripletLoss(nn.Module):
 
         return losses.mean() if size_average else losses.sum()
 
-
+"""
 
 class NetForEmbedding(nn.Module):
 
@@ -87,14 +88,15 @@ class NetForEmbedding(nn.Module):
 
         super().__init__()
         self.resnet = models.resnet50(pretrained=True)
-        # Drop pooling + last FC layer
 
         if custom_pool:
+           # Drop pooling + last FC layer
 
            self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-2])  #-2 for GeM
            self.pooling = GeM() # no whitening for now, all params to default
 
         else:
+            #Only drop last FC, keep pre-trained avgpool
             self.mod_resnet = nn.Sequential(*list(self.resnet.children())[:-1])
 
         self.norm = L2N()
@@ -249,7 +251,6 @@ class normxcorr(Function):
                                                 ctx.stride,
                                                 ctx.epsilon)
 
-
         nan_idxs = torch.nonzero(torch.isnan(grad_input1))
 
         # Print warning in case any is found
@@ -263,8 +264,6 @@ class normxcorr(Function):
             print("NaN value found in grad_input2")
 
         return grad_input1, grad_input2
-
-
 
 
 

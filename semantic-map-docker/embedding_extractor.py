@@ -4,6 +4,9 @@ embeddings from the last conv layer
 of a ResNet, after L2-norm,
 inspired by paper by Qi et al. (CVPR 2018)
 
+The permutation and indexing part tries to
+reproduce the efforts by Amato et al. (SIGIR 2018)
+
 """
 
 import torch
@@ -12,7 +15,7 @@ import torch
 #target_dim = 256 #2048 #512  # i.e. output size of the last layer kept in ResNet
 
 
-def save_embeddings(model, path_to_state, path_to_data, device, transforms=None):
+def extract_embeddings(model, path_to_state, path_to_data, device, transforms=None):
 
     model.load_state_dict(torch.load(path_to_state))
 
@@ -29,6 +32,19 @@ def save_embeddings(model, path_to_state, path_to_data, device, transforms=None)
 
         img = img.float().to(device)
 
+        base_embed = model.get_embedding(img)
+
+        print(base_embed.shape)
+
+        print(base_embed)
+
+        # permute it
+        embedding = permute(base_embed)
+
+        print(embedding)
+        # associate with codewords
+        embedding = toText(embedding)
+
         #Save embedding in dictionary under unique id
         embeddings[img_id] = model.get_embedding(img) #embedding
 
@@ -37,3 +53,14 @@ def save_embeddings(model, path_to_state, path_to_data, device, transforms=None)
     with open('./out_embeddings.dat', mode='wb') as outf:
         torch.save(obj=embeddings, f=outf)
 
+
+def permute(embedding):
+
+    #Returns the input embedding permutation
+    return torch.argsort(embedding, dim=0, descending=True)
+
+def toText(embedding):
+
+    # Assigns codewords to the input embedding
+
+    return

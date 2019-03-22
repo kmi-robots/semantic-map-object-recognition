@@ -8,7 +8,7 @@ from plot_results import gen_plots
 import data_loaders
 from siamese_models import SimplerNet, NCCNet, ResSiamese, ContrastiveLoss
 from pytorchtools import EarlyStopping
-from embedding_extractor import save_embeddings
+from embedding_extractor import extract_embeddings
 from train import train
 from test import test
 
@@ -143,9 +143,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
             valid_loss = test_m[0]
             early_stopping(valid_loss, model)
 
-
-
-        ## Plotting ##################################################################
+        ## Plotting ##------------------------------------------------------------------#
         epoch_train_metrics = torch.stack(epoch_train_metrics, dim=0)
         epoch_test_metrics = torch.stack(epoch_test_metrics, dim=0)
 
@@ -159,17 +157,24 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
         #Gen precision and recall plots
         gen_plots(epoch_ps, epoch_rs, num_epochs, MNIST, NCC, precrec=True)
-
+        #-------------------------------------------------------------------------------#
 
     else:
 
         #Code for test/inference time
+        #path_to_query_data= ''
+        #K= 1
+        #extract_embeddings(model, 'pt_results/checkpoint.pt', path_to_query_data, \
+                           #device, transforms=trans)
+        #for each query image
+        #Similarity matching against indexed data
+        #Return top-K ranking
         pass
 
     if keep_embeddings:
 
         #Warning: available for custom set only, no MNIST
-        save_embeddings(model, 'pt_results/checkpoint.pt', './data/processed/shapenet_training.dat', \
+        extract_embeddings(model, 'pt_results/checkpoint.pt', './data/processed/shapenet_training.dat', \
                         device, transforms=trans)
 
 

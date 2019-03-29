@@ -169,7 +169,6 @@ class BalancedTriplets(torch.utils.data.Dataset):
                 for file in files:
 
                     img_tensor = torch.from_numpy(img_preproc(os.path.join(root, file)))
-
                     filename = str(file.split('/')[-1])
 
                     data[iteration, :] = img_tensor

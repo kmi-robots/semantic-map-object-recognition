@@ -7,7 +7,7 @@ WORKDIR /app
 
 RUN apt-get update
 
-RUN pip3 install torch torchvision visdom 
+RUN pip3 install torch torchvision visdom split-folders 
 
 RUN apt-get -y install tmux
 # Copy the current directory contents into the container at /app

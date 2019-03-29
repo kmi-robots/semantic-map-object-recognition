@@ -129,7 +129,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
         training_set = (self.read_files(os.path.join(self.root, self.raw_folder, 'train')))
 
-        test_set = (self.read_files(os.path.join(self.root, self.raw_folder, self.to_val)))
+        test_set = (self.read_files(os.path.join(self.root, self.raw_folder, self.to_val), train=False))
 
         #Save as .pt files
 
@@ -166,7 +166,10 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
         if Hans:
 
-            total = 527
+            if train:
+                total = 527
+            else:
+                total = 64
 
         if ResNet:
 

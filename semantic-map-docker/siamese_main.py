@@ -25,9 +25,12 @@ metric_avg = 'micro'
 momentum = 0.9
 
 #TODO limit hardcoded part
-path_to_query_data = './data/low_shot/test_chair.png'
-path_to_train_embeds = './out_embeddings.dat'
+path_to_query_data = './data/Hans-split/test/fire-extinguishers/9. fire-extinguisher.jpg'
+path_to_train_embeds = './hans_out_embeddings.dat'
 K = 5
+model_checkpoint = 'pt_results/hans_checkpoint.pt' #hardcoded in pytorchtools.py
+path_to_train_data ='./data/processed/hans_training.data' #hardcoded in data_loaders.py ln. 205
+
 
 
 def main(NCC=False, MNIST=True, ResNet=True):
@@ -165,7 +168,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
         #Code for test/inference time on one(few) shot(s)
         # for each query image
-        qembedding = query_embedding(model, 'pt_results/checkpoint.pt', path_to_query_data, \
+        qembedding = query_embedding(model, model_checkpoint, path_to_query_data, \
             device,  transforms=trans)
 
         train_embeds = torch.load(path_to_train_embeds)
@@ -193,7 +196,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
     if keep_embeddings:
 
         #Warning: available for custom set only, no MNIST
-        extract_embeddings(model, 'pt_results/checkpoint.pt', './data/processed/shapenet_training.dat', \
+        extract_embeddings(model, model_checkpoint, path_to_train_data, \
                         device, path_to_train_embeds, transforms=trans)
 
 

@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 import os
 from PIL import Image
-import random
 import torch
 import random
 
@@ -15,7 +14,7 @@ Classes and methods to create balanced triplets
 
 
 """
-
+HANS = False
 
 class BalancedTriplets(torch.utils.data.Dataset):
 
@@ -30,7 +29,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
     test_file = 'shapenet_test.pt'
     to_val = 'test'
 
-    def __init__(self, root, train=True, transform=None, target_transform=None, Hans=True):
+    def __init__(self, root, train=True, transform=None, target_transform=None, Hans=HANS):
 
         self.root = os.path.expanduser(root)
         self.transform = transform
@@ -161,9 +160,16 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
 
 
-    def read_files(self, path, total=100, train=True, ResNet=True, Hans=True, n=20):
+    def read_files(self, path,  train=True, ResNet=True, Hans=HANS, n=20):
 
         class_ = 0
+
+        if train:
+
+            total = 100
+
+        else:
+            total = 82
 
         if Hans:
 
@@ -194,7 +200,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
                 #NOTE: the assumption is that images are grouped in subfolders by class
                 #example_no = 1
                 
-                if train:
+                if train and Hans:
                     sample = random.sample(files, n)
 
                 else:
@@ -349,7 +355,7 @@ def img_preproc(path_to_image, ResNet=True):
     return x/255.
 
 
-def group_by_class(data, labels, classes=10, Hans =True):   #ids=None
+def group_by_class(data, labels, classes=10, Hans =HANS):   #ids=None
 
     """
     Returns lists of len 10 grouping tensors

@@ -5,6 +5,7 @@ import os
 from PIL import Image
 import random
 import torch
+import random
 
 """"
 
@@ -67,7 +68,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
             self.train_data, self.train_labels = generate_balanced_triplets(train_labels_class, train_data_class)
 
-            #print(self.train_data.shape)
+            print(self.train_data.shape)
         else:
 
             test_data, test_labels = torch.load(
@@ -160,7 +161,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
 
 
-    def read_files(self, path, total=100, train=True, ResNet=True, Hans=True):
+    def read_files(self, path, total=100, train=True, ResNet=True, Hans=True, n=20):
 
         class_ = 0
 
@@ -192,8 +193,14 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
                 #NOTE: the assumption is that images are grouped in subfolders by class
                 #example_no = 1
+                
+                if train:
+                    sample = random.sample(files, n)
 
-                for file in files:
+                else:
+                    sample = files
+
+                for file in sample:
 
                     img_tensor = torch.from_numpy(img_preproc(os.path.join(root, file)))
                     filename = str(file.split('/')[-1])
@@ -212,7 +219,9 @@ class BalancedTriplets(torch.utils.data.Dataset):
         if train:
 
             fname = 'shapenet_training.dat'
+
             if Hans:
+
                 fname = 'hans_training.dat'
 
         else:

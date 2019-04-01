@@ -169,6 +169,7 @@ class ResSiamese(nn.Module):
             x = self.l2_norm(x)
 
         if self.scale:
+
             x = self.s * x
 
         return self.linear1(x) #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
@@ -177,7 +178,7 @@ class ResSiamese(nn.Module):
 
         #res1 = self.forward_once(data[0])
         #res2 = self.forward_once(data[1])
-        res = torch.abs(self.forward_once(data[1]) - self.forward_once(data[0]))
+        res = self.drop(torch.abs(self.forward_once(data[1]) - self.forward_once(data[0])))
         #self.drop(self.linear2(res))
 
         return self.linear3(res)

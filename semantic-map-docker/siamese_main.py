@@ -20,7 +20,7 @@ batch_size = 16
 lr = 0.0001
 num_epochs = 1000
 weight_decay = 0.0001
-patience = 80
+patience = 20
 metric_avg = 'micro'
 momentum = 0.9
 

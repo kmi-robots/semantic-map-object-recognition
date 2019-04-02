@@ -60,6 +60,6 @@ def test(model, device, test_loader, metric_avg):
         p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
         roc_auc = roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
 
-        print('Test accuracy: {}/{} ({:.3f}%)\t Loss: {:.6f}, ROC_AUC: {:.3f}'.format(accurate_labels, all_labels, accuracy, epoch_loss, roc_auc))
+        print('Test accuracy: {}/{} ({:.3f}%)\t Loss: {:.6f}, Precision: {:.3f}, Recall: {:.3f}, ROC_AUC: {:.3f}'.format(accurate_labels, all_labels, accuracy, epoch_loss, p, r, roc_auc))
 
         return torch.Tensor([epoch_loss, accuracy, float(p), float(r), float(roc_auc)])

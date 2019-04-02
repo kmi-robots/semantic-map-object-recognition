@@ -14,7 +14,7 @@ Classes and methods to create balanced triplets
 
 
 """
-HANS = False
+HANS = True
 
 class BalancedTriplets(torch.utils.data.Dataset):
 
@@ -204,7 +204,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
                     sample = random.sample(files, n)
 
                 else:
-                    sample = file
+                    sample = files
                 for file in sample:
 
                     img_tensor = torch.from_numpy(img_preproc(os.path.join(root, file)))

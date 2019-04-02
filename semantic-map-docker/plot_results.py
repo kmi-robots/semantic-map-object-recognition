@@ -35,7 +35,7 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
         #Only one plot, differently from the other cases
         current_session.line(Y=epoch_losses, X=torch.Tensor(range(epoch_losses.shape[0])), opts={
             'showlegend': True,
-            'title': title_l,
+            'title': title_l_,
             'xlabel': 'Epoch no.',
             'ylabel': title_l_,
             'legend': ['Training', 'Validation'],

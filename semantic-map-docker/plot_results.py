@@ -1,7 +1,7 @@
 import visdom
 import torch
 
-def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= visdom.Visdom(), precrec=False):
+def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= visdom.Visdom(), precrec=False, rocauc=False):
 
     """
     Method to plot Loss v epoch and Accuracy v epoch
@@ -12,6 +12,7 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
     :param epoch_accs: same as epoch_losses, but for accuracy values
     :param epochs: total number of epochs
     :param precrec: boolean flag for precision recall plots, defaults to False
+    :param rocauc: boolean flag for roc auc score plots, defaults to False
     :return:
     """
 
@@ -19,16 +20,40 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
     ymax1= 2.0
 
     if precrec:
+
         title_l_ = 'Precision'
         title_a_ = 'Recall'
-        ymin2 =ymin1
+        ymax1 = 1.0
+        ymin2 = ymin1
         ymax2 = ymax1
+
+    elif rocauc:
+
+        title_l_ = 'ROC_AUC score'
+        ymax1 = 1.0
+
+        #Only one plot, differently from the other cases
+        current_session.line(Y=epoch_losses, X=torch.Tensor(range(epoch_losses.shape[0])), opts={
+            'showlegend': True,
+            'title': title_l,
+            'xlabel': 'Epoch no.',
+            'ylabel': title_l_,
+            'legend': ['Training', 'Validation'],
+            'xtickmin': 1,
+            'xtickmax': epochs,
+            'xtickstep': 1,
+            'ytickmin': ymin1,
+            'ytickmax': ymax1
+        })
+
+        return
+
 
     else:
         title_l_ = 'Loss'
         title_a_ = 'Accuracy [%]'
-        ymin2=0
-        ymax2 =100
+        ymin2 = 0
+        ymax2 = 100
 
 
     if MNIST & ( not NCC):

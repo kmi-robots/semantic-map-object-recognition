@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
 import numpy as np
 
 def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg):
@@ -15,6 +15,7 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
 
     labels = []
     predictions = []
+    pos_proba = []
 
     for batch_idx, (data, target) in enumerate(train_loader):
 
@@ -49,7 +50,6 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
             print(str(e))
             pass
 
-
         norm_loss_p = output_positive.shape[0] * loss_positive.item()
         norm_loss_n = output_negative.shape[0] * loss_negative.item()
 
@@ -64,10 +64,13 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
         labels.extend(target_positive.tolist())
         labels.extend(target_negative.tolist())
 
+        pos_proba.extend(F.softmax(output_positive, dim=1)[:, 1].tolist())
+        pos_proba.extend(F.softmax(output_negative, dim=1)[:, 1].tolist())
+
         accurate_labels = accurate_labels + accurate_labels_positive + accurate_labels_negative
         all_labels = all_labels + len(target_positive) + len(target_negative)
 
-    accuracy = 100 * accurate_labels / all_labels
+    accuracy = 100. * accurate_labels / all_labels
     epoch_loss = running_loss / all_labels
 
     # print(predictions[0].shape)
@@ -85,8 +88,8 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
 
     """
     p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
-
-    print("Epoch {}/{}, Loss: {:.3f}, Accuracy: {:.3f}%".format(epoch + 1, num_epochs, epoch_loss, accuracy))
+    roc_auc = roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
+    print("Epoch {}/{}, Loss: {:.3f}, Accuracy: {:.3f}%, Precision: {.3f}, Recall: {.3f}, ROC_AUC: {.3f}".format(epoch + 1, num_epochs, epoch_loss, accuracy, p, r, roc_auc))
     # print(torch.Tensor([epoch_loss, accuracy]))
 
-    return torch.Tensor([epoch_loss, accuracy, float(p), float(r)])
+    return torch.Tensor([epoch_loss, accuracy, float(p), float(r), float(roc_auc)])

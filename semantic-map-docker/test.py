@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
-from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
+
 import numpy as np
 
 
@@ -15,6 +16,7 @@ def test(model, device, test_loader, metric_avg):
 
         labels=[]
         predictions=[]
+        pos_proba = []
 
         for batch_idx, (data, target) in enumerate(test_loader):
 
@@ -46,14 +48,18 @@ def test(model, device, test_loader, metric_avg):
             predictions.extend(torch.argmax(output_negative, dim=1).tolist())
             labels.extend(target_positive.tolist())
             labels.extend(target_negative.tolist())
-
+            # Softmax of raw output to get the probability
+            # Then retain only column of the positive class
+            pos_proba.extend(F.softmax(output_positive, dim=1)[:, 1].tolist())
+            pos_proba.extend(F.softmax(output_negative, dim=1)[:, 1].tolist())
             accurate_labels = accurate_labels + accurate_labels_positive + accurate_labels_negative
             all_labels = all_labels + len(target_positive) + len(target_negative)
 
         accuracy = 100. * accurate_labels / all_labels
         epoch_loss = running_loss/all_labels
         p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
+        roc_auc = roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
 
-        print('Test accuracy: {}/{} ({:.3f}%)\t Loss: {:.6f}'.format(accurate_labels, all_labels, accuracy, epoch_loss))
+        print('Test accuracy: {}/{} ({:.3f}%)\t Loss: {:.6f}, ROC_AUC: {:.3f}'.format(accurate_labels, all_labels, accuracy, epoch_loss, roc_auc))
 
-        return torch.Tensor([epoch_loss, accuracy, float(p), float(r)])
+        return torch.Tensor([epoch_loss, accuracy, float(p), float(r), float(roc_auc)])

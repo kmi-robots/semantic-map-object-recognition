@@ -21,7 +21,7 @@ lr = 0.0001
 num_epochs = 1000
 weight_decay = 0.0001
 patience = 20
-metric_avg = 'micro'
+metric_avg = 'binary'
 momentum = 0.9
 
 #TODO limit hardcoded part
@@ -158,10 +158,15 @@ def main(NCC=False, MNIST=True, ResNet=True):
         epoch_ps = torch.stack((epoch_train_metrics[:,2], epoch_test_metrics[:,2]), dim=1)
         epoch_rs = torch.stack((epoch_train_metrics[:,3], epoch_test_metrics[:,3]), dim=1)
 
+        epoch_roc_auc = torch.stack((epoch_train_metrics[:,4], epoch_test_metrics[:,4]), dim=1)
         gen_plots(epoch_losses, epoch_accs, num_epochs, MNIST, NCC)
 
         #Gen precision and recall plots
         gen_plots(epoch_ps, epoch_rs, num_epochs, MNIST, NCC, precrec=True)
+        #-------------------------------------------------------------------------------#
+
+        #Gen ROC AUC score plot
+        gen_plots(epoch_roc_auc, epoch_roc_auc, num_epochs, MNIST, NCC, rocauc= True)
         #-------------------------------------------------------------------------------#
 
     else:

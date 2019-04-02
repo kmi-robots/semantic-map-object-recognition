@@ -204,8 +204,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
                     sample = random.sample(files, n)
 
                 else:
-                    sample = files
-
+                    sample = file
                 for file in sample:
 
                     img_tensor = torch.from_numpy(img_preproc(os.path.join(root, file)))

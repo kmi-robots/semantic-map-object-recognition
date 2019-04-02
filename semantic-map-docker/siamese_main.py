@@ -29,7 +29,7 @@ path_to_query_data = './data/Hans-split/test/fire-extinguishers/9. fire-extingui
 path_to_train_embeds = './hans_out_embeddings.dat'
 K = 5
 model_checkpoint = 'pt_results/hans_checkpoint.pt' #hardcoded in pytorchtools.py
-path_to_train_data ='./data/processed/hans_training.data' #hardcoded in data_loaders.py ln. 205
+path_to_train_data ='./data/processed/hans_training.dat' #hardcoded in data_loaders.py ln. 205
 
 
 
@@ -166,7 +166,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
         #-------------------------------------------------------------------------------#
 
         #Gen ROC AUC score plot
-        gen_plots(epoch_roc_auc, epoch_roc_auc, num_epochs, MNIST, NCC, rocauc= True)
+        gen_plots(epoch_roc_auc, epoch_roc_auc, num_epochs, MNIST, NCC, rocauc = True)
         #-------------------------------------------------------------------------------#
 
     else:

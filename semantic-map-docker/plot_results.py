@@ -2,6 +2,11 @@ import visdom
 import torch
 import numpy as np
 
+
+
+colorscale = [[0, 'rgb(166,206,227)'], [0.25, 'rgb(31,120,180)'], [0.45, 'rgb(178,223,138)'], \
+              [0.65, 'rgb(51,160,44)'], [0.85, 'rgb(251,154,153)'], [1, 'rgb(227,26,28)']]
+
 def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= visdom.Visdom(), precrec=False, rocauc=False):
 
     """
@@ -36,6 +41,7 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
         #Only one plot, differently from the other cases
         current_session.line(Y=epoch_losses, X=torch.Tensor(range(epoch_losses.shape[0])), opts={
             'showlegend': True,
+            'colorscale' : colorscale,
             'title': title_l_,
             'xlabel': 'Epoch no.',
             'ylabel': title_l_,
@@ -80,6 +86,7 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
 
     current_session.line(Y=epoch_losses, X= torch.Tensor(range(epoch_losses.shape[0])), opts={
         'showlegend': True,
+        'colorscale': colorscale,
         'title': title_l,
         'xlabel': 'Epoch no.',
         'ylabel': title_l_,
@@ -94,6 +101,7 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
 
     current_session.line(Y=epoch_accs, X= torch.Tensor(range(epoch_accs.shape[0])), opts={
         'showlegend': True,
+        'colorscale': colorscale,
         'title': title_a,
         'xlabel': 'Epoch no.',
         'ylabel': title_a_,
@@ -109,15 +117,14 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
 
 def bar_plot(class_wise_data,  current_session= visdom.Visdom()):
 
-    class_serie =class_wise_data[0]
-    data_serie = np.asarray(class_wise_data[1])
+    class_serie, data_serie = list(class_wise_data)
 
     current_session.bar(
-        X=data_serie,
+        X= data_serie,
         Y=class_serie,
         opts=dict(
             stacked=False,
-            rownames= class_serie,
+            colorscale = colorscale,
             title='Class-wise Raking averages',
             xlabel='Top5-ranking Avg accuracy',
             xtickmin=0.0,

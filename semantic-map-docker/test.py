@@ -62,7 +62,7 @@ def test(model, model_checkpoint, path_to_test, device, trans, path_to_train_emb
 
                         else:
 
-                            outr.write('s mistaken for s'.format(classname, label))
+                            outr.write('{} mistaken for {}'.format(classname, label))
                             #tot_wrong += 1
 
                         avg_acc = correct_preds/K
@@ -70,8 +70,8 @@ def test(model, model_checkpoint, path_to_test, device, trans, path_to_train_emb
 
                 macro_avg = sum(class_accs)/len(class_accs)
 
-                print('Mean average accuracy for class s is f'.format(classname, float(macro_avg)))
-                outr.write('Mean average accuracy for class s is f'.format(classname, float(macro_avg)))
+                print('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
+                outr.write('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
                 class_wise_res.append((classname, macro_avg))
 
     return zip(*class_wise_res)

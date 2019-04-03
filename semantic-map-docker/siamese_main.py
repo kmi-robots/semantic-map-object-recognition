@@ -179,6 +179,8 @@ def main(NCC=False, MNIST=True, ResNet=True):
         #Test plot grouped by class
         bar_plot(class_wise_res)
 
+        keep_embeddings = False
+
 
     if keep_embeddings:
 

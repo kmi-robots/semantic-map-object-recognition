@@ -132,7 +132,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
         #optimizer = optim.Adam(params_to_update, lr=lr, weight_decay=weight_decay)
 
         epoch_train_metrics = [] #torch.empty((1,2))#((num_epochs, 2))
-        epoch_test_metrics = [] #torch.empty_like(epoch_train_metrics)
+        epoch_val_metrics = [] #torch.empty_like(epoch_train_metrics)
 
         for epoch in range(num_epochs):
 
@@ -144,7 +144,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
             epoch_train_metrics.append(train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg))
 
             val_m = validate(model, device, val_loader, metric_avg)
-            epoch_val_metrics.append(test_m)
+            epoch_val_metrics.append(val_m)
 
             valid_loss = val_m[0]
             early_stopping(valid_loss, model)

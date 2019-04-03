@@ -125,14 +125,6 @@ def bar_plot(class_wise_data,  current_session= visdom.Visdom()):
             xtickmin=0.0,
             xtickmax=1.0,
             xtickstep=0.1,
-            marker=dict(
-                color='rgb(158,202,225)',
-                line=dict(
-                    color='rgb(8,48,107)',
-                    width=1.5,
-                )
-            ),
-            opacity=0.6
 
         )
     )

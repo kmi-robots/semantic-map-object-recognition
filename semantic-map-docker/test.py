@@ -48,14 +48,12 @@ def test(model, model_checkpoint, path_to_test, device, trans, path_to_train_emb
 
                     class_accs = []
 
-                    for key, val in ranking[:K - 1]:
+                    if K == 1:
 
-
-                        label = key.split("_")[0] #[:-1]
-
+                        key, val = ranking[0]
+                        label = key.split("_")[0]  # [:-1]
                         outr.write(label + ": " + str(val) + "\n")
 
-                        #Parse labels to binary as correct? Yes/No
                         if label == classname:
 
                             correct_preds += 1
@@ -63,10 +61,30 @@ def test(model, model_checkpoint, path_to_test, device, trans, path_to_train_emb
                         else:
 
                             outr.write('{} mistaken for {}'.format(classname, label))
-                            #tot_wrong += 1
+                            # tot_wrong += 1
 
-                        avg_acc = correct_preds/K
-                        class_accs.append(avg_acc)
+                        class_accs.append(correct_preds)
+
+                    else:
+                        for key, val in ranking[:K - 1]:
+
+
+                            label = key.split("_")[0] #[:-1]
+
+                            outr.write(label + ": " + str(val) + "\n")
+
+                            #Parse labels to binary as correct? Yes/No
+                            if label == classname:
+
+                                correct_preds += 1
+
+                            else:
+
+                                outr.write('{} mistaken for {}'.format(classname, label))
+                                #tot_wrong += 1
+
+                            avg_acc = correct_preds/K
+                            class_accs.append(avg_acc)
 
                 macro_avg = sum(class_accs)/len(class_accs)
 

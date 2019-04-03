@@ -42,7 +42,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
     the second one indicating the dataset, e.g., MNIST or SNS2
 
     """
-    global num_epochs
+    global num_epochs, keep_embeddings
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

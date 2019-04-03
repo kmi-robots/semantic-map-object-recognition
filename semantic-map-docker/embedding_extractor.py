@@ -4,9 +4,6 @@ embeddings from the last conv layer
 of a ResNet, after L2-norm,
 inspired by paper by Qi et al. (CVPR 2018)
 
-The permutation and indexing part (not completed) tries to
-reproduce the efforts by Amato et al. (SIGIR 2018)
-
 """
 
 import torch
@@ -18,9 +15,7 @@ from data_loaders import img_preproc
 def extract_embeddings(model, path_to_state, path_to_data, device, outp, transforms=None):
 
     model.load_state_dict(torch.load(path_to_state))
-
     model.eval()
-
     data = torch.load(path_to_data)
 
     embeddings = {}
@@ -29,7 +24,6 @@ def extract_embeddings(model, path_to_state, path_to_data, device, outp, transfo
 
         #Applying same normalization as on a training forward pass
         img[0,:] = transforms(img[0,:].float())
-
         img = img.float().to(device)
 
         """
@@ -71,6 +65,7 @@ def query_embedding(model, path_to_state, path_to_img,  device, transforms=None)
     #Extract embedding for the query image
     return model.get_embedding(img)
 
+"""
 
 def permute(embedding):
 
@@ -86,3 +81,5 @@ def toText(embedding):
     # Assigns codewords to the input embedding
 
     return
+
+"""

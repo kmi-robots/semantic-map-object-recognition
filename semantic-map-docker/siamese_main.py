@@ -4,7 +4,7 @@ from torchvision import transforms
 import os
 
 #custom classes and methods
-from plot_results import gen_plots
+from plot_results import gen_plots, bar_plot
 import data_loaders
 from siamese_models import SimplerNet, NCCNet, ResSiamese #, ContrastiveLoss
 from pytorchtools import EarlyStopping
@@ -26,7 +26,7 @@ metric_avg = 'binary'
 momentum = 0.9
 
 #TODO limit hardcoded part
-path_to_query_data = './data/Hans-split/test/fire-extinguishers/9. fire-extinguisher.jpg'
+path_to_query_data = './data/Hans-split/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './hans_out_embeddings.dat'
 K = 5
 model_checkpoint = 'pt_results/hans_checkpoint.pt' #hardcoded in pytorchtools.py
@@ -172,12 +172,12 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
     else:
 
-        #Load all held-out data
-        test_loader = torch.utils.data.DataLoader(
-            data_loaders.BalancedTriplets('./data', train=False, transform=trans), batch_size=batch_size,
-            shuffle=False)
+        #Test on held-out set
 
-        test(model, model_checkpoint, test_loader, path_to_query_data, device, trans, path_to_train_embeds, K)
+        class_wise_res = test(model, model_checkpoint, path_to_query_data, device, trans, path_to_train_embeds, K)
+
+        #Test plot grouped by class
+        bar_plot(class_wise_res)
 
 
     if keep_embeddings:

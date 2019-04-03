@@ -1,5 +1,6 @@
 import visdom
 import torch
+import numpy as np
 
 def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= visdom.Visdom(), precrec=False, rocauc=False):
 
@@ -104,3 +105,24 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
         'ytickmax': ymax2
     }
              )
+
+
+def bar_plot(class_wise_data,  current_session= visdom.Visdom()):
+
+    class_serie =class_wise_data[0]
+    data_serie = np.asarray(class_wise_data[1])
+
+    current_session.bar(
+        X=data_serie,
+        Y=class_serie,
+        opts=dict(
+            stacked=False,
+            rownames= class_serie,
+            title='Class-wise Raking averages',
+            xlabel='Top5-ranking Avg accuracy',
+            xtickmin=0.0,
+            xtickmax=1.0,
+            xtickstep=0.1,
+
+        )
+    )

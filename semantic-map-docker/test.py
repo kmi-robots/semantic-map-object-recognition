@@ -12,60 +12,66 @@ def test(model, model_checkpoint, path_to_test, device, trans, path_to_train_emb
     # for each query image
     train_embeds = torch.load(path_to_train_embeds)
     class_wise_res = []
-    class_ratios = []
 
-    for root, dirs, files in os.walk(path_to_test):
 
-        if files:  #For each object class
+    with open('pt_results/ranking_log.txt', 'w') as outr:
 
-            #tot_wrong = 0
+        for root, dirs, files in os.walk(path_to_test):
 
-            classname = str(root.split('/')[-1])
+            if files:  #For each object class
 
-            for file in sample: #For each example in that class
+                #tot_wrong = 0
 
-                qembedding = query_embedding(model, model_checkpoint, path_to_query_data, \
-                                             device, transforms=trans)
+                classname = str(root.split('/')[-1])
 
-                # Similarity matching against indexed data
+                outr.write(classname)
 
-                similarities = {}
+                for file in files: #For each example in that class
 
-                for emb_id, emb in train_embeds.items():
+                    qembedding = query_embedding(model, model_checkpoint, os.path.join(root, file), \
+                                                 device, transforms=trans)
+                    # Similarity matching against indexed data
 
-                    # Cos sim reduces to dot product since embeddings are L2 normalized
-                    similarities[emb_id] = torch.mm(qembedding, emb.t()).item()
+                    similarities = {}
 
-                # Return top-K results
-                ranking = sorted(similarities.items(), key=lambda kv: kv[1], reverse=True)
+                    for emb_id, emb in train_embeds.items():
 
-                print("The %i most similar objects to the provided image are: \n" % K)
+                        # Cos sim reduces to dot product since embeddings are L2 normalized
+                        similarities[emb_id] = torch.mm(qembedding, emb.t()).item()
 
-                correct_preds = 0
+                    # Return top-K results
+                    ranking = sorted(similarities.items(), key=lambda kv: kv[1], reverse=True)
 
-                class_accs = []
+                    outr.write("The %i most similar objects to the provided image are: \n" % K)
 
-                for key, val in ranking[:K - 1]:
+                    correct_preds = 0
 
-                    label = key.split("_")[0][:-1]
-                    print(label + ": " + str(val) + "\n")
+                    class_accs = []
 
-                    #Parse labels to binary as correct? Yes/No
-                    if label == classname:
+                    for key, val in ranking[:K - 1]:
 
-                        correct_preds += 1
 
-                    else:
+                        label = key.split("_")[0] #[:-1]
 
-                        print('%s mistaken for %s'.format(classname, label))
-                        #tot_wrong += 1
+                        outr.write(label + ": " + str(val) + "\n")
 
-                    avg_acc = correct_preds/K
-                    class_accs.extend(avg_acc)
+                        #Parse labels to binary as correct? Yes/No
+                        if label == classname:
 
-            macro_avg = sum(class_accs)/len(class_accs)
+                            correct_preds += 1
 
-            print('Mean average accuracy for class %s is %f'.format(classname, float(macro_avg)))
-            class_wise_res.append((classname, macro_avg))
+                        else:
+
+                            outr.write('s mistaken for s'.format(classname, label))
+                            #tot_wrong += 1
+
+                        avg_acc = correct_preds/K
+                        class_accs.append(avg_acc)
+
+                macro_avg = sum(class_accs)/len(class_accs)
+
+                print('Mean average accuracy for class s is f'.format(classname, float(macro_avg)))
+                outr.write('Mean average accuracy for class s is f'.format(classname, float(macro_avg)))
+                class_wise_res.append((classname, macro_avg))
 
     return zip(*class_wise_res)

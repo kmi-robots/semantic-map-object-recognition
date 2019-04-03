@@ -8,8 +8,9 @@ from plot_results import gen_plots
 import data_loaders
 from siamese_models import SimplerNet, NCCNet, ResSiamese #, ContrastiveLoss
 from pytorchtools import EarlyStopping
-from embedding_extractor import extract_embeddings, query_embedding
+from embedding_extractor import extract_embeddings
 from train import train
+from validate import validate
 from test import test
 
 do_learn = True
@@ -112,7 +113,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
                shuffle=True)
 
 
-            test_loader = torch.utils.data.DataLoader(
+            val_loader = torch.utils.data.DataLoader(
                 data_loaders.BalancedMNIST('./data', train=False, transform=mnist_trans, download=False), batch_size=batch_size,
                 shuffle=False)
 
@@ -123,7 +124,7 @@ def main(NCC=False, MNIST=True, ResNet=True):
                data_loaders.BalancedTriplets('./data', train=True, transform=trans), batch_size=batch_size,
                shuffle=True)
 
-            test_loader = torch.utils.data.DataLoader(
+            val_loader = torch.utils.data.DataLoader(
                 data_loaders.BalancedTriplets('./data', train=False, transform=trans), batch_size=batch_size,
                 shuffle=False)
 
@@ -142,23 +143,23 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
             epoch_train_metrics.append(train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg))
 
-            test_m = test(model, device, test_loader, metric_avg)
-            epoch_test_metrics.append(test_m)
+            val_m = validate(model, device, val_loader, metric_avg)
+            epoch_val_metrics.append(test_m)
 
-            valid_loss = test_m[0]
+            valid_loss = val_m[0]
             early_stopping(valid_loss, model)
 
         ## Plotting ##------------------------------------------------------------------#
         epoch_train_metrics = torch.stack(epoch_train_metrics, dim=0)
-        epoch_test_metrics = torch.stack(epoch_test_metrics, dim=0)
+        epoch_val_metrics = torch.stack(epoch_val_metrics, dim=0)
 
-        epoch_losses = torch.stack((epoch_train_metrics[:,0], epoch_test_metrics[:,0]), dim=1)
-        epoch_accs = torch.stack((epoch_train_metrics[:,1], epoch_test_metrics[:,1]), dim=1)
+        epoch_losses = torch.stack((epoch_train_metrics[:,0], epoch_val_metrics[:,0]), dim=1)
+        epoch_accs = torch.stack((epoch_train_metrics[:,1], epoch_val_metrics[:,1]), dim=1)
 
-        epoch_ps = torch.stack((epoch_train_metrics[:,2], epoch_test_metrics[:,2]), dim=1)
-        epoch_rs = torch.stack((epoch_train_metrics[:,3], epoch_test_metrics[:,3]), dim=1)
+        epoch_ps = torch.stack((epoch_train_metrics[:,2], epoch_val_metrics[:,2]), dim=1)
+        epoch_rs = torch.stack((epoch_train_metrics[:,3], epoch_val_metrics[:,3]), dim=1)
 
-        epoch_roc_auc = torch.stack((epoch_train_metrics[:,4], epoch_test_metrics[:,4]), dim=1)
+        epoch_roc_auc = torch.stack((epoch_train_metrics[:,4], epoch_val_metrics[:,4]), dim=1)
         gen_plots(epoch_losses, epoch_accs, num_epochs, MNIST, NCC)
 
         #Gen precision and recall plots
@@ -166,36 +167,17 @@ def main(NCC=False, MNIST=True, ResNet=True):
         #-------------------------------------------------------------------------------#
 
         #Gen ROC AUC score plot
-        gen_plots(epoch_roc_auc, epoch_roc_auc, num_epochs, MNIST, NCC, rocauc = True)
+        gen_plots(epoch_roc_auc, epoch_roc_auc, num_epochs, MNIST, NCC, rocauc=True)
         #-------------------------------------------------------------------------------#
 
     else:
 
-        #Code for test/inference time on one(few) shot(s)
-        # for each query image
-        qembedding = query_embedding(model, model_checkpoint, path_to_query_data, \
-            device,  transforms=trans)
+        #Load all held-out data
+        test_loader = torch.utils.data.DataLoader(
+            data_loaders.BalancedTriplets('./data', train=False, transform=trans), batch_size=batch_size,
+            shuffle=False)
 
-        train_embeds = torch.load(path_to_train_embeds)
-
-        #Similarity matching against indexed data
-
-        similarities = {}
-
-        for emb_id, emb in train_embeds.items():
-
-            # Cos sim reduces to dot product since embeddings are L2 normalized
-            similarities[emb_id] = torch.mm(qembedding, emb.t()).item()
-
-        #Return top-K results
-        ranking = sorted(similarities.items(), key=lambda kv: kv[1], reverse=True)
-
-        print("The %i most similar objects to the provided image are: \n" % K)
-
-        for key, val in ranking[:K - 1]:
-
-            label = key.split("_")[0][:-1]
-            print(label + ": " + str(val) + "\n")
+        test(model, model_checkpoint, test_loader, path_to_query_data, device, trans, path_to_train_embeds, K)
 
 
     if keep_embeddings:

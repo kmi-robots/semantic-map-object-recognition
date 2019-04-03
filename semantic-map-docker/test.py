@@ -1,7 +1,4 @@
 import torch
-#import torch.nn.functional as F
-#import numpy as np
-#from sklearn.metrics import average_precision_score
 from embedding_extractor import query_embedding
 import os
 

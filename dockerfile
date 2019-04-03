@@ -13,7 +13,11 @@ RUN apt-get -y install tmux
 # Copy the current directory contents into the container at /app
 COPY semantic-map-docker /app/semantic-map-docker
 
-WORKDIR /app/semantic-map-docker
+WORKDIR /app/semantic-map-docker/ncc-extension
+
+RUN python setup.py install
+
+WORKDIR /app/semantic-map-docker/
 
 
 #CMD CUDA_VISIBLE_DEVICES=1 python -u train.py -il data/train/imgset_left.npy -ir data/train/imgset_right.npy -l /data/train/gt_labels.py -m results/model_16_e7_20.json -w results/model_16_e7_20.h5

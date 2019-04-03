@@ -56,24 +56,28 @@ Implemented in the Python script broader_pipeline.py
 
    ### With Siamese-like nets 
 
-   *Check docker branch for further details*.
  
-   Based on the tutorial illustrated here https://software.intel.com/en-us/articles/intel-optimization-for-tensorflow-installation-guide
-
-   we fixed their code ( layer dimensionality  and adjusted output shape for binary classification)
-   and set up for training on a subsample of ShapeNet models.
-
-   One docker image is conceived to be run on GPUs
+   The Keras implementation of NormXCorr by [1],
+   also described in our paper [2],
+   has been replaced and fully re-implemented in Pytorch.
    
-   `docker pull achiatti/semantic-map-docker:gpu `
-
-   Whereas another image is set-up for CPU-only training (Using Tensorflow with Intel Optimizer for ML) 
+   Currently we are testing a different, pre-trained architecture that combines
+   two ResNet50 Siamese branches 
+   with L2 embedding normalization similar to the fine-tuning routine in [3], 
+   as illustrated in the docker branch.
    
-   `docker pull achiatti/semantic-map-docker:cpu `
-
+   *Check docker branch for further details*.
    
-   Each image contains a subfolder with Keras-based code for the architecture saved as siamese_normxcorr_fixed.py. The training samples used are saved under ./data
-
+   
+   [1] Subramaniam, A., Chatterjee, M., & Mittal, A. (2016). Deep neural networks with inexact matching for person re-identification. 
+   In Advances in Neural Information Processing Systems (pp. 2667-2675).
+  
+   [2] Chiatti, A., Bardaro, G., Bastianelli, E., Tiddi, I., Mitra, P., & Motta, E. (2019). 
+   Exploring Task-agnostic, ShapeNet-based Object Recognition for Mobile Robots.
+   
+   [3] Qi, H., Brown, M., & Lowe, D. G. (2018). Low-shot learning with imprinted weights. 
+   In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (pp. 5822-5830).
+   
    ### Prerequisites
 
     * docker-ce

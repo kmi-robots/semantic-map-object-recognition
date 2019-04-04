@@ -200,7 +200,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("it", help="Input type at inference time: can be one between 'reference' or 'rosbag' ")
+    parser.add_argument('it', help='Input type at inference time: can be one between reference or pickled')
     args = parser.parse_args()
 
     main(args.it, NCC=False, MNIST=False)

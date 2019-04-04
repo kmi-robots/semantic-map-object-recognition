@@ -1,7 +1,8 @@
 import torch
-from embedding_extractor import query_embedding, ros_embedding
+from embedding_extractor import path_embedding, array_embedding
 import os
 from segment import find_bboxes, convert_bboxes, crop_img
+import numpy as np
 
 
 def compute_similarity(qembedding, train_embeds):
@@ -26,20 +27,17 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
     # Code for test/inference time on one(few) shot(s)
     # for each query image
 
-    if data_type == 'rosbag':
+    if data_type == 'pickled':
 
-        img_mat = []
+        try:
 
-        #To handle case where bags were split across separate files
-        for pbag in os.listdir(path_to_bags):
+            img_mat = np.load(path_to_bags)
 
-            bag = rosbag.Bag(os.path.join(path_to_bags, pbag))
-            bridge = CvBridge()
+        except Exception as e:
 
-            img_mat.extend((bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"),
-                    str(msg.header.stamp.secs) + str(msg.header.stamp.nsecs)) for topic, msg, t in bag.read_messages())
-
-            bag.close()
+            print("Problem while reading provided input +\n")
+            print(str(e))
+            return
 
         all_imgs, timestamps = zip(*img_mat)
 
@@ -59,7 +57,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                 for obj in obj_list:
 
-                    qembedding = ros_embedding(model, model_checkpoint, obj, \
+                    qembedding = array_embedding(model, model_checkpoint, obj, \
                                                  device, transforms=trans)
                     ranking = compute_similarity(qembedding, train_embeds)
 
@@ -81,39 +79,59 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         return None
 
-        with open('pt_results/ranking_log.txt', 'w') as outr:
+    with open('pt_results/ranking_log.txt', 'w') as outr:
 
-            class_wise_res = []
+        class_wise_res = []
 
-            for root, dirs, files in os.walk(path_to_test):
+        for root, dirs, files in os.walk(path_to_test):
 
-                if files:  #For each object class
+            if files:  #For each object class
 
-                    #tot_wrong = 0
+                #tot_wrong = 0
 
-                    classname = str(root.split('/')[-1])
+                classname = str(root.split('/')[-1])
 
-                    outr.write(classname)
+                outr.write(classname)
 
-                    for file in files: #For each example in that class
+                for file in files: #For each example in that class
 
-                        qembedding = query_embedding(model, model_checkpoint, os.path.join(root, file), \
-                                                     device, transforms=trans)
+                    qembedding = path_embedding(model, model_checkpoint, os.path.join(root, file), \
+                                                 device, transforms=trans)
 
-                        ranking = compute_similarity(qembedding, train_embeds)
+                    ranking = compute_similarity(qembedding, train_embeds)
 
-                        outr.write("The %i most similar objects to the provided image are: \n" % K)
+                    outr.write("The %i most similar objects to the provided image are: \n" % K)
 
-                        correct_preds = 0
+                    correct_preds = 0
 
-                        class_accs = []
+                    class_accs = []
 
-                        if K == 1:
+                    if K == 1:
 
-                            key, val = ranking[0]
-                            label = key.split("_")[0]  # [:-1]
+                        key, val = ranking[0]
+                        label = key.split("_")[0]  # [:-1]
+                        outr.write(label + ": " + str(val) + "\n")
+
+                        if label == classname:
+
+                            correct_preds += 1
+
+                        else:
+
+                            outr.write('{} mistaken for {}'.format(classname, label))
+                            # tot_wrong += 1
+
+                        class_accs.append(correct_preds)
+
+                    else:
+                        for key, val in ranking[:K - 1]:
+
+
+                            label = key.split("_")[0] #[:-1]
+
                             outr.write(label + ": " + str(val) + "\n")
 
+                            #Parse labels to binary as correct? Yes/No
                             if label == classname:
 
                                 correct_preds += 1
@@ -121,35 +139,15 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                             else:
 
                                 outr.write('{} mistaken for {}'.format(classname, label))
-                                # tot_wrong += 1
+                                #tot_wrong += 1
 
-                            class_accs.append(correct_preds)
+                            avg_acc = correct_preds/K
+                            class_accs.append(avg_acc)
 
-                        else:
-                            for key, val in ranking[:K - 1]:
+                macro_avg = sum(class_accs)/len(class_accs)
 
-
-                                label = key.split("_")[0] #[:-1]
-
-                                outr.write(label + ": " + str(val) + "\n")
-
-                                #Parse labels to binary as correct? Yes/No
-                                if label == classname:
-
-                                    correct_preds += 1
-
-                                else:
-
-                                    outr.write('{} mistaken for {}'.format(classname, label))
-                                    #tot_wrong += 1
-
-                                avg_acc = correct_preds/K
-                                class_accs.append(avg_acc)
-
-                    macro_avg = sum(class_accs)/len(class_accs)
-
-                    print('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
-                    outr.write('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
-                    class_wise_res.append((classname, macro_avg))
+                print('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
+                outr.write('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
+                class_wise_res.append((classname, macro_avg))
 
         return zip(*class_wise_res)

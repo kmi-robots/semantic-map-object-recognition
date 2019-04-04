@@ -50,7 +50,7 @@ def extract_embeddings(model, path_to_state, path_to_data, device, outp, transfo
     print("Trained embeddings saved under %s" % outp)
 
 
-def query_embedding(model, path_to_state, path_to_img,  device, transforms=None):
+def path_embedding(model, path_to_state, path_to_img,  device, transforms=None):
 
     model.load_state_dict(torch.load(path_to_state))
     model.eval()
@@ -66,7 +66,7 @@ def query_embedding(model, path_to_state, path_to_img,  device, transforms=None)
     return model.get_embedding(img)
 
 
-def ros_embedding(model, path_to_state, img_array,  device, transforms=None):
+def array_embedding(model, path_to_state, img_array,  device, transforms=None):
 
     model.load_state_dict(torch.load(path_to_state))
     model.eval()

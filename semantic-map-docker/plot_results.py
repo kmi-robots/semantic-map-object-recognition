@@ -116,7 +116,7 @@ def bar_plot(class_wise_data,  current_session= visdom.Visdom()):
     class_serie, data_serie = list(class_wise_data)
 
     current_session.bar(
-        X= data_serie,
+        X=data_serie,
         Y=class_serie,
         opts=dict(
             stacked=False,

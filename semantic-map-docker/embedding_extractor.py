@@ -65,6 +65,22 @@ def query_embedding(model, path_to_state, path_to_img,  device, transforms=None)
     #Extract embedding for the query image
     return model.get_embedding(img)
 
+
+def ros_embedding(model, path_to_state, img_array,  device, transforms=None):
+
+    model.load_state_dict(torch.load(path_to_state))
+    model.eval()
+
+    #read image
+    img = torch.from_numpy(img_preproc(img_array, ros=True))
+
+    img[0, :] = transforms(img[0, :].float())
+
+    img = img.float().to(device)
+
+    #Extract embedding for the query image
+    return model.get_embedding(img)
+
 """
 
 def permute(embedding):

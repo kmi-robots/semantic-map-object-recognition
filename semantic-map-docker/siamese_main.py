@@ -2,6 +2,7 @@ import torch
 from torch import optim
 from torchvision import transforms
 import os
+import argparse
 
 #custom classes and methods
 from plot_results import gen_plots, bar_plot
@@ -24,6 +25,8 @@ weight_decay = 0.0001
 patience = 20
 metric_avg = 'binary'
 momentum = 0.9
+segmentation_threshold = 0.1
+
 
 #TODO limit hardcoded part
 path_to_query_data = './data/Hans-split/test/' #fire-extinguishers/9. fire-extinguisher.jpg
@@ -31,10 +34,11 @@ path_to_train_embeds = './hans_out_embeddings.dat'
 K = 5
 model_checkpoint = 'pt_results/hans_checkpoint.pt' #hardcoded in pytorchtools.py
 path_to_train_data ='./data/processed/hans_training.dat' #hardcoded in data_loaders.py ln. 205
+path_to_bags='./data/'
 
 
 
-def main(NCC=False, MNIST=True, ResNet=True):
+def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
     """
     Expects two command line arguments or flags
@@ -174,10 +178,14 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
         #Test on held-out set
 
-        class_wise_res = test(model, model_checkpoint, path_to_query_data, device, trans, path_to_train_embeds, K)
+        class_wise_res = test(model, model_checkpoint, input_type, path_to_query_data, path_to_bags,\
+                              device, trans, path_to_train_embeds, K, segmentation_threshold)
 
         #Test plot grouped by class
-        bar_plot(class_wise_res)
+        if class_wise_res is not None:
+            #Evaluation only available for data held out from ground truth
+            #When evaluating on robot-collected data, rankings are logged anyways
+            bar_plot(class_wise_res)
 
         keep_embeddings = False
 
@@ -191,9 +199,11 @@ def main(NCC=False, MNIST=True, ResNet=True):
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("it", help="Input type at inference time: can be one between 'reference' or 'rosbag' ")
+    args = parser.parse_args()
 
-    print("Running siamese net on SNS2")
-    main(NCC=False, MNIST=False)
+    main(args.it, NCC=False, MNIST=False)
 
     """
     Reproduces old runs 

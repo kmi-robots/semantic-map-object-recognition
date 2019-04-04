@@ -331,9 +331,13 @@ class BalancedMNIST(MNIST):
 
 
 
-def img_preproc(path_to_image, ResNet=True):
+def img_preproc(path_to_image, ResNet=True, ros=False):
 
-    img = cv2.imread(path_to_image)
+    if not ros:
+        img = cv2.imread(path_to_image)
+
+    else:
+        img = path_to_image
 
     if ResNet:
         W= 224

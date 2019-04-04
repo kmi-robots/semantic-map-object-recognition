@@ -14,7 +14,7 @@ Classes and methods to create balanced triplets
 
 
 """
-HANS = True
+HANS = False
 
 class BalancedTriplets(torch.utils.data.Dataset):
 
@@ -37,6 +37,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         self.train = train  # training set or test set
 
         if Hans:
+
             self.raw_folder = 'Hans-all'
             self.out_name = 'Hans-split'
 
@@ -51,7 +52,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         if not os.path.isdir(os.path.join(self.root, self.processed_folder)):
             os.mkdir(os.path.join(self.root, self.processed_folder))
 
-        self.prep()
+        self.prep(self.train)
 
         if not self._check_exists():
             raise RuntimeError('Dataset not found.')
@@ -77,9 +78,9 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
             self.test_data, self.test_labels = generate_balanced_triplets(test_labels_class, test_data_class)
 
-            # print(self.test_data.shape)
+            print(self.test_data.shape)
 
-    def split_data(self, data_path, out_path, ratio=(.8, .1, .1)):
+    def split_data(self, data_path, out_path, ratio=(.35, .35, .3)):
 
         #TODO Add dependency in readme
         import split_folders
@@ -121,25 +122,26 @@ class BalancedTriplets(torch.utils.data.Dataset):
         return os.path.exists(os.path.join(self.root, self.processed_folder, self.training_file)) and \
                os.path.exists(os.path.join(self.root, self.processed_folder, self.test_file))
 
-    def prep(self):
+    def prep(self, train=True):
 
         print('Reading images and labels...')
 
         #Load from local
+        if train:
 
-        training_set = (self.read_files(os.path.join(self.root, self.raw_folder, 'train')))
+            training_set = (self.read_files(os.path.join(self.root, self.raw_folder, 'train')))
+            # Save as .pt files
 
-        test_set = (self.read_files(os.path.join(self.root, self.raw_folder, self.to_val), train=False))
+            with open(os.path.join(self.root, self.processed_folder, self.training_file), 'wb') as f:
+                torch.save(training_set, f)
 
-        #Save as .pt files
+        else:
 
-        with open(os.path.join(self.root, self.processed_folder, self.training_file), 'wb') as f:
+            test_set = (self.read_files(os.path.join(self.root, self.raw_folder, self.to_val), train=False))
 
-            torch.save(training_set, f)
+            with open(os.path.join(self.root, self.processed_folder, self.test_file), 'wb') as f:
 
-        with open(os.path.join(self.root, self.processed_folder, self.test_file), 'wb') as f:
-
-            torch.save(test_set, f)
+                torch.save(test_set, f)
 
         print('Done!')
 
@@ -162,7 +164,6 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
     def read_files(self, path,  train=True, ResNet=True, Hans=HANS, n=20):
 
-        class_ = 0
 
         if train:
 
@@ -174,9 +175,10 @@ class BalancedTriplets(torch.utils.data.Dataset):
         if Hans:
 
             if train:
-                total = 527
+
+                total = 40 #527
             else:
-                total = 64
+                total = 40 #64
 
         if ResNet:
 
@@ -188,8 +190,10 @@ class BalancedTriplets(torch.utils.data.Dataset):
         labels = torch.empty((total))
         names = {}
 
+
         #Subfolders are named after classes here
         iteration = 0
+        class_ = 0
 
         for root, dirs, files in os.walk(path):
 
@@ -197,16 +201,13 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
                 classname = str(root.split('/')[-1])
 
+                #print(torch.LongTensor([class_]))
+
                 #NOTE: the assumption is that images are grouped in subfolders by class
                 #example_no = 1
-                
-                if train and Hans:
-                    sample = random.sample(files, n)
 
-                else:
-                    sample = files
 
-                for file in sample:
+                for file in files:
 
                     img_tensor = torch.from_numpy(img_preproc(os.path.join(root, file)))
                     filename = str(file.split('/')[-1])
@@ -219,22 +220,15 @@ class BalancedTriplets(torch.utils.data.Dataset):
                     #example_no += 1
                     iteration += 1
 
+
                 class_ += 1
 
         #Save serialized object separately for IDs
         if train:
-
-            fname = 'shapenet_training.dat'
-
-            if Hans:
-
-                fname = 'hans_training.dat'
+            fname = 'training.dat'
 
         else:
-
-            fname = 'shapenet_test.dat'
-            if Hans:
-                fname = 'hans_test.dat'
+            fname = 'test.dat'
 
         with open(os.path.join(self.root, self.processed_folder, fname), 'wb') as f:
 
@@ -288,7 +282,7 @@ class BalancedMNIST(MNIST):
 
             self.test_data, self.test_labels = generate_balanced_triplets(test_labels_class, test_data_class, mnist=True)
 
-            #print(self.test_data.shape)
+            print(self.test_data.shape)
 
 
     def __getitem__(self, index):
@@ -402,6 +396,7 @@ def generate_balanced_triplets(labels_class, data_class, mnist=False):
     if mnist:
 
        min_ = 500
+
     else:
 
        min_ = min([x.shape[0] for x in labels_class])
@@ -422,6 +417,7 @@ def generate_balanced_triplets(labels_class, data_class, mnist=False):
 
                 #Oversample   Fewer examples available
                 r = [y for y in range(min_) if y != j]  # excluding j
+                #idx = random.choice(r)
 
                 for idx in r:
 

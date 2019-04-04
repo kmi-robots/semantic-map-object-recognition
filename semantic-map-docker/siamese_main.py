@@ -14,6 +14,8 @@ from train import train
 from validate import validate
 from test import test
 
+
+#These parameters can be tweaked---------------------------------------------------------#
 do_learn = True
 feature_extraction = False
 keep_embeddings = True
@@ -27,15 +29,17 @@ metric_avg = 'binary'
 momentum = 0.9
 segmentation_threshold = 0.1
 
-
-#TODO limit hardcoded part
 path_to_query_data = './data/Hans-split/test/' #fire-extinguishers/9. fire-extinguisher.jpg
-path_to_train_embeds = './hans_out_embeddings.dat'
+path_to_train_embeds = './embeddings.dat'
 K = 5
-model_checkpoint = 'pt_results/hans_checkpoint.pt' #hardcoded in pytorchtools.py
-path_to_train_data ='./data/processed/hans_training.dat' #hardcoded in data_loaders.py ln. 205
 path_to_bags='./data/'
+#-----------------------------------------------------------------------------------------#
 
+
+#Hardcoded variables -------------------------------------------------------------------------#
+model_checkpoint = 'pt_results/checkpoint.pt' #hardcoded in pytorchtools.py
+path_to_train_data ='./data/processed/training.dat' #hardcoded in data_loaders.py ln. 205
+#--- Simpler not to change -----------------------------------------------------------------------#
 
 
 def main(input_type, NCC=False, MNIST=True, ResNet=True):

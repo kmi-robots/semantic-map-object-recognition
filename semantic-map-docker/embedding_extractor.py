@@ -81,6 +81,7 @@ def array_embedding(model, path_to_state, img_array,  device, transforms=None):
     #Extract embedding for the query image
     return model.get_embedding(img)
 
+
 """
 
 def permute(embedding):

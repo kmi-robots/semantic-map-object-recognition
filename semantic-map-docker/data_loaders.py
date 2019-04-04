@@ -54,7 +54,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
         self.prep(self.train)
 
-        if not self._check_exists():
+        if not self._check_exists(self.train):
             raise RuntimeError('Dataset not found.')
 
         if self.train:
@@ -117,10 +117,12 @@ class BalancedTriplets(torch.utils.data.Dataset):
         else:
             return len(self.test_data)
 
-    def _check_exists(self):
+    def _check_exists(self, train=True):
 
-        return os.path.exists(os.path.join(self.root, self.processed_folder, self.training_file)) and \
-               os.path.exists(os.path.join(self.root, self.processed_folder, self.test_file))
+        if train:
+            return os.path.exists(os.path.join(self.root, self.processed_folder, self.training_file))
+        else:
+            return os.path.exists(os.path.join(self.root, self.processed_folder, self.test_file))
 
     def prep(self, train=True):
 

@@ -16,6 +16,7 @@ Classes and methods to create balanced triplets
 """
 HANS = False
 
+
 class BalancedTriplets(torch.utils.data.Dataset):
 
     """Generic class to load custom dataset and generate balanced triplets
@@ -23,19 +24,20 @@ class BalancedTriplets(torch.utils.data.Dataset):
        for both an image collection and a set of labels
     """
     #Local paths
-    raw_folder = 'shapenet'
+    raw_folder = 'all-objects'
     processed_folder = 'processed'
-    training_file = 'shapenet_training.pt'
-    test_file = 'shapenet_test.pt'
-    to_val = 'test'
+    training_file = 'whole_training.pt'#training_file = 'shapenet_training.pt'
+    test_file = 'whole_test.pt'
+    to_val = 'val'
 
-    def __init__(self, root, train=True, transform=None, target_transform=None, Hans=HANS):
+    def __init__(self, root, train=True, transform=None, target_transform=None, N=10, Hans=HANS):
 
         self.root = os.path.expanduser(root)
         self.transform = transform
         self.target_transform = target_transform
         self.train = train  # training set or test set
 
+        """
         if Hans:
 
             self.raw_folder = 'Hans-all'
@@ -49,6 +51,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
             self.test_file = 'hans_test.pt'
             self.to_val = 'val'
 
+        """
         if not os.path.isdir(os.path.join(self.root, self.processed_folder)):
             os.mkdir(os.path.join(self.root, self.processed_folder))
 
@@ -64,7 +67,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
                 os.path.join(self.root, self.processed_folder, self.training_file))
 
             # To then pass to new functions
-            train_labels_class, train_data_class = group_by_class(train_data, train_labels)
+            train_labels_class, train_data_class = group_by_class(train_data, train_labels, classes=N)
 
             self.train_data, self.train_labels = generate_balanced_triplets(train_labels_class, train_data_class)
 
@@ -74,7 +77,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
             test_data, test_labels = torch.load(
                 os.path.join(self.root, self.processed_folder, self.test_file))
 
-            test_labels_class, test_data_class = group_by_class(test_data, test_labels)
+            test_labels_class, test_data_class = group_by_class(test_data, test_labels, classes=N)
 
             self.test_data, self.test_labels = generate_balanced_triplets(test_labels_class, test_data_class)
 
@@ -131,6 +134,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         #Load from local
         if train:
 
+            
             training_set = (self.read_files(os.path.join(self.root, self.raw_folder, 'train')))
             # Save as .pt files
 
@@ -169,11 +173,12 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
         if train:
 
-            total = 100
+            total = 200 #100
 
         else:
-            total = 82
+            total = 100   #82
 
+        """
         if Hans:
 
             if train:
@@ -182,6 +187,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
             else:
                 total = 40 #64
 
+        """
         if ResNet:
 
             data = torch.empty((total, 3, 224, 224))
@@ -191,7 +197,6 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
         labels = torch.empty((total))
         names = {}
-
 
         #Subfolders are named after classes here
         iteration = 0
@@ -204,10 +209,8 @@ class BalancedTriplets(torch.utils.data.Dataset):
                 classname = str(root.split('/')[-1])
 
                 #print(torch.LongTensor([class_]))
-
                 #NOTE: the assumption is that images are grouped in subfolders by class
                 #example_no = 1
-
 
                 for file in files:
 
@@ -367,9 +370,13 @@ def group_by_class(data, labels, classes=10, Hans =HANS):   #ids=None
     data_class = []
     #id_class = []
 
+    """
     if Hans:
 
         classes = 4
+        
+        
+    """
 
     # For each digit in the data
     for i in range(classes):

@@ -176,18 +176,18 @@ class ResSiamese(nn.Module):
 
     def forward(self, data):
 
-        #res1 = self.forward_once(data[0])
-        #res2 = self.forward_once(data[1])
         res = self.drop(torch.abs(self.forward_once(data[1]) - self.forward_once(data[0])))
-        #self.drop(self.linear2(res))
 
         return self.linear3(res)
 
     def l2_norm(self, x):
+
         input_size = x.size()
+
         buffer = torch.pow(x, 2)
 
         normp = torch.sum(buffer, 1).add_(1e-10)
+
         norm = torch.sqrt(normp)
 
         _output = torch.div(x, norm.view(-1, 1).expand_as(x))
@@ -200,6 +200,7 @@ class ResSiamese(nn.Module):
     def weight_norm(self):
 
         w = self.linear2.weight.data
+
         norm = w.norm(p=2, dim=1, keepdim=True)
 
         self.linear2.weight.data = w.div(norm.expand_as(w))

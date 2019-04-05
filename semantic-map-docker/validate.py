@@ -10,6 +10,7 @@ def validate(model, device, test_loader, metric_avg):
     model.eval()
 
     with torch.no_grad():
+
         accurate_labels = 0
         all_labels = 0
         running_loss = 0

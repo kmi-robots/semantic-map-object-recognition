@@ -29,7 +29,8 @@ metric_avg = 'binary'
 momentum = 0.9
 segmentation_threshold = 0.1
 
-path_to_query_data = './data/Hans-split/test/' #fire-extinguishers/9. fire-extinguisher.jpg
+N= 20 #No of object classes
+path_to_query_data = './data/all-objects/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './embeddings.dat'
 K = 5
 path_to_bags='./data/'
@@ -129,11 +130,11 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
 
             train_loader = torch.utils.data.DataLoader(
-               data_loaders.BalancedTriplets('./data', train=True, transform=trans), batch_size=batch_size,
+               data_loaders.BalancedTriplets('./data', train=True, N=N, transform=trans), batch_size=batch_size,
                shuffle=True)
 
             val_loader = torch.utils.data.DataLoader(
-                data_loaders.BalancedTriplets('./data', train=False, transform=trans), batch_size=batch_size,
+                data_loaders.BalancedTriplets('./data', train=False, N=N, transform=trans), batch_size=batch_size,
                 shuffle=False)
 
         optimizer = optim.SGD(params_to_update, lr=lr, momentum=momentum)

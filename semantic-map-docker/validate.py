@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
 from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
-import warnings
 import numpy as np
 
 
@@ -59,19 +58,9 @@ def validate(model, device, test_loader, metric_avg):
         accuracy = 100. * accurate_labels / all_labels
         epoch_loss = running_loss/all_labels
 
-        with warnings.catch_warnings():
 
-            warnings.filterwarnings('error')
+        p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
 
-            try:
-                p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
-
-            except Warning:
-
-                print("Labels causing issues \n")
-                print(np.asarray(labels))
-                print("Problematic predictions")
-                print(np.asarray(predictions))
 
         roc_auc = roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
 

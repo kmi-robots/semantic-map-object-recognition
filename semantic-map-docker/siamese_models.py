@@ -157,6 +157,7 @@ class ResSiamese(nn.Module):
         self.linear2 = nn.Linear(2048,2)  #(512, 2)
 
         self.norm = norm
+        self.relu= nn.ReLU()
         self.scale = scale
         self.s = nn.Parameter(torch.FloatTensor([10]))
 
@@ -172,11 +173,11 @@ class ResSiamese(nn.Module):
 
             x = self.s * x
 
-        return self.linear1(x) #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
+        return self.relu(self.linear1(x)) #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
 
     def forward(self, data):
 
-        res = self.drop(torch.abs(self.forward_once(data[1]) - self.forward_once(data[0])))
+        res = torch.abs(self.forward_once(data[1]) - self.forward_once(data[0]))
 
         return self.linear3(res)
 

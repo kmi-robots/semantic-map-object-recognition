@@ -219,8 +219,11 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
                     img_tensor = img_preproc(os.path.join(root, file), trans) #torch.from_numpy(img_preproc(os.path.join(root, file)))
                     filename = str(file.split('/')[-1])
-
-                    data[iteration, :] = img_tensor
+                    try:
+                        data[iteration, :] = img_tensor
+                    except:
+                        print(classname)
+                        print(filename)
                     labels[iteration] = torch.LongTensor([class_])
 
                     # ID = <classname_filename>
@@ -357,7 +360,7 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
     #x = np.asarray(img) #x)
 
     x = Image.fromarray(img, mode='RGB')
-    #x.show()
+    x.show()
     """
     #display_img(x)
     print(type(x))

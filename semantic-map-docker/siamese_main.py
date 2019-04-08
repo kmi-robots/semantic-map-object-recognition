@@ -80,15 +80,14 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
     #Transformations applied to the images on training
     trans_train = transforms.Compose([
-        transforms.Resize(224),
+        transforms.Resize((224,224)),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(means, stds)])
 
     # Transformations applied to the images on validation and at test time
     trans_val = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
+        transforms.Resize((224,224)),
         transforms.ToTensor(),
         transforms.Normalize(means, stds)])
 

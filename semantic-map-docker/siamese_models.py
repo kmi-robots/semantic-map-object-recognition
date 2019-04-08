@@ -207,7 +207,6 @@ class ResSiamese(nn.Module):
         self.linear2.weight.data = w.div(norm.expand_as(w))
 
 
-
     def get_embedding(self, x):
 
         x = self.embed(x)

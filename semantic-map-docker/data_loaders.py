@@ -30,7 +30,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
     test_file = 'whole_test.pt'
     to_val = 'val'
 
-    def __init__(self, root, train=True, transform=None, target_transform=None, N=10, Hans=HANS):
+    def __init__(self, root, train=True, transform=None,  target_transform=None, N=10, Hans=HANS):
 
         self.root = os.path.expanduser(root)
         self.transform = transform
@@ -55,7 +55,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         if not os.path.isdir(os.path.join(self.root, self.processed_folder)):
             os.mkdir(os.path.join(self.root, self.processed_folder))
 
-        self.prep(self.train)
+        self.prep(self.transform, self.train)
 
         if not self._check_exists(self.train):
             raise RuntimeError('Dataset not found.')
@@ -65,13 +65,14 @@ class BalancedTriplets(torch.utils.data.Dataset):
             # Load explicitly from processed MNIST files created
             train_data, train_labels = torch.load(
                 os.path.join(self.root, self.processed_folder, self.training_file))
-
+            #print(train_data.shape)
             # To then pass to new functions
             train_labels_class, train_data_class = group_by_class(train_data, train_labels, classes=N)
+            #print(train_labels_class)
 
             self.train_data, self.train_labels = generate_balanced_triplets(train_labels_class, train_data_class)
-
             print(self.train_data.shape)
+
         else:
 
             test_data, test_labels = torch.load(
@@ -127,7 +128,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         else:
             return os.path.exists(os.path.join(self.root, self.processed_folder, self.test_file))
 
-    def prep(self, train=True):
+    def prep(self, trans, train=True):
 
         print('Reading images and labels...')
 
@@ -135,7 +136,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         if train:
 
             
-            training_set = (self.read_files(os.path.join(self.root, self.raw_folder, 'train')))
+            training_set = (self.read_files(os.path.join(self.root, self.raw_folder, 'train'), trans))
             # Save as .pt files
 
             with open(os.path.join(self.root, self.processed_folder, self.training_file), 'wb') as f:
@@ -143,7 +144,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
         else:
 
-            test_set = (self.read_files(os.path.join(self.root, self.raw_folder, self.to_val), train=False))
+            test_set = (self.read_files(os.path.join(self.root, self.raw_folder, self.to_val), trans, train=False))
 
             with open(os.path.join(self.root, self.processed_folder, self.test_file), 'wb') as f:
 
@@ -168,12 +169,13 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
 
 
-    def read_files(self, path,  train=True, ResNet=True, Hans=HANS, n=20):
+    def read_files(self, path, trans, train=True, ResNet=True, Hans=HANS, n=20):
 
 
         if train:
 
             total = 200 #100
+
 
         else:
             total = 100   #82
@@ -214,7 +216,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
                 for file in files:
 
-                    img_tensor = torch.from_numpy(img_preproc(os.path.join(root, file)))
+                    img_tensor = img_preproc(os.path.join(root, file), trans) #torch.from_numpy(img_preproc(os.path.join(root, file)))
                     filename = str(file.split('/')[-1])
 
                     data[iteration, :] = img_tensor
@@ -275,15 +277,15 @@ class BalancedMNIST(MNIST):
             # To then pass to new functions
             train_labels_class, train_data_class = group_by_class(train_data, train_labels)
 
-            self.train_data, self.train_labels =generate_balanced_triplets(train_labels_class,train_data_class, mnist=True)
+            self.train_data, self.train_labels = generate_balanced_triplets(train_labels_class,train_data_class, mnist=True)
 
-            #print(self.train_data.shape)
+            print(self.train_data.shape)
 
         else:
 
             test_data, test_labels = torch.load(os.path.join(mnist_set.root, mnist_set.processed_folder, mnist_set.test_file))
 
-            test_labels_class, test_data_class= group_by_class(test_data, test_labels)
+            test_labels_class, test_data_class = group_by_class(test_data, test_labels)
 
             self.test_data, self.test_labels = generate_balanced_triplets(test_labels_class, test_data_class, mnist=True)
 
@@ -303,18 +305,20 @@ class BalancedMNIST(MNIST):
 
         for i in range(len(imgs)):
 
-            img = Image.fromarray(imgs[i].numpy(), mode='L')
+            #img = Image.fromarray(imgs[i].numpy(), mode='L')
+
+            """
 
             if self.transform is not None:
 
                 img = self.transform(img)
 
+            """
             img_ar.append(img)
 
         if self.target_transform is not None:
 
             target = self.target_transform(target)
-
 
         return img_ar, target
 
@@ -330,7 +334,7 @@ class BalancedMNIST(MNIST):
 
 
 
-def img_preproc(path_to_image, ResNet=True, ros=False):
+def img_preproc(path_to_image, transform, ResNet=True, ros=False):
 
     if not ros:
         img = cv2.imread(path_to_image)
@@ -338,6 +342,7 @@ def img_preproc(path_to_image, ResNet=True, ros=False):
     else:
         img = path_to_image
 
+    """
     if ResNet:
         W= 224
         H= 224
@@ -346,16 +351,23 @@ def img_preproc(path_to_image, ResNet=True, ros=False):
         H = 160
 
     x = cv2.resize(img, (W,H))
-    x = np.asarray(x)
+    """
+    x = np.asarray(img) #x)
+
+    x = Image.fromarray(x, mode='RGB')
+
+    """
     #display_img(x)
-    x = x.astype('float')
+    print(type(x))
+    
+    x = x.astype('float')/255.
     #display_img(x)
-    x = np.expand_dims(x, axis= 0)
+    x = np.expand_dims(x, axis= 0) #To include batch no later
 
     x = np.reshape(x, (x.shape[0], x.shape[3], x.shape[1], x.shape[2]))
     #display_img(x)
-
-    return x/255.
+    """
+    return transform(x)
 
 
 def group_by_class(data, labels, classes=10, Hans =HANS):   #ids=None
@@ -432,7 +444,7 @@ def generate_balanced_triplets(labels_class, data_class, mnist=False):
 
                     data, labels = pick_samples(data_class, labels_class, data, labels, i, j, idx, min_)
 
-    # print(torch.stack(data).shape)
+
 
     return torch.stack(data), torch.tensor(labels)
 

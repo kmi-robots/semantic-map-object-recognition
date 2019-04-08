@@ -23,7 +23,7 @@ def extract_embeddings(model, path_to_state, path_to_data, device, outp, transfo
     for img_id, img in data.items():
 
         #Applying same normalization as on a training forward pass
-        img[0,:] = transforms(img[0,:].float())
+        #img[0,:] = #transforms(img[0,:])
         img = img.float().to(device)
 
         """
@@ -56,9 +56,9 @@ def path_embedding(model, path_to_state, path_to_img,  device, transforms=None):
     model.eval()
 
     #read image
-    img = torch.from_numpy(img_preproc(path_to_img))
+    img = img_preproc(path_to_img, transforms) #torch.from_numpy(img_preproc(path_to_img))
 
-    img[0, :] = transforms(img[0, :].float())
+    #img[0, :] = transforms(img[0, :].float())
 
     img = img.float().to(device)
 
@@ -72,9 +72,9 @@ def array_embedding(model, path_to_state, img_array,  device, transforms=None):
     model.eval()
 
     #read image
-    img = torch.from_numpy(img_preproc(img_array, ros=True))
+    img = img_preproc(img_array, transforms, ros=True) #torch.from_numpy(img_preproc(img_array, ros=True))
 
-    img[0, :] = transforms(img[0, :].float())
+    #img[0, :] = transforms(img[0, :].float())
 
     img = img.float().to(device)
 

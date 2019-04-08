@@ -16,7 +16,7 @@ from test import test
 
 
 #These parameters can be tweaked---------------------------------------------------------#
-do_learn = True
+do_learn = False
 feature_extraction = False
 keep_embeddings = True
 save_frequency = 2
@@ -61,7 +61,8 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
         #means = [0.485, 0.456, 0.406]
         #stds = [0.229, 0.224, 0.225]
         means = (0.5,)
-        stds = (1.0,)
+        stds = (0.5,)
+        #stds = (1.0,)
 
         mnist_trans = transforms.Compose([transforms.Resize((224, 224)),
                                           transforms.Grayscale(3),
@@ -77,7 +78,19 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
                                     transforms.ToTensor(),
                                     transforms.Normalize(means, stds)])
 
-    trans = transforms.Compose([transforms.Normalize(means, stds)])
+    #Transformations applied to the images on training
+    trans_train = transforms.Compose([
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(means, stds)])
+
+    # Transformations applied to the images on validation and at test time
+    trans_val = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(means, stds)])
 
     if NCC:
 
@@ -130,11 +143,11 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
 
             train_loader = torch.utils.data.DataLoader(
-               data_loaders.BalancedTriplets('./data', train=True, N=N, transform=trans), batch_size=batch_size,
+               data_loaders.BalancedTriplets('./data', train=True, N=N, transform=trans_train), batch_size=batch_size,
                shuffle=True)
 
             val_loader = torch.utils.data.DataLoader(
-                data_loaders.BalancedTriplets('./data', train=False, N=N, transform=trans), batch_size=batch_size,
+                data_loaders.BalancedTriplets('./data', train=False, N=N, transform=trans_val), batch_size=batch_size,
                 shuffle=False)
 
         optimizer = optim.SGD(params_to_update, lr=lr, momentum=momentum)
@@ -184,7 +197,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
         #Test on held-out set
 
         class_wise_res = test(model, model_checkpoint, input_type, path_to_query_data, path_to_bags,\
-                              device, trans, path_to_train_embeds, K, segmentation_threshold)
+                              device, trans_val, path_to_train_embeds, K, segmentation_threshold)
 
         #Test plot grouped by class
         if class_wise_res is not None:
@@ -199,7 +212,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
         #Warning: available for custom set only, no MNIST
         extract_embeddings(model, model_checkpoint, path_to_train_data, \
-                        device, path_to_train_embeds, transforms=trans)
+                        device, path_to_train_embeds, transforms=trans_val)
 
 
 if __name__ == '__main__':

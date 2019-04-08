@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
 import numpy as np
+import warnings
 
 def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg):
 
@@ -87,7 +88,21 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
     This does not take label imbalance into account.
 
     """
-    p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
+
+    with warnings.catch_warnings():
+
+        warnings.filterwarnings('error')
+        try:
+
+            p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
+
+        except Warning:
+
+            print("Labels causing issues \n")
+            print(np.asarray(labels))
+            print("Problematic predictions")
+            print(np.asarray(predictions))
+
     roc_auc = roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
     print("Epoch {}/{}, Loss: {:.3f}, Accuracy: {:.3f}%, Precision: {:.3f}, Recall: {:.3f}, ROC_AUC: {:.3f}".format(epoch + 1, num_epochs, epoch_loss, accuracy, p, r, roc_auc))
     # print(torch.Tensor([epoch_loss, accuracy]))

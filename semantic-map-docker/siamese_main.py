@@ -165,6 +165,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
             epoch_train_metrics.append(train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg))
 
+
             val_m = validate(model, device, val_loader, metric_avg)
             epoch_val_metrics.append(val_m)
 

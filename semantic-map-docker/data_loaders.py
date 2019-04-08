@@ -105,13 +105,15 @@ class BalancedTriplets(torch.utils.data.Dataset):
         for i in range(len(imgs)):
 
             img = imgs[i] #Image.fromarray(imgs[i].numpy(), mode='L')
+            """
             if self.transform is not None:
                 img = self.transform(img)
+            """
             img_ar.append(img)
-
+        """
         if self.target_transform is not None:
             target = self.target_transform(target)
-
+        """
         return img_ar, target
 
     def __len__(self):
@@ -308,7 +310,6 @@ class BalancedMNIST(MNIST):
             #img = Image.fromarray(imgs[i].numpy(), mode='L')
 
             """
-
             if self.transform is not None:
 
                 img = self.transform(img)
@@ -316,10 +317,11 @@ class BalancedMNIST(MNIST):
             """
             img_ar.append(img)
 
+        """
         if self.target_transform is not None:
 
             target = self.target_transform(target)
-
+        """
         return img_ar, target
 
     def __len__(self):

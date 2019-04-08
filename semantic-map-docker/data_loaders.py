@@ -1,6 +1,5 @@
 from torchvision.datasets import MNIST
 import cv2
-import numpy as np
 import os
 from PIL import Image
 import torch
@@ -338,6 +337,7 @@ class BalancedMNIST(MNIST):
 
 def img_preproc(path_to_image, transform, ResNet=True, ros=False):
 
+
     if not ros:
         img = cv2.imread(path_to_image)
 
@@ -354,10 +354,10 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
 
     x = cv2.resize(img, (W,H))
     """
-    x = np.asarray(img) #x)
+    #x = np.asarray(img) #x)
 
-    x = Image.fromarray(x, mode='RGB')
-
+    x = Image.fromarray(img, mode='RGB')
+    #x.show()
     """
     #display_img(x)
     print(type(x))
@@ -369,6 +369,7 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
     x = np.reshape(x, (x.shape[0], x.shape[3], x.shape[1], x.shape[2]))
     #display_img(x)
     """
+
     return transform(x)
 
 

@@ -80,7 +80,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
     #Transformations applied to the images on training
     trans_train = transforms.Compose([
-        transforms.RandomResizedCrop(224),
+        transforms.Resize(224),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(means, stds)])

@@ -10,20 +10,17 @@ https://github.com/meenavyas/Misc/blob/master/ObjectDetectionUsingYolo/ObjectDet
 import cv2
 import numpy as np
 
-# 'path to input image'
-IMAGE='./1.mp4'
-
 # 'path to yolo config file'
 # download https://github.com/arunponnusamy/object-detection-opencv/blob/master/yolov3.cfg
-CONFIG='./yolov3.cfg'
+CONFIG='./data/yolo/yolov3.cfg'
 
 # 'path to text file containing class names'
 # download https://github.com/arunponnusamy/object-detection-opencv/blob/master/yolov3.txt
-CLASSES='./yolov3.txt'
+CLASSES='./data/yolo/yolov3.txt'
 
 # 'path to yolo pre-trained weights'
 # wget https://pjreddie.com/media/files/yolov3.weights
-WEIGHTS='./yolov3.weights'
+WEIGHTS='./data/yolo/yolov3.weights'
 
 # read class names from text file
 classes = None
@@ -31,8 +28,8 @@ with open(CLASSES, 'r') as f:
     classes = [line.strip() for line in f.readlines()]
 
 scale = 0.00392
-conf_threshold = 0.5
-nms_threshold = 0.4
+conf_threshold = 0.0
+nms_threshold = 0.1 #0.4
 
 # generate different colors for different classes
 COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
@@ -42,6 +39,7 @@ COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
 
 def get_output_layers(net):
     layer_names = net.getLayerNames()
+
     output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
     return output_layers
 
@@ -58,6 +56,8 @@ def segment(temp_path, img):
     Width = img.shape[1]
     Height = img.shape[0]
 
+    img = cv2.imread(temp_path)
+
     # read pre-trained model and config file
     net = cv2.dnn.readNet(WEIGHTS, CONFIG)
 
@@ -66,9 +66,10 @@ def segment(temp_path, img):
     # set input blob for the network
     net.setInput(blob)
 
+
     # run inference through the network
     # and gather predictions from output layers
-    print(get_output_layers(net))
+    #print(get_output_layers(net))
     outs = net.forward(get_output_layers(net))
 
     # initialization
@@ -83,7 +84,7 @@ def segment(temp_path, img):
             scores = detection[5:]
             class_id = np.argmax(scores)
             confidence = scores[class_id]
-            if confidence > 0.5:
+            if confidence > conf_threshold:
                 center_x = int(detection[0] * Width)
                 center_y = int(detection[1] * Height)
                 w = int(detection[2] * Width)
@@ -111,12 +112,9 @@ def segment(temp_path, img):
 
     # display output image
     #out_image_name = "object detection" + str(index)
-    cv2.imshow(out_image_name, image)
-    # wait until any key is pressed
-    cv2.waitKey()
-    # save output image to disk
-    #cv2.imwrite("out/" + out_image_name + ".jpg", image)
-
+    cv2.imshow('prediction',img)
+    cv2.waitKey(1000)
+    cv2.destroyAllWindows()
 
 
 

@@ -11,14 +11,19 @@ RUN apt-get update
 RUN apt-get -y install tmux
 RUN apt-get -y install libopenblas-dev
 
-RUN pip3 install torch torchvision visdom split-folders lightnet
+RUN pip3 install torch torchvision visdom split-folders #lightnet
 
 #YOLO for lightnet
-RUN python -m lightnet download yolo
+#RUN python -m lightnet download yolo
 
 
 # Copy the current directory contents into the container at /app
 COPY semantic-map-docker /app/semantic-map-docker
+
+#weights for pre-trained YOLOV3
+WORKDIR /app/semantic-map-docker/data/yolo
+
+RUN wget https://pjreddie.com/media/files/yolov3.weights 
 
 WORKDIR /app/semantic-map-docker/ncc-extension
 

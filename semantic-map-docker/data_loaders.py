@@ -360,7 +360,7 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
     #x = np.asarray(img) #x)
 
     x = Image.fromarray(img, mode='RGB')
-    x.show()
+
     """
     #display_img(x)
     print(type(x))

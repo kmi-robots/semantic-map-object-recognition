@@ -1,9 +1,11 @@
 import torch
 from embedding_extractor import path_embedding, array_embedding
 import os
-from segment import find_bboxes, convert_bboxes, crop_img
+from segment import segment
+#from segment import find_bboxes, convert_bboxes, crop_img
 import numpy as np
-
+from PIL import Image
+import cv2
 
 def compute_similarity(qembedding, train_embeds):
     # Similarity matching against indexed data
@@ -20,7 +22,7 @@ def compute_similarity(qembedding, train_embeds):
     return ranking
 
 
-def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K=5, sthresh= 0.1):
+def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K=5, sthresh= 1.0):
 
     train_embeds = torch.load(path_to_train_embeds)
 
@@ -31,7 +33,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         try:
 
-            img_mat = np.load(path_to_bags)
+            img_mat = np.load(path_to_bags, encoding = 'latin1')
 
         except Exception as e:
 
@@ -43,10 +45,17 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         for img in all_imgs:
 
+            #img2 = img.astype('float32')
+
+            #Write temporary img file
+            cv2.imwrite('temp.jpg', img)
+
             with open('pt_results/ranking_log.txt', 'w') as outr:
 
+                segment('temp.jpg', img)
+                """
                 #Segment using lightnet (YOLO)
-                bboxes = find_bboxes(img, thr= sthresh)
+                bboxes = find_bboxes('temp.jpg', thr= sthresh)
 
                 # Convert boxes back to original image resolution
                 # And from YOLO format (center coord) to ROI format (top-left/bottom-right)
@@ -55,10 +64,17 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 #Crop to each box found
                 obj_list = crop_img(img, n_bboxes)
 
+                print("New image")
                 for obj in obj_list:
 
+                    #For each box wrapping an object
+                    Image.fromarray(obj, mode='RGB').show()
+
+                    pass
+                    '''
                     qembedding = array_embedding(model, model_checkpoint, obj, \
                                                  device, transforms=trans)
+                    
                     ranking = compute_similarity(qembedding, train_embeds)
 
                     if K == 1:
@@ -76,7 +92,9 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                             print(label + ": " + str(val) + "\n")
                             outr.write(label + ": " + str(val) + "\n")
 
-
+                    '''
+                    
+                """
         return None
 
     with open('pt_results/ranking_log.txt', 'w') as outr:

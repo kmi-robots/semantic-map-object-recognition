@@ -53,7 +53,7 @@ def main(path_to_bag):
     print("Sampled %i images in total" % len(img_mat))
 
     print("Saving all imported images as numpy pickle")
-    np.save('./semantic-map-docker/data/robot_collected.npy', img_mat)
+    np.save('../semantic-map-docker/data/robot_collected.npy', img_mat)
 
 if __name__ == '__main__':
 

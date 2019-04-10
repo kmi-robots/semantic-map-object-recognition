@@ -106,7 +106,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                             win_label, win_score = max(votes.items(), key=lambda x: x[1])
 
-                            if win_score > float(1/K):
+                            if win_score > 1.0:
 
                                 print("The most similar object by majority voting is %s \n" % win_label)
 

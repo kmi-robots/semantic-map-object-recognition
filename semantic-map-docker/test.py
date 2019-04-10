@@ -2,10 +2,12 @@ import torch
 from embedding_extractor import path_embedding, array_embedding
 import os
 from segment import segment
-#from segment import find_bboxes, convert_bboxes, crop_img
 import numpy as np
 from PIL import Image
 import cv2
+
+#Set of labels to retain from segmentation
+keepers= ['person','chair','potted plant']
 
 def compute_similarity(qembedding, train_embeds):
     # Similarity matching against indexed data
@@ -41,9 +43,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
             print(str(e))
             return
 
-        all_imgs, timestamps = zip(*img_mat)
 
-        for img in all_imgs:
+        for img, timestamp in zip(*img_mat):
 
             #img2 = img.astype('float32')
 
@@ -52,49 +53,57 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
             with open('pt_results/ranking_log.txt', 'w') as outr:
 
-                segment('temp.jpg', img)
-                """
-                #Segment using lightnet (YOLO)
-                bboxes = find_bboxes('temp.jpg', thr= sthresh)
+                yolo_preds = segment('temp.jpg', img)
 
-                # Convert boxes back to original image resolution
-                # And from YOLO format (center coord) to ROI format (top-left/bottom-right)
-                n_bboxes = convert_bboxes(bboxes, img.shape)
-
-                #Crop to each box found
-                obj_list = crop_img(img, n_bboxes)
-
-                print("New image")
-                for obj in obj_list:
+                for idx, obj, yolo_label in enumerate(zip(*yolo_preds)):
 
                     #For each box wrapping an object
-                    Image.fromarray(obj, mode='RGB').show()
-
-                    pass
-                    '''
+                    #Image.fromarray(obj, mode='RGB').show()
+                    #Pre-process as usual validation/test images to extract embedding
                     qembedding = array_embedding(model, model_checkpoint, obj, \
                                                  device, transforms=trans)
-                    
-                    ranking = compute_similarity(qembedding, train_embeds)
 
-                    if K == 1:
-                        label = ranking[0][0].split("_")[0]
-                        print("The top most similar object is %s \n" % label)
-                        outr("The top most similar object is %s \n" % label)
+                    if yolo_label in keepers:
+
+                        #Add to collection of known objects for future rankings
+                        #Reconcile format to labels used for other ShapeNet examples
+                        if yolo_label == 'person':
+                            label ='people'
+                        elif yolo_label == 'chair':
+                            label = 'chairs'
+                        elif yolo_label == 'potted plant':
+                            label = 'plants'
+
+                        #Unique image identifier
+                        img_id = label +'_'+str(idx)+ '_'+ str(timestamp)
+                        train_embeds[img_id] = qembedding
 
                     else:
-                        outr.write("The %i most similar objects to the provided image are: \n" % K)
+                        #Go ahead and classify by similarity
+                        ranking = compute_similarity(qembedding, train_embeds)
 
-                        for key, val in ranking[:K - 1]:
+                        if K == 1:
+                            label = ranking[0][0].split("_")[0]
+                            print("The top most similar object is %s \n" % label)
+                            outr("The top most similar object is %s \n" % label)
 
-                            label = key.split("_")[0]  # [:-1]
+                        else:
+                            outr.write("The %i most similar objects to the provided image are: \n" % K)
 
-                            print(label + ": " + str(val) + "\n")
-                            outr.write(label + ": " + str(val) + "\n")
+                            for key, val in ranking[:K - 1]:
 
-                    '''
-                    
-                """
+                                label = key.split("_")[0]  # [:-1]
+
+                                print(label + ": " + str(val) + "\n")
+                                outr.write(label + ": " + str(val) + "\n")
+
+
+        #Save updated embeddings after YOLO segmentation
+        with open(path_to_train_embeds, mode='wb') as outf:
+            torch.save(obj=train_embeds, f=outf)
+
+        print("Updated embeddings saved under %s" % path_to_train_embeds)
+
         return None
 
     with open('pt_results/ranking_log.txt', 'w') as outr:

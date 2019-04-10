@@ -45,7 +45,6 @@ def extract_embeddings(model, path_to_state, path_to_data, device, outp, transfo
         embeddings[img_id] = model.get_embedding(img) #embedding
 
 
-    #Save dictionary locally, as JSON file
     with open(outp, mode='wb') as outf:
         torch.save(obj=embeddings, f=outf)
 
@@ -69,7 +68,10 @@ def path_embedding(model, path_to_state, path_to_img,  device, transforms=None):
 
 
 def array_embedding(model, path_to_state, img_array,  device, transforms=None):
-
+    """
+    Same as path_embedding but requiring image array instead of path
+    to image file as input
+    """
     model.load_state_dict(torch.load(path_to_state))
     model.eval()
 

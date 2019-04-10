@@ -5,6 +5,7 @@ from segment import segment
 import numpy as np
 from PIL import Image
 import cv2
+from collections import Counter
 
 #Set of labels to retain from segmentation
 keepers= ['person','chair','potted plant']
@@ -90,12 +91,28 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         else:
                             outr.write("The %i most similar objects to the provided image are: \n" % K)
 
-                            for key, val in ranking[:K - 1]:
+                            topK = ranking[:K - 1]
+                            votes = Counter()
+
+                            #Majority voting with discounts by distance from top position
+                            for k,key, val in enumerate(topK):
 
                                 label = key.split("_")[0]  # [:-1]
 
+                                votes[label] += 1/(k+1)
+
                                 print(label + ": " + str(val) + "\n")
                                 outr.write(label + ": " + str(val) + "\n")
+
+                            win_label, win_score = max(votes.items(), key=lambda x: x[1])
+
+                            if win_score > float(1/K):
+
+                                print("The most similar object by majority voting is %s \n" % win_label)
+
+                            else:
+
+                                print("Not sure about how to classify this object")
 
 
         #Save updated embeddings after YOLO segmentation

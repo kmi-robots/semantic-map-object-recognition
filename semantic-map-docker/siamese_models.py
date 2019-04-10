@@ -134,7 +134,7 @@ class ResSiamese(nn.Module):
     - if a False flag is passed, the network will be fine-tuned instead
     """
 
-    def __init__(self, feature_extraction=False, p=0.5, norm=True, scale=True):
+    def __init__(self, feature_extraction=False, p=0.3, norm=True, scale=True):
 
         super().__init__()
 
@@ -173,7 +173,7 @@ class ResSiamese(nn.Module):
 
             x = self.s * x
 
-        return self.relu(self.linear1(x)) #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
+        return self.relu(self.drop(self.linear1(x))) #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
 
     def forward(self, data):
 

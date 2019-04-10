@@ -12,10 +12,9 @@ Change the window variable to play with the temporal window
 """
 
 import rosbag
-from cv_bridge import CvBridge, CvBridgeError
+from cv_bridge import CvBridge
 import argparse
 import os
-import logging
 import time
 from PIL import Image
 import numpy as np

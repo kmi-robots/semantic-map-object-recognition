@@ -58,10 +58,10 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
     if ResNet:
 
         # Add hardcoded mean and variance values for torchvision pre-trained modules
-        #means = [0.485, 0.456, 0.406]
-        #stds = [0.229, 0.224, 0.225]
-        means = (0.5,)
-        stds = (0.5,)
+        means = [0.485, 0.456, 0.406]
+        stds = [0.229, 0.224, 0.225]
+        #means = (0.5,)
+        #stds = (0.5,)
         #stds = (1.0,)
 
         mnist_trans = transforms.Compose([transforms.Resize((224, 224)),

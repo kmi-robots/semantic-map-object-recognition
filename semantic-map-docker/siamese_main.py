@@ -34,6 +34,7 @@ path_to_query_data = './data/all-objects/test/' #fire-extinguishers/9. fire-exti
 path_to_train_embeds = './pt_results/embeddings.dat'
 K = 5
 path_to_bags ='./data/robot_collected.npy'
+STN = False #Whether to use Spatial Transformer module on input or not
 #-----------------------------------------------------------------------------------------#
 
 
@@ -98,7 +99,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
         params_to_update = model.parameters()  # all params
     else:
 
-        model = ResSiamese(feature_extraction).to(device) #SimplerNet().to(device)
+        model = ResSiamese(feature_extraction, stn=STN).to(device) #SimplerNet().to(device)
 
 
         if feature_extraction:
@@ -209,6 +210,9 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
 
     if keep_embeddings:
+
+        #Switch to other GPU in case the one for training has not been freed up yet
+        device = torch.device("cuda:1")
 
         #Warning: available for custom set only, no MNIST
         extract_embeddings(model, model_checkpoint, path_to_train_data, \

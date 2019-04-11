@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 from collections import OrderedDict
 import torchvision.models as models
 
@@ -134,7 +135,7 @@ class ResSiamese(nn.Module):
     - if a False flag is passed, the network will be fine-tuned instead
     """
 
-    def __init__(self, feature_extraction=False, p=0.3, norm=True, scale=True):
+    def __init__(self, feature_extraction=False, p=0.2, norm=True, scale=True, stn=False):
 
         super().__init__()
 
@@ -150,6 +151,7 @@ class ResSiamese(nn.Module):
         }))
 
         self.drop = nn.Dropout(p=p)
+        self.drop2d = nn.Dropout2d(p=p)
 
         self.linear3 = nn.Linear(256, 2, bias=False)
 
@@ -160,8 +162,47 @@ class ResSiamese(nn.Module):
         self.relu= nn.ReLU()
         self.scale = scale
         self.s = nn.Parameter(torch.FloatTensor([10]))
+        self.stn_flag = stn
+
+        # Spatial transformer localization-network
+        self.localization = nn.Sequential(
+            nn.Conv2d(3, 8, kernel_size=7),
+            nn.MaxPool2d(2, stride=2),
+            nn.ReLU(True),
+            nn.Conv2d(8, 10, kernel_size=5),
+            nn.MaxPool2d(2, stride=2),
+            nn.ReLU(True)
+        )
+
+        # Regressor for the 3 * 2 affine matrix
+        self.fc_loc = nn.Sequential(
+            nn.Linear(10 * 52 * 52, 32),
+            nn.ReLU(True),
+            nn.Linear(32, 3 * 2)
+        )
+
+        # Initialize the weights/bias with identity transformation
+        self.fc_loc[2].weight.data.zero_()
+        self.fc_loc[2].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
+
+    def stn(self, x):
+        xs = self.localization(x)
+        xs = xs.view(-1, 10 * 52 * 52)
+        theta = self.fc_loc(xs)
+        theta = theta.view(-1, 2, 3)
+
+        grid = F.affine_grid(theta, x.size())
+        x = F.grid_sample(x, grid)
+
+        return x
 
     def forward_once(self, x):
+
+        if self.stn_flag:
+
+            #If Spatial Transformer Net is activated
+            x = self.stn(x)
+
 
         x = self.embed(x)
         #Flatten + FC + dropout
@@ -173,13 +214,13 @@ class ResSiamese(nn.Module):
 
             x = self.s * x
 
-        return self.relu(self.drop(self.linear1(x))) #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
+        return self.drop(self.relu(self.linear1(x))) #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
 
     def forward(self, data):
 
-        res = torch.abs(self.forward_once(data[1]) - self.forward_once(data[0]))
+        res = self.drop2d(torch.abs(self.forward_once(data[1]) - self.forward_once(data[0])))
 
-        return self.linear3(res)
+        return self.linear3(self.drop(res))
 
     def l2_norm(self, x):
 

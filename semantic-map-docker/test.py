@@ -49,10 +49,14 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
             #img2 = img.astype('float32')
 
+
             #Write temporary img file
             cv2.imwrite('temp.jpg', img)
 
-            with open('pt_results/ranking_log.txt', 'w') as outr:
+            with open('pt_results/ranking_log.txt', 'a') as outr:
+
+                print("Analyzing frame %s" % timestamp)
+                outr.write("Analyzing frame %s" % timestamp)
 
                 yolo_preds = segment('temp.jpg', img)
 
@@ -84,35 +88,49 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         ranking = compute_similarity(qembedding, train_embeds)
 
                         if K == 1:
-                            label = ranking[0][0].split("_")[0]
+                            keyr, val = ranking[0]
+                            label = keyr.split("_")[0]
+
                             print("The top most similar object is %s \n" % label)
                             outr("The top most similar object is %s \n" % label)
+
+                            print("With unique ID %s \n" % keyr)
+                            outr("With unique ID %s \n" % keyr)
 
                         else:
                             outr.write("The %i most similar objects to the provided image are: \n" % K)
 
-                            topK = ranking[:K - 1]
                             votes = Counter()
+                            ids = {}
 
                             #Majority voting with discounts by distance from top position
-                            for k,key, val in enumerate(topK):
+                            for k,key, val in enumerate(ranking[:K - 1]):
 
                                 label = key.split("_")[0]  # [:-1]
 
                                 votes[label] += 1/(k+1)
 
+                                ids[label] = key
+
                                 print(label + ": " + str(val) + "\n")
                                 outr.write(label + ": " + str(val) + "\n")
+                                print("With unique ID %s \n" % key)
+                                outr.write("With unique ID %s \n" % key)
 
                             win_label, win_score = max(votes.items(), key=lambda x: x[1])
+                            win_id = ids[win_label]
 
                             if win_score > 1.0:
 
                                 print("The most similar object by majority voting is %s \n" % win_label)
+                                outr.write("The most similar object by majority voting is %s \n" % win_label)
+                                print("With unique ID %s \n" % win_id)
+                                outr.write("With unique ID %s \n" % win_id)
 
                             else:
 
                                 print("Not sure about how to classify this object")
+                                outr.write("Not sure about how to classify this object")
 
 
         #Save updated embeddings after YOLO segmentation
@@ -139,11 +157,15 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                 for file in files: #For each example in that class
 
+                    print("Looking at file %s \n" % file)
+                    outr.write("Looking at file %s \n" % file)
+
                     qembedding = path_embedding(model, model_checkpoint, os.path.join(root, file), \
                                                  device, transforms=trans)
 
                     ranking = compute_similarity(qembedding, train_embeds)
 
+                    print("The %i most similar objects to the provided image are: \n" % K)
                     outr.write("The %i most similar objects to the provided image are: \n" % K)
 
                     correct_preds = 0
@@ -154,7 +176,12 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                         key, val = ranking[0]
                         label = key.split("_")[0]  # [:-1]
+
+
+                        print(label + ": " + str(val) + "\n")
                         outr.write(label + ": " + str(val) + "\n")
+                        print("With unique ID %s \n" % key)
+                        outr.write("With unique ID %s \n" % key)
 
                         if label == classname:
 
@@ -162,7 +189,10 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                         else:
 
+                            print('{} mistaken for {}'.format(classname, label))
                             outr.write('{} mistaken for {}'.format(classname, label))
+                            print("With unique ID %s \n" % key)
+                            outr.write("With unique ID %s \n" % key)
                             # tot_wrong += 1
 
                         class_accs.append(correct_preds)
@@ -173,7 +203,10 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                             label = key.split("_")[0] #[:-1]
 
+                            print(label + ": " + str(val) + "\n")
                             outr.write(label + ": " + str(val) + "\n")
+                            print("With unique ID %s \n" % key)
+                            outr.write("With unique ID %s \n" % key)
 
                             #Parse labels to binary as correct? Yes/No
                             if label == classname:
@@ -182,7 +215,10 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                             else:
 
+                                print('{} mistaken for {}'.format(classname, label))
                                 outr.write('{} mistaken for {}'.format(classname, label))
+                                print("With unique ID %s \n" % key)
+                                outr.write("With unique ID %s \n" % key)
                                 #tot_wrong += 1
 
                             avg_acc = correct_preds/K

@@ -16,7 +16,7 @@ from test import test
 
 
 #These parameters can be tweaked---------------------------------------------------------#
-do_learn = False
+do_learn = True
 feature_extraction = False
 keep_embeddings = True
 save_frequency = 2
@@ -81,7 +81,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
     #Transformations applied to the images on training
     trans_train = transforms.Compose([
-        transforms.Resize((224,224)),
+        transforms.RandomResizedCrop((224,224)),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(means, stds)])
@@ -89,6 +89,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
     # Transformations applied to the images on validation and at test time
     trans_val = transforms.Compose([
         transforms.Resize((224,224)),
+        transforms.CenterCrop((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize(means, stds)])
 
@@ -211,8 +212,6 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
     if keep_embeddings:
 
-        #Switch to other GPU in case the one for training has not been freed up yet
-        device = torch.device("cuda:1")
 
         #Warning: available for custom set only, no MNIST
         extract_embeddings(model, model_checkpoint, path_to_train_data, \

@@ -153,6 +153,7 @@ class ResSiamese(nn.Module):
         self.drop = nn.Dropout(p=p)
         self.drop2d = nn.Dropout2d(p=p)
 
+        # No bias used in the classifier layer of weight imprinting
         self.linear3 = nn.Linear(256, 2, bias=False)
 
         self.linear1 = nn.Linear(2048, 256) #set as weight imprinting example
@@ -205,7 +206,8 @@ class ResSiamese(nn.Module):
 
 
         x = self.embed(x)
-        #Flatten + FC + dropout
+
+
         if self.norm:
 
             x = self.l2_norm(x)

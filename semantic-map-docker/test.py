@@ -61,6 +61,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
             with open('pt_results/ranking_log.txt', 'a') as outr:
 
+                print("%-----------------------------------------------------------------------% \n")
                 print("Analyzing frame %s" % timestamp)
                 outr.write("Analyzing frame %s" % timestamp)
 
@@ -140,6 +141,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                                 print("Not sure about how to classify this object")
                                 outr.write("Not sure about how to classify this object")
 
+                print("%EOF---------------------------------------------------------------------% \n")
 
         #Save updated embeddings after YOLO segmentation
         with open(path_to_train_embeds, mode='wb') as outf:
@@ -165,6 +167,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                 for file in files: #For each example in that class
 
+                    print("%-----------------------------------------------------------------------% \n")
                     print("Looking at file %s \n" % file)
                     outr.write("Looking at file %s \n" % file)
 
@@ -231,6 +234,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                             avg_acc = correct_preds/K
                             class_accs.append(avg_acc)
+
+                    print("%EOF---------------------------------------------------------------------% \n")
 
                 macro_avg = sum(class_accs)/len(class_accs)
 

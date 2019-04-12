@@ -444,11 +444,11 @@ def generate_balanced_triplets(labels_class, data_class, mnist=False):
 
                 #Oversample   Fewer examples available
                 r = [y for y in range(min_) if y != j]  # excluding j
-                #idx = random.choice(r)
+                idx = random.choice(r)
 
-                for idx in r:
+                #for idx in r:
 
-                    data, labels = pick_samples(data_class, labels_class, data, labels, i, j, idx, min_)
+                data, labels = pick_samples(data_class, labels_class, data, labels, i, j, idx, min_)
 
 
 

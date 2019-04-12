@@ -34,14 +34,13 @@ def main(path_to_bag):
         bridge = CvBridge()
 
         timestamp = 0.0
-
         for topic, msg, _ in bag.read_messages():
 
             current = msg.header.stamp.to_sec()
 
             if (current - timestamp) > window:
 
-                img_mat.extend((bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"),
+                img_mat.append((bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"),
                     str(current)))
 
                 timestamp = current

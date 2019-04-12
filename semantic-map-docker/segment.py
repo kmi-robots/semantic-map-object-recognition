@@ -107,13 +107,14 @@ def segment(temp_path, img):
         w = round(box[2])
         h = round(box[3])
 
-        #draw_bounding_box(img, class_ids[i], confidences[i], x, y, x + w, y + h)
+        draw_bounding_box(img, class_ids[i], confidences[i], x, y, x + w, y + h)
         predictions.append((img[y:y+h, x:x+w],str(classes[class_ids[i]])))
 
     # display output image
-    #cv2.imshow('prediction',img)
-    #cv2.waitKey(1000)
-    #cv2.destroyAllWindows()
+
+    cv2.imshow('prediction',img)
+    cv2.waitKey(5000)
+    cv2.destroyAllWindows()
 
     return predictions
 

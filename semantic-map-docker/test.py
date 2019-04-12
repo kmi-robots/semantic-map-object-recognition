@@ -27,7 +27,7 @@ def compute_similarity(qembedding, train_embeds):
 
 def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K=5, sthresh= 1.0):
 
-    train_embeds = torch.load(path_to_train_embeds)
+    #train_embeds = torch.load(path_to_train_embeds)
 
     # Code for test/inference time on one(few) shot(s)
     # for each query image
@@ -37,21 +37,27 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
         try:
 
             img_mat = np.load(path_to_bags, encoding = 'latin1')
-
+            #print(len(img_mat))
+            #print(img_mat[0])
         except Exception as e:
 
             print("Problem while reading provided input +\n")
             print(str(e))
             return
 
+        for img, timestamp in img_mat:
 
-        for img, timestamp in zip(*img_mat):
-
+            """
+            Convert from BRG -- OpenCV
+            to RGB
+            """
             #img2 = img.astype('float32')
-
+            im2 = img.copy()
+            im2[:, :, 0] = img[:, :, 2]
+            im2[:, :, 2] = img[:, :, 0]
 
             #Write temporary img file
-            cv2.imwrite('temp.jpg', img)
+            cv2.imwrite('temp.jpg', im2)
 
             with open('pt_results/ranking_log.txt', 'a') as outr:
 
@@ -59,6 +65,9 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 outr.write("Analyzing frame %s" % timestamp)
 
                 yolo_preds = segment('temp.jpg', img)
+
+
+                """
 
                 for idx, obj, yolo_label in enumerate(zip(*yolo_preds)):
 
@@ -132,7 +141,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                                 print("Not sure about how to classify this object")
                                 outr.write("Not sure about how to classify this object")
 
-
+                """
         #Save updated embeddings after YOLO segmentation
         with open(path_to_train_embeds, mode='wb') as outf:
             torch.save(obj=train_embeds, f=outf)

@@ -16,7 +16,7 @@ from test import test
 
 
 #These parameters can be tweaked---------------------------------------------------------#
-do_learn = False
+do_learn = True
 feature_extraction = False
 keep_embeddings = True
 save_frequency = 2
@@ -29,7 +29,7 @@ metric_avg = 'binary'
 momentum = 0.9
 segmentation_threshold = 0.1
 
-N= 20 #No of object classes
+N = 20 #No of object classes
 path_to_query_data = './data/all-objects/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/embeddings.dat'
 K = 5

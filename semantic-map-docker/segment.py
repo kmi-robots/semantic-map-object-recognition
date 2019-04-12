@@ -24,9 +24,9 @@ classes = None
 with open(CLASSES, 'r') as f:
     classes = [line.strip() for line in f.readlines()]
 
-scale = 0.00392
-conf_threshold = 0.0
-nms_threshold = 0.1 #0.4
+scale = 0.00392 # 1/255.  factor
+conf_threshold = 0.0 #0.5
+nms_threshold = 0.0 #0.4
 
 # generate different colors for different classes
 COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
@@ -107,14 +107,14 @@ def segment(temp_path, img):
         w = round(box[2])
         h = round(box[3])
 
-        draw_bounding_box(img, class_ids[i], confidences[i], x, y, x + w, y + h)
+        #draw_bounding_box(img, class_ids[i], confidences[i], x, y, x + w, y + h)
         predictions.append((img[y:y+h, x:x+w],str(classes[class_ids[i]])))
 
     # display output image
 
-    cv2.imshow('prediction',img)
-    cv2.waitKey(5000)
-    cv2.destroyAllWindows()
+    #cv2.imshow('prediction',img)
+    #cv2.waitKey(5000)
+    #cv2.destroyAllWindows()
 
     return predictions
 

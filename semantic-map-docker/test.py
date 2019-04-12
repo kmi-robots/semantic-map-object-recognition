@@ -27,7 +27,7 @@ def compute_similarity(qembedding, train_embeds):
 
 def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K=5, sthresh= 1.0):
 
-    #train_embeds = torch.load(path_to_train_embeds)
+    train_embeds = torch.load(path_to_train_embeds)
 
     # Code for test/inference time on one(few) shot(s)
     # for each query image
@@ -67,13 +67,12 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 yolo_preds = segment('temp.jpg', img)
 
 
-                """
-
                 for idx, obj, yolo_label in enumerate(zip(*yolo_preds)):
 
                     #For each box wrapping an object
                     #Image.fromarray(obj, mode='RGB').show()
                     #Pre-process as usual validation/test images to extract embedding
+
                     qembedding = array_embedding(model, model_checkpoint, obj, \
                                                  device, transforms=trans)
 
@@ -141,7 +140,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                                 print("Not sure about how to classify this object")
                                 outr.write("Not sure about how to classify this object")
 
-                """
+
         #Save updated embeddings after YOLO segmentation
         with open(path_to_train_embeds, mode='wb') as outf:
             torch.save(obj=train_embeds, f=outf)

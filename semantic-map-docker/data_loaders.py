@@ -343,6 +343,11 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
 
     if not ros:
         img = cv2.imread(path_to_image)
+        im2 = img.copy()
+        im2[:, :, 0] = img[:, :, 2]
+        im2[:, :, 2] = img[:, :, 0]
+        img = im2
+
 
     else:
         img = path_to_image
@@ -361,6 +366,7 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
 
     x = Image.fromarray(img, mode='RGB')
 
+    #x.show()
     """
     #display_img(x)
     print(type(x))

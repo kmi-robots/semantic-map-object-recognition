@@ -68,7 +68,9 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 yolo_preds = segment('temp.jpg', img)
 
 
-                for idx, obj, yolo_label in enumerate(zip(*yolo_preds)):
+                for idx, (obj, yolo_label) in enumerate(yolo_preds):
+
+                    print("Looking at %i -th object in this frame \n" % idx)
 
                     #For each box wrapping an object
                     #Image.fromarray(obj, mode='RGB').show()
@@ -92,6 +94,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         img_id = label +'_'+str(idx)+ '_'+ str(timestamp)
                         train_embeds[img_id] = qembedding
 
+                        print("Keeping embedding of object labeled by YOLO as %s \n" % yolo_label)
+
                     else:
                         #Go ahead and classify by similarity
                         ranking = compute_similarity(qembedding, train_embeds)
@@ -107,13 +111,14 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                             outr("With unique ID %s \n" % keyr)
 
                         else:
+                            print("The %i most similar objects to the provided image are: \n")
                             outr.write("The %i most similar objects to the provided image are: \n" % K)
 
                             votes = Counter()
                             ids = {}
 
                             #Majority voting with discounts by distance from top position
-                            for k,key, val in enumerate(ranking[:K - 1]):
+                            for k,(key, val) in enumerate(ranking[:K - 1]):
 
                                 label = key.split("_")[0]  # [:-1]
 

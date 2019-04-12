@@ -42,6 +42,7 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
 
         optimizer.step()
 
+        """
         #Weight imprinting norm
         try:
             model.weight_norm()
@@ -50,6 +51,8 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
 
             print(str(e))
             pass
+
+        """
 
         norm_loss_p = output_positive.shape[0] * loss_positive.item()
         norm_loss_n = output_negative.shape[0] * loss_negative.item()
@@ -89,9 +92,7 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
 
     """
 
-
     p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
-
 
     roc_auc = roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
     print("Epoch {}/{}, Loss: {:.3f}, Accuracy: {:.3f}%, Precision: {:.3f}, Recall: {:.3f}, ROC_AUC: {:.3f}".format(epoch + 1, num_epochs, epoch_loss, accuracy, p, r, roc_auc))

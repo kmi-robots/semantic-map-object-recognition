@@ -135,7 +135,7 @@ class ResSiamese(nn.Module):
     - if a False flag is passed, the network will be fine-tuned instead
     """
 
-    def __init__(self, feature_extraction=False, p=0.2, norm=True, scale=True, stn=False):
+    def __init__(self, feature_extraction=False, p=0.5, norm=True, scale=True, stn=False):
 
         super().__init__()
 
@@ -151,10 +151,9 @@ class ResSiamese(nn.Module):
         }))
 
         self.drop = nn.Dropout(p=p)
-        self.drop2d = nn.Dropout2d(p=p)
+        self.drop2d = nn.Dropout2d(p=0.2)
 
-        # No bias used in the classifier layer of weight imprinting
-        self.linear3 = nn.Linear(256, 2, bias=False)
+        self.linear3 = nn.Linear(256, 2) #, bias=False) # No bias used in the classifier layer of weight imprinting
 
         self.linear1 = nn.Linear(2048, 256) #set as weight imprinting example
         self.linear2 = nn.Linear(2048,2)  #(512, 2)
@@ -207,7 +206,7 @@ class ResSiamese(nn.Module):
 
         x = self.embed(x)
 
-
+        """
         if self.norm:
 
             x = self.l2_norm(x)
@@ -216,6 +215,7 @@ class ResSiamese(nn.Module):
 
             x = self.s * x
 
+        """
         return self.drop(self.relu(self.linear1(x))) #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
 
     def forward(self, data):
@@ -240,7 +240,7 @@ class ResSiamese(nn.Module):
 
         return output
 
-
+    """
     def weight_norm(self):
 
         w = self.linear2.weight.data
@@ -248,7 +248,7 @@ class ResSiamese(nn.Module):
         norm = w.norm(p=2, dim=1, keepdim=True)
 
         self.linear2.weight.data = w.div(norm.expand_as(w))
-
+    """
 
     def get_embedding(self, x):
 

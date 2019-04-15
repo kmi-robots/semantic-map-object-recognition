@@ -25,8 +25,8 @@ with open(CLASSES, 'r') as f:
     classes = [line.strip() for line in f.readlines()]
 
 scale = 0.00392 # 1/255.  factor
-conf_threshold = 0.0 #0.5
-nms_threshold = 0.0 #0.4
+conf_threshold = 0.01 #0.5
+nms_threshold = 0.01 #0.4
 
 # generate different colors for different classes
 COLORS = np.random.uniform(0, 255, size=(len(classes), 3))

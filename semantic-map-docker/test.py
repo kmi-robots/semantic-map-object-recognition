@@ -6,6 +6,8 @@ import numpy as np
 from PIL import Image
 import cv2
 from collections import Counter
+from data_loaders import BGRtoRGB
+from sklearn.metrics import classification_report
 
 #Set of labels to retain from segmentation
 keepers= ['person','chair','potted plant']
@@ -25,9 +27,10 @@ def compute_similarity(qembedding, train_embeds):
     return ranking
 
 
+
 def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K=5, sthresh= 1.0):
 
-    train_embeds = torch.load(path_to_train_embeds)
+    train_embeds = torch.load(path_to_train_embeds, map_location={'cuda:0': 'cpu'})
 
     # Code for test/inference time on one(few) shot(s)
     # for each query image
@@ -52,12 +55,10 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
             to RGB
             """
             #img2 = img.astype('float32')
-            im2 = img.copy()
-            im2[:, :, 0] = img[:, :, 2]
-            im2[:, :, 2] = img[:, :, 0]
+            img = BGRtoRGB(img)
 
             #Write temporary img file
-            cv2.imwrite('temp.jpg', im2)
+            cv2.imwrite('temp.jpg', img)
 
             with open('pt_results/ranking_log.txt', 'a') as outr:
 
@@ -72,8 +73,21 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                     print("Looking at %i -th object in this frame \n" % idx)
 
+                    if str(obj) ==  "[]":
+
+                        print("Empty bbox returned")
+                        continue
                     #For each box wrapping an object
-                    #Image.fromarray(obj, mode='RGB').show()
+
+                    try:
+
+                        ob2 = BGRtoRGB(obj)
+                        Image.fromarray(ob2, mode='RGB').show()
+
+                    except:
+
+                        print(type(obj))
+                        print(yolo_label)
                     #Pre-process as usual validation/test images to extract embedding
 
                     qembedding = array_embedding(model, model_checkpoint, obj, \
@@ -159,6 +173,9 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
     with open('pt_results/ranking_log.txt', 'w') as outr:
 
         class_wise_res = []
+        y_true = []
+        y_pred = []
+        all_classes=[]
 
         for root, dirs, files in os.walk(path_to_test):
 
@@ -169,8 +186,11 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 classname = str(root.split('/')[-1])
 
                 outr.write(classname)
+                all_classes.append(classname)
 
                 for file in files: #For each example in that class
+
+                    y_true.append(classname)
 
                     print("%-----------------------------------------------------------------------% \n")
                     print("Looking at file %s \n" % file)
@@ -212,40 +232,51 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                             # tot_wrong += 1
 
                         class_accs.append(correct_preds)
-
+                        y_pred.append(label)
                     else:
-                        for key, val in ranking[:K - 1]:
 
+                        votes = Counter()
+                        ids = {}
 
-                            label = key.split("_")[0] #[:-1]
+                        # Majority voting with discounts by distance from top position
+                        for k, (key, val) in enumerate(ranking[:K - 1]):
+                            label = key.split("_")[0]  # [:-1]
+
+                            votes[label] += 1 / (k + 1)
+
+                            ids[label] = key
 
                             print(label + ": " + str(val) + "\n")
                             outr.write(label + ": " + str(val) + "\n")
                             print("With unique ID %s \n" % key)
                             outr.write("With unique ID %s \n" % key)
 
-                            #Parse labels to binary as correct? Yes/No
-                            if label == classname:
+                        win_label, win_score = max(votes.items(), key=lambda x: x[1])
+                        win_id = ids[win_label]
 
-                                correct_preds += 1
+                        if win_label == classname:
+                            correct_preds += 1
 
-                            else:
+                        else:
 
-                                print('{} mistaken for {}'.format(classname, label))
-                                outr.write('{} mistaken for {}'.format(classname, label))
-                                print("With unique ID %s \n" % key)
-                                outr.write("With unique ID %s \n" % key)
-                                #tot_wrong += 1
+                            print('{} mistaken for {}'.format(classname, win_label))
+                            outr.write('{} mistaken for {}'.format(classname, win_label))
+                            print("With unique ID %s \n" % win_id)
+                            outr.write("With unique ID %s \n" % win_id)
+                            #tot_wrong += 1
 
-                            avg_acc = correct_preds/K
-                            class_accs.append(avg_acc)
+                        #avg_acc = correct_preds/K
+                        class_accs.append(correct_preds)
+                        y_pred.append(win_label)
 
                     print("%EOF---------------------------------------------------------------------% \n")
 
-                macro_avg = sum(class_accs)/len(class_accs)
+                #macro_avg = sum(class_accs)/len(class_accs)
+                print("Class-wise test results \n")
+                print(classification_report(y_true, y_pred, target_names=all_classes))
 
-                print('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
-                outr.write('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
-                class_wise_res.append((classname, macro_avg))
+                #print('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
+                #outr.write('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
+                #class_wise_res.append((classname, macro_avg))
 
-        return zip(*class_wise_res)
+        return None #zip(*class_wise_res)

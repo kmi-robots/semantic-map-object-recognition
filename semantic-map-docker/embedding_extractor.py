@@ -72,7 +72,7 @@ def array_embedding(model, path_to_state, img_array,  device, transforms=None):
     Same as path_embedding but requiring image array instead of path
     to image file as input
     """
-    model.load_state_dict(torch.load(path_to_state))
+    model.load_state_dict(torch.load(path_to_state, map_location={'cuda:0': 'cpu'}))
     model.eval()
 
     #read image

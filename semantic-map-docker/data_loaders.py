@@ -337,17 +337,19 @@ class BalancedMNIST(MNIST):
             return len(self.test_data)
 
 
+def BGRtoRGB(img_array):
+    img = img_array.copy()
+    img[:, :, 0] = img_array[:, :, 2]
+    img[:, :, 2] = img_array[:, :, 0]
+
+    return img
 
 def img_preproc(path_to_image, transform, ResNet=True, ros=False):
 
 
     if not ros:
         img = cv2.imread(path_to_image)
-        im2 = img.copy()
-        im2[:, :, 0] = img[:, :, 2]
-        im2[:, :, 2] = img[:, :, 0]
-        img = im2
-
+        img = BGRtoRGB(img)
 
     else:
         img = path_to_image

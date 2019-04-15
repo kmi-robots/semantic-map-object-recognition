@@ -175,7 +175,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
         class_wise_res = []
         y_true = []
         y_pred = []
-        all_classes=[]
+        #all_classes=[]
 
         for root, dirs, files in os.walk(path_to_test):
 
@@ -186,7 +186,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 classname = str(root.split('/')[-1])
 
                 outr.write(classname)
-                all_classes.append(classname)
+                #all_classes.append(classname)
 
                 for file in files: #For each example in that class
 
@@ -271,12 +271,12 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                     print("%EOF---------------------------------------------------------------------% \n")
 
-                #macro_avg = sum(class_accs)/len(class_accs)
-                print("Class-wise test results \n")
-                print(classification_report(y_true, y_pred, target_names=all_classes))
+        #macro_avg = sum(class_accs)/len(class_accs)
+        print("Class-wise test results \n")
+        print(classification_report(y_true, y_pred ) #, target_names=all_classes))
 
-                #print('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
-                #outr.write('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
-                #class_wise_res.append((classname, macro_avg))
+        #print('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
+        #outr.write('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
+        #class_wise_res.append((classname, macro_avg))
 
         return None #zip(*class_wise_res)

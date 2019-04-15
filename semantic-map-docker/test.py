@@ -30,12 +30,13 @@ def compute_similarity(qembedding, train_embeds):
 
 def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K=5, sthresh= 1.0):
 
-    train_embeds = torch.load(path_to_train_embeds, map_location={'cuda:0': 'cpu'})
 
     # Code for test/inference time on one(few) shot(s)
     # for each query image
 
     if data_type == 'pickled':
+
+        train_embeds = torch.load(path_to_train_embeds, map_location={'cuda:0': 'cpu'})
 
         try:
 
@@ -105,10 +106,10 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                             label = 'plants'
 
                         #Unique image identifier
-                        img_id = label +'_'+str(idx)+ '_'+ str(timestamp)
-                        train_embeds[img_id] = qembedding
+                        #img_id = label +'_'+str(idx)+ '_'+ str(timestamp)
+                        #train_embeds[img_id] = qembedding
 
-                        print("Keeping embedding of object labeled by YOLO as %s \n" % yolo_label)
+                        print("Keeping label produced by YOLO as %s \n" % yolo_label)
 
                     else:
                         #Go ahead and classify by similarity
@@ -132,7 +133,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                             ids = {}
 
                             #Majority voting with discounts by distance from top position
-                            for k,(key, val) in enumerate(ranking[:K - 1]):
+                            for k,(key, val) in enumerate(ranking[:K]):
 
                                 label = key.split("_")[0]  # [:-1]
 
@@ -160,6 +161,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                                 print("Not sure about how to classify this object")
                                 outr.write("Not sure about how to classify this object")
 
+
+
                 print("%EOF---------------------------------------------------------------------% \n")
 
         #Save updated embeddings after YOLO segmentation
@@ -169,6 +172,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
         print("Updated embeddings saved under %s" % path_to_train_embeds)
 
         return None
+
+    train_embeds = torch.load(path_to_train_embeds)
 
     with open('pt_results/ranking_log.txt', 'w') as outr:
 
@@ -273,7 +278,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         #macro_avg = sum(class_accs)/len(class_accs)
         print("Class-wise test results \n")
-        print(classification_report(y_true, y_pred ) #, target_names=all_classes))
+        print(classification_report(y_true, y_pred )) #, target_names=all_classes))
 
         #print('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
         #outr.write('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))

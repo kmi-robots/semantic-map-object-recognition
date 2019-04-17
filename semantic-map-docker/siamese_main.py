@@ -16,7 +16,7 @@ from test import test
 
 
 #These parameters can be tweaked---------------------------------------------------------#
-do_learn = False
+do_learn = True
 feature_extraction = False
 keep_embeddings = True
 save_frequency = 2
@@ -27,10 +27,10 @@ weight_decay = 0.0001
 patience = 20
 metric_avg = 'binary'
 momentum = 0.9
-segmentation_threshold = 0.1
+segmentation_threshold = 0.01
 
-N = 20 #No of object classes
-path_to_query_data = './data/all-objects/test/' #fire-extinguishers/9. fire-extinguisher.jpg
+N = 10 #20 #No of object classes
+path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/embeddings.dat'
 K = 5
 path_to_bags ='./data/robot_collected.npy'
@@ -79,26 +79,42 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
                                     transforms.ToTensor(),
                                     transforms.Normalize(means, stds)])
 
-    #Transformations applied to the images on training
-    trans_train = transforms.Compose([
-        transforms.RandomResizedCrop((224,224)),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize(means, stds)])
-
-    # Transformations applied to the images on validation and at test time
-    trans_val = transforms.Compose([
-        transforms.Resize((224,224)),
-        transforms.CenterCrop((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(means, stds)])
-
     if NCC:
 
-        model = NCCNet().to(device)
+        #Supported in CPU-only for now
+        device = torch.device('cpu')
 
+        model = NCCNet().to(device)
         params_to_update = model.parameters()  # all params
+
+        # Transformations applied to the images on training
+        trans_train = transforms.Compose([
+            transforms.Resize((160, 60)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(means, stds)])
+
+        # Transformations applied to the images on validation and at test time
+        trans_val = transforms.Compose([
+            transforms.Resize((160, 60)),
+            transforms.ToTensor(),
+            transforms.Normalize(means, stds)])
+
     else:
+
+        # Transformations applied to the images on training
+        trans_train = transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(means, stds)])
+
+        # Transformations applied to the images on validation and at test time
+        trans_val = transforms.Compose([
+            transforms.Resize(224),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(means, stds)])
 
         model = ResSiamese(feature_extraction, stn=STN).to(device) #SimplerNet().to(device)
 
@@ -113,13 +129,10 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
             params_to_update = model.parameters()  # all params
 
 
-
     if not os.path.isdir('./data'):
 
         os.mkdir('data')
 
-    if not os.path.isdir('./data/embeddings'):
-            os.mkdir('data/embeddings')
 
     if not os.path.isdir('./pt_results'):
 
@@ -144,11 +157,11 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
 
             train_loader = torch.utils.data.DataLoader(
-               data_loaders.BalancedTriplets('./data', train=True, N=N, transform=trans_train), batch_size=batch_size,
+               data_loaders.BalancedTriplets('./data', train=True, N=N, transform=trans_train, ResNet=ResNet), batch_size=batch_size,
                shuffle=True)
 
             val_loader = torch.utils.data.DataLoader(
-                data_loaders.BalancedTriplets('./data', train=False, N=N, transform=trans_val), batch_size=batch_size,
+                data_loaders.BalancedTriplets('./data', train=False, N=N, transform=trans_val, ResNet=ResNet), batch_size=batch_size,
                 shuffle=False)
 
         optimizer = optim.SGD(params_to_update, lr=lr, momentum=momentum)
@@ -224,7 +237,7 @@ if __name__ == '__main__':
     parser.add_argument('it', help='Input type at inference time: can be one between reference or pickled')
     args = parser.parse_args()
 
-    main(args.it, NCC=False, MNIST=False)
+    main(args.it, NCC=True, MNIST=False, ResNet=False)
 
     """
     Reproduces old runs 

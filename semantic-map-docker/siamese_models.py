@@ -347,7 +347,7 @@ class NCCNet(nn.Module):
             nn.MaxPool2d(2)
         )
 
-        self.normxcorrconv = normxcorrConv()
+        #self.normxcorrconv = normxcorrConv()
 
         self.linear1 = nn.Linear(25 * 17 * 5, 500)
 

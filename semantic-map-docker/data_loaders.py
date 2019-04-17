@@ -23,38 +23,31 @@ class BalancedTriplets(torch.utils.data.Dataset):
        for both an image collection and a set of labels
     """
     #Local paths
-    raw_folder = 'all-objects'
+    raw_folder = 'shapenet10'
     processed_folder = 'processed'
-    training_file = 'whole_training.pt'#training_file = 'shapenet_training.pt'
-    test_file = 'whole_test.pt'
+    training_file = 'shp10_training.pt'
+    test_file = 'shp10_test.pt'
     to_val = 'val'
 
-    def __init__(self, root, train=True, transform=None,  target_transform=None, N=10, Hans=HANS):
+    def __init__(self, root, train=True, transform=None,  target_transform=None, N=10, ResNet=True):
 
         self.root = os.path.expanduser(root)
         self.transform = transform
         self.target_transform = target_transform
         self.train = train  # training set or test set
+        self.resnet= ResNet
 
-        """
-        if Hans:
+        if N == 20:
+            #Use shapenet20 classes instead
+            self.raw_folder = 'shapenet20'
+            self.training_file = 'shp20_training.pt'
+            self.test_file = 'shp20_test.pt'
 
-            self.raw_folder = 'Hans-all'
-            self.out_name = 'Hans-split'
 
-            if not os.path.isdir(os.path.join(self.root, self.out_name)):
-                self.split_data(os.path.join(self.root, self.raw_folder), os.path.join(self.root, self.out_name))
-
-            self.raw_folder = self.out_name
-            self.training_file = 'hans_training.pt'
-            self.test_file = 'hans_test.pt'
-            self.to_val = 'val'
-
-        """
         if not os.path.isdir(os.path.join(self.root, self.processed_folder)):
             os.mkdir(os.path.join(self.root, self.processed_folder))
 
-        self.prep(self.transform, self.train)
+        self.prep(self.transform, self.train, N=N, resnet=self.resnet)
 
         if not self._check_exists(self.train):
             raise RuntimeError('Dataset not found.')
@@ -129,7 +122,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         else:
             return os.path.exists(os.path.join(self.root, self.processed_folder, self.test_file))
 
-    def prep(self, trans, train=True):
+    def prep(self, trans, train=True, N=20, resnet=True):
 
         print('Reading images and labels...')
 
@@ -137,7 +130,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         if train:
 
             
-            training_set = (self.read_files(os.path.join(self.root, self.raw_folder, 'train'), trans))
+            training_set = (self.read_files(os.path.join(self.root, self.raw_folder, 'train'), trans, n=N, ResNet=resnet ))
             # Save as .pt files
 
             with open(os.path.join(self.root, self.processed_folder, self.training_file), 'wb') as f:
@@ -145,7 +138,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
         else:
 
-            test_set = (self.read_files(os.path.join(self.root, self.raw_folder, self.to_val), trans, train=False))
+            test_set = (self.read_files(os.path.join(self.root, self.raw_folder, self.to_val), trans, n=N, ResNet=resnet,train=False))
 
             with open(os.path.join(self.root, self.processed_folder, self.test_file), 'wb') as f:
 
@@ -173,30 +166,26 @@ class BalancedTriplets(torch.utils.data.Dataset):
     def read_files(self, path, trans, train=True, ResNet=True, Hans=HANS, n=20):
 
 
-        if train:
+        if train and n == 20:
 
-            total = 200 #100
+            total = 200
 
+        elif (train and n == 10) or ((not train) and n==20):
+
+            total = 100
 
         else:
-            total = 100   #82
 
-        """
-        if Hans:
+            total = 82
 
-            if train:
-
-                total = 40 #527
-            else:
-                total = 40 #64
-
-        """
         if ResNet:
 
             data = torch.empty((total, 3, 224, 224))
+
         else:
 
             data = torch.empty((total, 3, 160, 60))
+
 
         labels = torch.empty((total))
         names = {}
@@ -221,7 +210,8 @@ class BalancedTriplets(torch.utils.data.Dataset):
                     filename = str(file.split('/')[-1])
                     try:
                         data[iteration, :] = img_tensor
-                    except:
+                    except Exception as e:
+                        print(str(e))
                         print(classname)
                         print(filename)
                     labels[iteration] = torch.LongTensor([class_])
@@ -351,7 +341,9 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
         img = cv2.imread(path_to_image)
         img = BGRtoRGB(img)
 
+
     else:
+
         img = path_to_image
 
     """
@@ -368,7 +360,7 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
 
     x = Image.fromarray(img, mode='RGB')
 
-    #x.show()
+
     """
     #display_img(x)
     print(type(x))
@@ -459,7 +451,6 @@ def generate_balanced_triplets(labels_class, data_class, mnist=False):
                 data, labels = pick_samples(data_class, labels_class, data, labels, i, j, idx, min_)
 
 
-
     return torch.stack(data), torch.tensor(labels)
 
 
@@ -472,7 +463,6 @@ def pick_samples(data_class, labels_class, data, labels, i, j, idx, min_):
     rnd_idx = random.randint(0, min_ - 1)
 
     data.append(torch.stack([data_class[i][j], data_class[i][idx], data_class[rnd_cls][rnd_idx]]))
-    # data.append(torch.stack([data_class[i][j], data_class[i][rnd_dist], data_class[rnd_cls][j]]))
 
     # Append the pos neg labels for the two pairs
     labels.append([1, 0])

@@ -116,6 +116,22 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
             transforms.ToTensor(),
             transforms.Normalize(means, stds)])
 
+
+        if STN:
+
+            # Transformations applied to the images on training
+            trans_train = transforms.Compose([
+                transforms.Resize((224,224)),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(means, stds)])
+
+            # Transformations applied to the images on validation and at test time
+            trans_val = transforms.Compose([
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(means, stds)])
+
         model = ResSiamese(feature_extraction, stn=STN).to(device) #SimplerNet().to(device)
 
 

@@ -32,7 +32,6 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
         target_positive = torch.squeeze(target[:, 0])
         target_negative = torch.squeeze(target[:, 1])
 
-
         loss_positive = F.cross_entropy(output_positive, target_positive)
         loss_negative = F.cross_entropy(output_negative, target_negative)
 
@@ -95,7 +94,7 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
     p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
 
     roc_auc = roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
-    print("Epoch {}/{}, Loss: {:.3f}, Accuracy: {:.3f}%, Precision: {:.3f}, Recall: {:.3f}, ROC_AUC: {:.3f}".format(epoch + 1, num_epochs, epoch_loss, accuracy, p, r, roc_auc))
+    print("Epoch {}/{}, Loss: {:.6f}, Accuracy: {:.6f}%, Precision: {:.6f}, Recall: {:.6f}, ROC_AUC: {:.6f}".format(epoch + 1, num_epochs, epoch_loss, accuracy, p, r, roc_auc))
     # print(torch.Tensor([epoch_loss, accuracy]))
 
     return torch.Tensor([epoch_loss, accuracy, float(p), float(r), float(roc_auc)])

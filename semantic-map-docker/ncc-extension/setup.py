@@ -4,8 +4,6 @@ from setuptools import setup
 import torch.utils
 from torch.utils.cpp_extension import CppExtension, BuildExtension
 
-
-
 setup(name='ncc',
       ext_modules=[CppExtension('ncc', ['ncc.cpp'])],
       cmdclass={'build_ext': BuildExtension})

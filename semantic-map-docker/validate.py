@@ -52,8 +52,8 @@ def validate(model, device, test_loader, metric_avg):
             # Then retain only column of the positive class
             pos_proba.extend(F.softmax(output_positive, dim=1)[:, 1].tolist())
             pos_proba.extend(F.softmax(output_negative, dim=1)[:, 1].tolist())
-            accurate_labels = accurate_labels + accurate_labels_positive + accurate_labels_negative
-            all_labels = all_labels + len(target_positive) + len(target_negative)
+            accurate_labels = float(accurate_labels + accurate_labels_positive + accurate_labels_negative)
+            all_labels = float(all_labels + len(target_positive) + len(target_negative))
 
         accuracy = 100. * accurate_labels / all_labels
         epoch_loss = running_loss/all_labels
@@ -61,9 +61,8 @@ def validate(model, device, test_loader, metric_avg):
 
         p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
 
-
         roc_auc = roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
 
-        print('Test accuracy: {}/{} ({:.3f}%)\t Loss: {:.6f}, Precision: {:.3f}, Recall: {:.3f}, ROC_AUC: {:.3f}'.format(accurate_labels, all_labels, accuracy, epoch_loss, p, r, roc_auc))
+        print('Test accuracy: {}/{} ({:.6f}%)\t Loss: {:.6f}, Precision: {:.6f}, Recall: {:.6f}, F1: {:.6f}, ROC_AUC: {:.6f}'.format(int(accurate_labels), int(all_labels), accuracy, epoch_loss, p, r, f1, roc_auc))
 
         return torch.Tensor([epoch_loss, accuracy, float(p), float(r), float(roc_auc)])

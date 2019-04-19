@@ -44,7 +44,7 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
             'legend': ['Training', 'Validation'],
             'xtickmin': 1,
             'xtickmax': epochs,
-            'xtickstep': 1,
+            'xtickstep': 50,
             'ytickmin': ymin1,
             'ytickmax': ymax1
         })
@@ -89,7 +89,7 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
         'legend': ['Training', 'Validation'],
         'xtickmin': 1,
         'xtickmax': epochs,
-        'xtickstep':1,
+        'xtickstep':50,
         'ytickmin': ymin1,
         'ytickmax': ymax1
         })
@@ -104,7 +104,7 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
         'legend': ['Training', 'Validation'],
         'xtickmin': 1,
         'xtickmax': epochs,
-        'xtickstep': 1,
+        'xtickstep': 50,
         'ytickmin': ymin2,
         'ytickmax': ymax2
     }

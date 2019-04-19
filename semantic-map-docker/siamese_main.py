@@ -35,6 +35,10 @@ path_to_train_embeds = './pt_results/embeddings.dat'
 K = 5
 path_to_bags ='./data/robot_collected.npy'
 STN = False #Whether to use Spatial Transformer module on input or not
+
+if STN:
+    #Decrease learning rate
+    lr = 0.00001
 #-----------------------------------------------------------------------------------------#
 
 
@@ -116,7 +120,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
             transforms.ToTensor(),
             transforms.Normalize(means, stds)])
 
-
+        """
         if STN:
 
             # Transformations applied to the images on training
@@ -132,6 +136,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
                 transforms.ToTensor(),
                 transforms.Normalize(means, stds)])
 
+        """
         model = ResSiamese(feature_extraction, stn=STN).to(device) #SimplerNet().to(device)
 
 

@@ -150,8 +150,7 @@ class ResSiamese(nn.Module):
             'relu_2': nn.ReLU()
         }))
 
-        self.drop = nn.Dropout(p=p)
-        self.drop2d = nn.Dropout2d(p=0.2)
+
 
         self.linear3 = nn.Linear(256, 2) #, bias=False) # No bias used in the classifier layer of weight imprinting
 
@@ -164,26 +163,36 @@ class ResSiamese(nn.Module):
         self.s = nn.Parameter(torch.FloatTensor([10]))
         self.stn_flag = stn
 
+        if self.stn_flag:
+
+            p = 0.0
+
+        self.drop = nn.Dropout(p=p)
+        self.drop2d = nn.Dropout2d(p=0.2)
+
         # Spatial transformer localization-network
         self.localization = nn.Sequential(
             nn.Conv2d(3, 8, kernel_size=7),
             nn.MaxPool2d(2, stride=2),
             nn.ReLU(True),
+            nn.BatchNorm2d(8),
             nn.Conv2d(8, 10, kernel_size=5),
             nn.MaxPool2d(2, stride=2),
-            nn.ReLU(True)
+            nn.ReLU(True),
+            nn.BatchNorm2d(10),
         )
 
         # Regressor for the 3 * 2 affine matrix
         self.fc_loc = nn.Sequential(
             nn.Linear(10 * 52 * 52, 32),
             nn.ReLU(True),
+            nn.Dropout(p=0.2),
             nn.Linear(32, 3 * 2)
         )
 
         # Initialize the weights/bias with identity transformation
-        self.fc_loc[2].weight.data.zero_()
-        self.fc_loc[2].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
+        self.fc_loc[3].weight.data.zero_()
+        self.fc_loc[3].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
 
     def stn(self, x):
         xs = self.localization(x)

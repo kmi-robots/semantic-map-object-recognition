@@ -29,7 +29,7 @@ metric_avg = 'binary'
 momentum = 0.9
 segmentation_threshold = 0.01
 
-N = 10 #20 #No of object classes
+N = 20 #20 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/embeddings.dat'
 K = 5
@@ -258,7 +258,7 @@ if __name__ == '__main__':
     parser.add_argument('it', help='Input type at inference time: can be one between reference or pickled')
     args = parser.parse_args()
 
-    main(args.it, NCC=True, MNIST=False, ResNet=False)
+    main(args.it, NCC=False, MNIST=False, ResNet=True)
 
     """
     Reproduces old runs 

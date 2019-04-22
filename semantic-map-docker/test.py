@@ -11,6 +11,10 @@ from sklearn.metrics import classification_report
 
 #Set of labels to retain from segmentation
 keepers= ['person','chair','potted plant']
+KNOWN = ['chairs', 'bottles', 'papers', 'books', 'desks', 'boxes', 'windows', 'exit-signs', 'coat-racks', 'radiators']
+NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'power-cables', 'monitors', 'people', 'plants', 'bins', 'doors' ]
+
+n_support = 5
 
 def compute_similarity(qembedding, train_embeds):
     # Similarity matching against indexed data
@@ -180,8 +184,41 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
         class_wise_res = []
         y_true = []
         y_pred = []
+        kn_true = []
+        kn_pred = []
+        nw_true = []
+        nw_pred = []
+
         #all_classes=[]
 
+
+        if n_support == 10:
+
+            path_to_support = path_to_test+"../train"
+
+        elif n_support == 5:
+
+            path_to_support = path_to_test + "../val"
+
+        for root, dirs, files in os.walk(path_to_support):
+
+            if files:
+
+                classname = str(root.split('/')[-1])
+
+                if classname in KNOWN:
+
+                    continue
+
+                for file in files:
+
+                    filename = str(file.split('/')[-1])
+
+                    #Update embedding space by mapping support set set as well
+                    train_embeds[classname+'_'+filename] = path_embedding(model, model_checkpoint, os.path.join(root, file), \
+                                        device, transforms=trans)
+
+        #Then make predictions for all test examples (Known + Novel)
         for root, dirs, files in os.walk(path_to_test):
 
             if files:  #For each object class
@@ -196,6 +233,14 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 for file in files: #For each example in that class
 
                     y_true.append(classname)
+
+                    if classname in KNOWN:
+
+                        kn_true.append(classname)
+
+                    else:
+
+                        nw_true.append(classname)
 
                     print("%-----------------------------------------------------------------------% \n")
                     print("Looking at file %s \n" % file)
@@ -237,7 +282,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                             # tot_wrong += 1
 
                         class_accs.append(correct_preds)
-                        y_pred.append(label)
+
+
                     else:
 
                         votes = Counter()
@@ -272,13 +318,29 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                         #avg_acc = correct_preds/K
                         class_accs.append(correct_preds)
-                        y_pred.append(win_label)
+                        label= win_label
+
+                    y_pred.append(label)
+
+                    if classname in KNOWN:
+
+                        kn_pred.append(label)
+
+                    else:
+
+                        nw_pred.append(label)
 
                     print("%EOF---------------------------------------------------------------------% \n")
 
         #macro_avg = sum(class_accs)/len(class_accs)
         print("Class-wise test results \n")
         print(classification_report(y_true, y_pred )) #, target_names=all_classes))
+
+        print("Known objects test results \n")
+        print(classification_report(kn_true, kn_pred))  # , target_names=all_classes))
+
+        print("Novel objects test results \n")
+        print(classification_report(nw_true, nw_pred))  # , target_names=all_classes))
 
         #print('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
         #outr.write('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))

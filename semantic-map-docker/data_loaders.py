@@ -15,6 +15,9 @@ Classes and methods to create balanced triplets
 """
 HANS = False
 
+KNOWN = ['chairs', 'bottles', 'papers', 'books', 'desks', 'boxes', 'windows', 'exit-signs', 'coat-racks', 'radiators']
+NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'power-cables', 'monitors', 'people', 'plants', 'bins', 'doors' ]
+
 
 class BalancedTriplets(torch.utils.data.Dataset):
 
@@ -59,7 +62,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
                 os.path.join(self.root, self.processed_folder, self.training_file))
             #print(train_data.shape)
             # To then pass to new functions
-            train_labels_class, train_data_class = group_by_class(train_data, train_labels, classes=N)
+            train_labels_class, train_data_class = group_by_class(train_data, train_labels, classes=10)
             #print(train_labels_class)
 
             self.train_data, self.train_labels = generate_balanced_triplets(train_labels_class, train_data_class)
@@ -70,7 +73,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
             test_data, test_labels = torch.load(
                 os.path.join(self.root, self.processed_folder, self.test_file))
 
-            test_labels_class, test_data_class = group_by_class(test_data, test_labels, classes=N)
+            test_labels_class, test_data_class = group_by_class(test_data, test_labels, classes=10)
 
             self.test_data, self.test_labels = generate_balanced_triplets(test_labels_class, test_data_class)
 
@@ -166,17 +169,21 @@ class BalancedTriplets(torch.utils.data.Dataset):
     def read_files(self, path, trans, train=True, ResNet=True, Hans=HANS, n=20):
 
 
-        if train and n == 20:
+        #if train and n == 20:
 
-            total = 200
+        #    total = 200
 
-        elif (train and n == 10) or ((not train) and n==20):
+        if train:
 
             total = 100
 
-        else:
+        elif (not train) and (n==10):
 
             total = 82
+
+        elif (not train) and (n == 20):
+
+            total = 50
 
         if ResNet:
 
@@ -199,6 +206,11 @@ class BalancedTriplets(torch.utils.data.Dataset):
             if files:
 
                 classname = str(root.split('/')[-1])
+
+                if n == 20 and (classname not in KNOWN):
+
+                    #Skip novel object classes
+                    continue
 
                 #print(torch.LongTensor([class_]))
                 #NOTE: the assumption is that images are grouped in subfolders by class

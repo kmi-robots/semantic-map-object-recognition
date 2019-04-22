@@ -16,7 +16,7 @@ from test import test
 
 
 #These parameters can be tweaked---------------------------------------------------------#
-do_learn = True
+do_learn = False
 feature_extraction = False
 keep_embeddings = True
 save_frequency = 2

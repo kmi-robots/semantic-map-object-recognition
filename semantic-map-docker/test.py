@@ -7,7 +7,7 @@ from PIL import Image
 import cv2
 from collections import Counter
 from data_loaders import BGRtoRGB
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, accuracy_score
 
 #Set of labels to retain from segmentation
 keepers= ['person','chair','potted plant']
@@ -335,12 +335,15 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
         #macro_avg = sum(class_accs)/len(class_accs)
         print("Class-wise test results \n")
         print(classification_report(y_true, y_pred )) #, target_names=all_classes))
+        print(accuracy_score(y_true, y_pred))
 
         print("Known objects test results \n")
         print(classification_report(kn_true, kn_pred))  # , target_names=all_classes))
+        print(accuracy_score(kn_true, kn_pred))
 
         print("Novel objects test results \n")
         print(classification_report(nw_true, nw_pred))  # , target_names=all_classes))
+        print(accuracy_score(nw_true, nw_pred))
 
         #print('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))
         #outr.write('Mean average accuracy for class {} is {}'.format(classname, float(macro_avg)))

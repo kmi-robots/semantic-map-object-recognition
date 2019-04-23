@@ -32,6 +32,8 @@ class BalancedTriplets(torch.utils.data.Dataset):
     test_file = 'shp10_test.pt'
     to_val = 'val'
 
+
+
     def __init__(self, root, train=True, transform=None,  target_transform=None, N=10, ResNet=True):
 
         self.root = os.path.expanduser(root)
@@ -161,13 +163,13 @@ class BalancedTriplets(torch.utils.data.Dataset):
         tmp = '    Target Transforms (if any): '
         fmt_str += '{0}{1}'.format(tmp, self.target_transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
 
-
         return fmt_str
-
 
 
     def read_files(self, path, trans, train=True, ResNet=True, Hans=HANS, n=20):
 
+        #discarded = []
+        #kept=[]
 
         #if train and n == 20:
 
@@ -209,9 +211,11 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
                 if n == 20 and (classname not in KNOWN):
 
+                    #discarded.append(classname)
                     #Skip novel object classes
                     continue
 
+                #kept.append(classname)
                 #print(torch.LongTensor([class_]))
                 #NOTE: the assumption is that images are grouped in subfolders by class
                 #example_no = 1
@@ -246,6 +250,9 @@ class BalancedTriplets(torch.utils.data.Dataset):
         with open(os.path.join(self.root, self.processed_folder, fname), 'wb') as f:
 
             torch.save(obj=names, f=f)
+
+        #print(set(discarded))
+        #print(set(kept))
 
         return data, labels
 

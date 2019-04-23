@@ -8,6 +8,7 @@ inspired by paper by Qi et al. (CVPR 2018)
 
 import torch
 from data_loaders import img_preproc
+from siamese_model import ResSiamese
 
 #target_dim = 256 #2048 #512  # i.e. output size of the last layer kept in ResNet
 
@@ -84,6 +85,25 @@ def array_embedding(model, path_to_state, img_array,  device, transforms=None):
 
     #Extract embedding for the query image
     return model.get_embedding(img)
+
+
+
+def base_embedding(path_to_img,  device, transforms=None):
+
+    model = ResSiamese(feature_extraction=True)
+    #model.load_state_dict(torch.load(path_to_state))
+    model.eval()
+
+    #read image
+    img = img_preproc(path_to_img, transforms) #torch.from_numpy(img_preproc(path_to_img))
+    img = img.view(1, img.shape[0], img.shape[1], img.shape[2]).to(device)
+    #img[0, :] = transforms(img[0, :].float())
+
+    #img = img.float().to(device)
+
+    #Extract embedding for the query image
+    return model.get_embedding(img)
+
 
 
 """

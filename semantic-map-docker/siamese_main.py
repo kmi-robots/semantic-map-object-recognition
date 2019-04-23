@@ -16,7 +16,7 @@ from test import test
 
 
 #These parameters can be tweaked---------------------------------------------------------#
-do_learn = False
+do_learn = False #True
 feature_extraction = False
 keep_embeddings = True
 save_frequency = 2
@@ -29,7 +29,7 @@ metric_avg = 'binary'
 momentum = 0.9
 segmentation_threshold = 0.01
 
-N = 20 #20 #No of object classes
+N = 10 #20 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/embeddings.dat'
 K = 5
@@ -233,7 +233,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
         #Test on held-out set
 
         class_wise_res = test(model, model_checkpoint, input_type, path_to_query_data, path_to_bags,\
-                              device, trans_val, path_to_train_embeds, K, segmentation_threshold)
+                              device, trans_val, path_to_train_embeds, K, segmentation_threshold, N=N)
 
         #Test plot grouped by class
         if class_wise_res is not None:

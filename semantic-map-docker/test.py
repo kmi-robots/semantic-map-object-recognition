@@ -8,6 +8,7 @@ import cv2
 from collections import Counter
 from data_loaders import BGRtoRGB
 from sklearn.metrics import classification_report, accuracy_score
+from baseline_KNN import run_baseline
 
 #Set of labels to retain from segmentation
 keepers= ['person','chair','potted plant']
@@ -15,6 +16,7 @@ KNOWN = ['chairs', 'bottles', 'papers', 'books', 'desks', 'boxes', 'windows', 'e
 NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'power-cables', 'monitors', 'people', 'plants', 'bins', 'doors' ]
 
 n_support = 5
+run_baseline = True
 
 def compute_similarity(qembedding, train_embeds):
     # Similarity matching against indexed data
@@ -32,8 +34,15 @@ def compute_similarity(qembedding, train_embeds):
 
 
 
-def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K=5, sthresh= 1.0):
+def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K=5, N=None, sthresh= 1.0):
 
+
+    #baseline KNN?
+    if run_baseline:
+
+        run_baseline(device, trans, K, N, n_support, KNOWN)
+
+        return None
 
     # Code for test/inference time on one(few) shot(s)
     # for each query image

@@ -232,8 +232,9 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
         #Test on held-out set
 
+
         class_wise_res = test(model, model_checkpoint, input_type, path_to_query_data, path_to_bags,\
-                              device, trans_val, path_to_train_embeds, K, segmentation_threshold, N=N)
+                              device, trans_val, path_to_train_embeds, K, N, sthresh=segmentation_threshold)
 
         #Test plot grouped by class
         if class_wise_res is not None:

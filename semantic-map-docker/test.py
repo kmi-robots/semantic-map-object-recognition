@@ -16,7 +16,7 @@ KNOWN = ['chairs', 'bottles', 'papers', 'books', 'desks', 'boxes', 'windows', 'e
 NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'power-cables', 'monitors', 'people', 'plants', 'bins', 'doors' ]
 
 n_support = 5
-run_baseline = True
+baseline = True
 
 def compute_similarity(qembedding, train_embeds):
     # Similarity matching against indexed data
@@ -34,11 +34,11 @@ def compute_similarity(qembedding, train_embeds):
 
 
 
-def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K=5, N=None, sthresh= 1.0):
+def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K, N, sthresh= 1.0):
 
 
     #baseline KNN?
-    if run_baseline:
+    if baseline:
 
         run_baseline(device, trans, K, N, n_support, KNOWN)
 

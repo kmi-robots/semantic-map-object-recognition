@@ -6,7 +6,7 @@ re-train/fine-tuning
 """
 
 from embedding_extractor import base_embedding
-from test import compute_similarity
+import test
 import os
 from sklearn.metrics import classification_report, accuracy_score
 from collections import Counter
@@ -115,7 +115,7 @@ def run_baseline(device, transforms,  K, N, n_support, KNOWN):
 
                     qembedding = base_embedding(os.path.join(root, file), device, transforms=transforms)
 
-                    ranking = compute_similarity(qembedding, support_embeds)
+                    ranking = test.compute_similarity(qembedding, support_embeds)
 
                     print("The %i most similar objects to the provided image are: \n" % K)
                     outr.write("The %i most similar objects to the provided image are: \n" % K)

@@ -16,7 +16,7 @@ KNOWN = ['chairs', 'bottles', 'papers', 'books', 'desks', 'boxes', 'windows', 'e
 NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'power-cables', 'monitors', 'people', 'plants', 'bins', 'doors' ]
 
 n_support = 5
-baseline = True
+baseline = False  #Run KNN baseline or not?
 
 def compute_similarity(qembedding, train_embeds):
     # Similarity matching against indexed data
@@ -203,11 +203,11 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         if n_support == 10:
 
-            path_to_support = path_to_test+"../train"
+            path_to_support = path_to_test+"/../train"
 
         elif n_support == 5:
 
-            path_to_support = path_to_test + "../val"
+            path_to_support = path_to_test + "/../val"
 
         for root, dirs, files in os.walk(path_to_support):
 

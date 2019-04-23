@@ -47,11 +47,11 @@ def run_baseline(device, transforms,  K, N, n_support, KNOWN):
 
         if n_support == 5:
 
-            path_to_support = path_to_support = path_to_test + "../val"
+            path_to_support = path_to_support = path_to_test + "/../val"
 
         elif n_support == 10:
 
-            path_to_support = path_to_support = path_to_test + "../train"
+            path_to_support = path_to_support = path_to_test + "/../train"
 
     support_embeds = {}
     #Create embedding space for support set

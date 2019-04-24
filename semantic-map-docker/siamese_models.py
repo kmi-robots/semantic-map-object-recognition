@@ -59,11 +59,13 @@ class ContrastiveLoss(nn.Module):
                         (1 + -1 * target).float() * F.relu(self.margin - (distances + self.eps).sqrt()).pow(2))
         return losses.mean() if size_average else losses.sum()
 
+"""
 class TripletLoss(nn.Module):
-    \"""
+
+    """
     Triplet loss
     Takes embeddings of an anchor sample, a positive sample and a negative sample
-    \"""
+    """
 
     def __init__(self, margin):
         super(TripletLoss, self).__init__()
@@ -76,7 +78,6 @@ class TripletLoss(nn.Module):
 
         return losses.mean() if size_average else losses.sum()
 
-"""
 
 class NetForEmbedding(nn.Module):
 
@@ -103,6 +104,7 @@ class NetForEmbedding(nn.Module):
         self.norm = L2N()
 
         if feature_extraction:
+
 
             for param in self.mod_resnet.parameters():
 

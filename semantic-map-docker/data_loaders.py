@@ -62,12 +62,18 @@ class BalancedTriplets(torch.utils.data.Dataset):
             # Load explicitly from processed MNIST files created
             train_data, train_labels = torch.load(
                 os.path.join(self.root, self.processed_folder, self.training_file))
-            #print(train_data.shape)
+
+            print(train_data.shape)
+            print(type(train_data))
             # To then pass to new functions
+
+            self.train_data, self.train_labels = generate_KNN_triplets(train_data, train_labels)
+            """
             train_labels_class, train_data_class = group_by_class(train_data, train_labels, classes=10)
             #print(train_labels_class)
 
             self.train_data, self.train_labels = generate_balanced_triplets(train_labels_class, train_data_class)
+            """
             print(self.train_data.shape)
 
         else:
@@ -393,6 +399,13 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
     """
 
     return transform(x)
+
+
+def generate_KNN_triplets(data, labels):
+
+
+    return None, None
+
 
 
 def group_by_class(data, labels, classes=10, Hans =HANS):   #ids=None

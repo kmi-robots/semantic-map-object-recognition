@@ -16,14 +16,14 @@ from test import test
 
 
 #These parameters can be tweaked---------------------------------------------------------#
-do_learn = False #True
+do_learn = True #True
 feature_extraction = False
 keep_embeddings = True
 save_frequency = 2
 batch_size = 16
 lr = 0.0001
 num_epochs = 1000
-weight_decay = 0.0001
+weight_decay = 0.00001
 patience = 20
 metric_avg = 'binary'
 momentum = 0.9
@@ -149,6 +149,10 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
             params_to_update = model.parameters()  # all params
 
+    base_trans = transforms.Compose([
+        transforms.Resize((224,224)),
+        transforms.ToTensor(),
+        transforms.Normalize(means, stds)])
 
     if not os.path.isdir('./data'):
 
@@ -178,14 +182,14 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
 
             train_loader = torch.utils.data.DataLoader(
-               data_loaders.BalancedTriplets('./data', train=True, N=N, transform=trans_train, ResNet=ResNet), batch_size=batch_size,
+               data_loaders.BalancedTriplets('./data', train=True, N=N, transform=base_trans, ResNet=ResNet), batch_size=batch_size,
                shuffle=True)
 
             val_loader = torch.utils.data.DataLoader(
-                data_loaders.BalancedTriplets('./data', train=False, N=N, transform=trans_val, ResNet=ResNet), batch_size=batch_size,
+                data_loaders.BalancedTriplets('./data', train=False, N=N, transform=base_trans, ResNet=ResNet), batch_size=batch_size,
                 shuffle=False)
 
-        optimizer = optim.SGD(params_to_update, lr=lr, momentum=momentum)
+        optimizer = optim.SGD(params_to_update, lr=lr, momentum=momentum, weight_decay=weight_decay )
         #optimizer = optim.Adam(params_to_update, lr=lr, weight_decay=weight_decay)
 
         epoch_train_metrics = [] #torch.empty((1,2))#((num_epochs, 2))
@@ -234,7 +238,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
 
         class_wise_res = test(model, model_checkpoint, input_type, path_to_query_data, path_to_bags,\
-                              device, trans_val, path_to_train_embeds, K, N, sthresh=segmentation_threshold)
+                              device, base_trans, path_to_train_embeds, K, N, sthresh=segmentation_threshold)
 
         #Test plot grouped by class
         if class_wise_res is not None:
@@ -250,7 +254,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
         #Warning: available for custom set only, no MNIST
         extract_embeddings(model, model_checkpoint, path_to_train_data, \
-                        device, path_to_train_embeds, transforms=trans_val)
+                        device, path_to_train_embeds, transforms=base_trans)
 
 
 if __name__ == '__main__':

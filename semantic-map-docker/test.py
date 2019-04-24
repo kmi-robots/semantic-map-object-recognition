@@ -15,7 +15,7 @@ keepers= ['person','chair','potted plant']
 KNOWN = ['chairs', 'bottles', 'papers', 'books', 'desks', 'boxes', 'windows', 'exit-signs', 'coat-racks', 'radiators']
 NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'power-cables', 'monitors', 'people', 'plants', 'bins', 'doors' ]
 
-n_support = 5
+n_support = 10
 baseline = False  #Run KNN baseline or not?
 
 def compute_similarity(qembedding, train_embeds):

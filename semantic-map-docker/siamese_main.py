@@ -29,7 +29,7 @@ metric_avg = 'binary'
 momentum = 0.9
 segmentation_threshold = 0.01
 
-N = 10 #20 #No of object classes
+N = 20 #10 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/embeddings.dat'
 K = 5
@@ -182,11 +182,11 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
 
             train_loader = torch.utils.data.DataLoader(
-               data_loaders.BalancedTriplets('./data', train=True, N=N, transform=base_trans, ResNet=ResNet), batch_size=batch_size,
+               data_loaders.BalancedTriplets('./data', device, train=True, N=N, transform=base_trans, ResNet=ResNet), batch_size=batch_size,
                shuffle=True)
 
             val_loader = torch.utils.data.DataLoader(
-                data_loaders.BalancedTriplets('./data', train=False, N=N, transform=base_trans, ResNet=ResNet), batch_size=batch_size,
+                data_loaders.BalancedTriplets('./data', device, train=False, N=N, transform=base_trans, ResNet=ResNet), batch_size=batch_size,
                 shuffle=False)
 
         optimizer = optim.SGD(params_to_update, lr=lr, momentum=momentum, weight_decay=weight_decay )

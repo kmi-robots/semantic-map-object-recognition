@@ -4,6 +4,7 @@ import os
 from PIL import Image
 import torch
 import random
+from siamese_models import ResSiamese
 
 """"
 
@@ -34,7 +35,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
 
 
-    def __init__(self, root, train=True, transform=None,  target_transform=None, N=10, ResNet=True):
+    def __init__(self, root, device, train=True, transform=None,  target_transform=None, N=10, ResNet=True):
 
         self.root = os.path.expanduser(root)
         self.transform = transform
@@ -63,11 +64,12 @@ class BalancedTriplets(torch.utils.data.Dataset):
             train_data, train_labels = torch.load(
                 os.path.join(self.root, self.processed_folder, self.training_file))
 
-            print(train_data.shape)
-            print(type(train_data))
+            #print(train_data.shape)
+
             # To then pass to new functions
 
-            self.train_data, self.train_labels = generate_KNN_triplets(train_data, train_labels)
+            self.train_data, self.train_labels = generate_KNN_triplets(self.train, device)
+
             """
             train_labels_class, train_data_class = group_by_class(train_data, train_labels, classes=10)
             #print(train_labels_class)
@@ -81,10 +83,13 @@ class BalancedTriplets(torch.utils.data.Dataset):
             test_data, test_labels = torch.load(
                 os.path.join(self.root, self.processed_folder, self.test_file))
 
+            self.test_data, self.test_labels = generate_KNN_triplets(self.train, device)
+            """
             test_labels_class, test_data_class = group_by_class(test_data, test_labels, classes=10)
 
             self.test_data, self.test_labels = generate_balanced_triplets(test_labels_class, test_data_class)
 
+            """
             print(self.test_data.shape)
 
     def split_data(self, data_path, out_path, ratio=(.35, .35, .3)):
@@ -400,12 +405,65 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
 
     return transform(x)
 
+import test
 
-def generate_KNN_triplets(data, labels):
+def generate_KNN_triplets(train, device):
+
+    # Save serialized object separately for IDs
+    if train:
+        fname = 'training.dat'
+
+    else:
+        fname = 'test.dat'
+
+    data_dict = torch.load(os.path.join('./data/processed', fname))
+
+    #extract embeddings on all set given
+    #pre-trained ResNet without retrain
+
+    model = ResSiamese(feature_extraction=True).to(device)
+    model.eval()
+
+    embed_space = {}
+    for imgkey,img in data_dict.items(): #i in range(data.size(0)):
+
+        #img_tensor = data[i, :]
+        img_tensor = img.view(1, img.shape[0], img.shape[1], img.shape[2]).to(device)
+        embed_space[imgkey] = model.get_embedding(img_tensor)
+
+    #print(len(embed_space.keys()))
+
+    triplet_data=[]
+    binary_labels = []
+
+    for imgkey,img in data_dict.items():
+
+        anchor_emb = embed_space[imgkey]
+        ranking = test.compute_similarity(anchor_emb, embed_space)
+        key, val = ranking[1]
+
+        positive_eg = data_dict[key] #embed_space[key]
+        #print("Second Most similar example") # Because we need to exclude the image itself
+        #print(key)
+        #print(val)
+
+        #print("And Least similar example")
+        key, val = ranking[-1]
+        negative_eg = data_dict[key] #embed_space[key]
+        #print(key)
+        #print(val)
+
+        triplet_data.append(torch.stack([img, positive_eg, negative_eg]))
+        #print(torch.stack([img, positive_eg, negative_eg]).shape)
+
+        binary_labels.append([1,0])
 
 
-    return None, None
+    #print(torch.stack(triplet_data).shape)
+    #print(torch.tensor(binary_labels).shape)
 
+
+    return torch.stack(triplet_data), torch.tensor(binary_labels)
 
 
 def group_by_class(data, labels, classes=10, Hans =HANS):   #ids=None

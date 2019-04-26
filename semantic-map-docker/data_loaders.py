@@ -68,6 +68,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
             # To then pass to new functions
 
+            
             self.train_data, self.train_labels = generate_KNN_triplets(self.train, device)
 
             """
@@ -144,8 +145,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
         #Load from local
         if train:
-
-            
+      
             training_set = (self.read_files(os.path.join(self.root, self.raw_folder, 'train'), trans, n=N, ResNet=resnet ))
             # Save as .pt files
 
@@ -409,6 +409,7 @@ import test
 
 def generate_KNN_triplets(train, device):
 
+
     # Save serialized object separately for IDs
     if train:
         fname = 'training.dat'
@@ -425,6 +426,7 @@ def generate_KNN_triplets(train, device):
     model.eval()
 
     embed_space = {}
+    
     for imgkey,img in data_dict.items(): #i in range(data.size(0)):
 
         #img_tensor = data[i, :]
@@ -439,19 +441,44 @@ def generate_KNN_triplets(train, device):
     for imgkey,img in data_dict.items():
 
         anchor_emb = embed_space[imgkey]
+        anchor_class = imgkey.split("_")[0]
+        
         ranking = test.compute_similarity(anchor_emb, embed_space)
-        key, val = ranking[1]
 
-        positive_eg = data_dict[key] #embed_space[key]
+        positive_eg = None
+        negative_eg = None 
+
+        while positive_eg is None and negative_eg is None:
+            
+            for i in range(1,len(ranking)):
+
+                #i.e., not starting from zero to exclude the embed itself
+                key, val = ranking[i]
+
+                top_match = data_dict[key]  # embed_space[key]
+
+                top_class = key.split("_")[0]
+
+                if top_class == anchor_class and positive_eg is None:
+
+                    positive_eg = top_match
+
+
+                elif top_class != anchor_class and negative_eg is None:
+
+                    negative_eg = top_match
+
         #print("Second Most similar example") # Because we need to exclude the image itself
         #print(key)
         #print(val)
 
+        """
         #print("And Least similar example")
         key, val = ranking[-1]
         negative_eg = data_dict[key] #embed_space[key]
         #print(key)
         #print(val)
+        """
 
         triplet_data.append(torch.stack([img, positive_eg, negative_eg]))
         #print(torch.stack([img, positive_eg, negative_eg]).shape)

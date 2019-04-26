@@ -5,37 +5,6 @@ from collections import OrderedDict
 import torchvision.models as models
 
 
-class SimplerNet(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-        self.sequential = nn.Sequential(OrderedDict({
-            'conv_1': nn.Conv2d(3, 20, kernel_size=5),
-            'relu_1': nn.ReLU(),
-            'maxpool_1': nn.MaxPool2d(2),
-            'conv_2': nn.Conv2d(20, 25, kernel_size=5),
-            'relu_2': nn.ReLU(),
-            'maxpool_2': nn.MaxPool2d(2),
-            'conv_3': nn.Conv2d(25, 30, kernel_size=5),
-            'relu_3': nn.ReLU(),
-            'maxpool_3': nn.MaxPool2d(2)
-        }))
-
-        self.linear1 = nn.Linear(16 * 4 * 30, 500)
-
-        self.linear2 = nn.Linear(500, 2)
-
-    def forward_once(self, x):
-        x = self.sequential(x)
-
-        x = x.view(x.size(0), -1)
-
-        return self.linear1(x)
-
-    def forward(self, data):
-        res = torch.abs(self.forward_once(data[1]) - self.forward_once(data[0]))
-        res = self.linear2(res)
-        return res
 
 
 from rpooling import GeM, L2N
@@ -60,13 +29,13 @@ class ContrastiveLoss(nn.Module):
         return losses.mean() if size_average else losses.sum()
 
 
-"""
+
 class TripletLoss(nn.Module):
 
-    \"""
+    """
     Triplet loss
     Takes embeddings of an anchor sample, a positive sample and a negative sample
-    \"""
+    """
 
     def __init__(self, margin):
         super(TripletLoss, self).__init__()
@@ -78,7 +47,7 @@ class TripletLoss(nn.Module):
         losses = F.relu(distance_positive - distance_negative + self.margin)
 
         return losses.mean() if size_average else losses.sum()
-"""
+
 
 class NetForEmbedding(nn.Module):
 
@@ -228,13 +197,18 @@ class ResSiamese(nn.Module):
             x = self.s * x
 
         """
-        return self.drop(self.relu(self.linear1(x))) #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
+        return self.l2_norm(x) # #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
+
 
     def forward(self, data):
 
-        res = self.drop2d(torch.abs(self.forward_once(data[1]) - self.forward_once(data[0])))
+        x0 = self.forward_once(data[0])
+        x1 = self.forward_once(data[1])
+        res = torch.abs(x1 - x0)
 
-        return self.linear3(self.drop(res))
+        res = self.drop(self.relu(self.linear1(res)))
+
+        return self.linear3(self.drop(res)), x0, x1
 
     def l2_norm(self, x):
 
@@ -267,6 +241,171 @@ class ResSiamese(nn.Module):
         x = self.embed(x)
 
         return self.l2_norm(x)
+
+
+
+
+
+
+
+class ResTwoBranch(nn.Module):
+
+
+    """
+    Same as ResSiamese, except weights are not
+    shared in the 2 ConvNet branches
+    Without L2 norm on branch output embeddings
+    """
+
+    def __init__(self, feature_extraction=False, p=0.5, norm=True, scale=True, stn=False):
+
+        super().__init__()
+
+        self.embed = NetForEmbedding(feature_extraction)
+        #self.linear1 = nn.Linear(512, 512)
+        self.embed_branch2 = NetForEmbedding(feature_extraction)
+
+        self.fc = nn.Sequential(OrderedDict({
+            'linear_1': nn.Linear(2048, 512),
+            'relu_1': nn.ReLU(),
+            'linear_2': nn.Linear(512, 512),
+            'relu_2': nn.ReLU()
+        }))
+
+
+        self.linear3 = nn.Linear(256, 2) #, bias=False) # No bias used in the classifier layer of weight imprinting
+
+        self.linear1 = nn.Linear(2048, 256) #set as weight imprinting example
+        self.linear2 = nn.Linear(2048,2)  #(512, 2)
+
+        self.norm = norm
+        self.relu= nn.ReLU()
+        self.scale = scale
+        self.s = nn.Parameter(torch.FloatTensor([10]))
+        self.stn_flag = stn
+
+        if self.stn_flag:
+
+            p = 0.0
+
+        self.drop = nn.Dropout(p=p)
+        self.drop2d = nn.Dropout2d(p=0.2)
+
+        # Spatial transformer localization-network
+        self.localization = nn.Sequential(
+            nn.Conv2d(3, 8, kernel_size=7),
+            nn.MaxPool2d(2, stride=2),
+            nn.ReLU(True),
+            nn.BatchNorm2d(8),
+            nn.Conv2d(8, 10, kernel_size=5),
+            nn.MaxPool2d(2, stride=2),
+            nn.ReLU(True),
+            nn.BatchNorm2d(10),
+        )
+
+        # Regressor for the 3 * 2 affine matrix
+        self.fc_loc = nn.Sequential(
+            nn.Linear(10 * 52 * 52, 32),
+            nn.ReLU(True),
+            nn.Dropout(p=0.2),
+            nn.Linear(32, 3 * 2)
+        )
+
+        # Initialize the weights/bias with identity transformation
+        self.fc_loc[3].weight.data.zero_()
+        self.fc_loc[3].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
+
+    def stn(self, x):
+
+        xs = self.localization(x)
+        xs = xs.view(-1, 10 * 52 * 52)
+        theta = self.fc_loc(xs)
+        theta = theta.view(-1, 2, 3)
+
+        grid = F.affine_grid(theta, x.size())
+        x = F.grid_sample(x, grid)
+
+        return x
+
+    def forward_once(self, x):
+
+        if self.stn_flag:
+
+            #If Spatial Transformer Net is activated
+            x = self.stn(x)
+
+
+        x = self.embed(x)
+
+        """
+        if self.norm:
+
+            x = self.l2_norm(x)
+
+        if self.scale:
+
+            x = self.s * x
+
+        """
+        return x # #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
+
+    def forward_branch2(self, x):
+
+        if self.stn_flag:
+
+            #If Spatial Transformer Net is activated
+            x = self.stn(x)
+
+
+        x = self.embed_branch2(x)
+
+        return x # #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
+
+
+    def forward(self, data):
+
+        x0 = self.forward_once(data[0])
+        x1 = self.forward_branch2(data[1])
+        res = torch.abs(x1 - x0)
+
+        res = self.drop(self.relu(self.linear1(res)))
+
+        return self.linear3(self.drop(res)), x0, x1
+
+    def l2_norm(self, x):
+
+        input_size = x.size()
+
+        buffer = torch.pow(x, 2)
+
+        normp = torch.sum(buffer, 1).add_(1e-10)
+
+        norm = torch.sqrt(normp)
+
+        _output = torch.div(x, norm.view(-1, 1).expand_as(x))
+
+        output = _output.view(input_size)
+
+        return output
+
+    """
+    def weight_norm(self):
+
+        w = self.linear2.weight.data
+
+        norm = w.norm(p=2, dim=1, keepdim=True)
+
+        self.linear2.weight.data = w.div(norm.expand_as(w))
+    """
+
+    def get_embedding(self, x):
+
+        x = self.embed(x)
+
+        return self.l2_norm(x)
+
+
+
 
 
 #Reproducing NormXCorr model by Submariam et al. (NIPS 2016)

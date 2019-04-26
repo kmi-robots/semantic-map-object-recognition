@@ -2,11 +2,12 @@ import torch
 import torch.nn.functional as F
 from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
 import numpy as np
+from siamese_models import TripletLoss
 
-
-def validate(model, device, test_loader, metric_avg):
+def validate(model, device, test_loader, metric_avg, tloss=False):
 
     model.eval()
+    criterion = TripletLoss()
 
     with torch.no_grad():
 
@@ -23,8 +24,8 @@ def validate(model, device, test_loader, metric_avg):
             for i in range(len(data)):
                 data[i] = data[i].to(device)
 
-            output_positive = model(data[:2])
-            output_negative = model(data[0:3:2])
+            output_positive, emb_a, emb_p = model(data[:2])
+            output_negative, _, emb_n = model(data[0:3:2])
 
             target = target.type(torch.LongTensor).to(device)
             target_positive = torch.squeeze(target[:, 0])
@@ -35,10 +36,25 @@ def validate(model, device, test_loader, metric_avg):
 
             #loss = loss_positive + loss_negative
 
-            norm_loss_p = output_positive.shape[0] * loss_positive.item() #as cross_entropy loss is the mean over batch size by default
-            norm_loss_n = output_negative.shape[0] * loss_negative.item() #as cross_entropy  loss is the mean over batch size by default
 
-            running_loss += norm_loss_p + norm_loss_n
+            classif_loss = loss_positive + loss_negative
+            triplet_loss = criterion(emb_a, emb_p, emb_n)
+
+            norm_loss_p = output_positive.shape[0] * loss_positive.item()
+            norm_loss_n = output_negative.shape[0] * loss_negative.item()
+
+            if tloss:
+
+                #loss = classif_loss + triplet_loss
+
+                norm_tloss = output_positive.shape[0] * triplet_loss.item()
+                running_loss += norm_loss_p + norm_loss_n + norm_tloss
+
+            else:
+
+                #loss = classif_loss
+
+                running_loss += norm_loss_p + norm_loss_n
 
             accurate_labels_positive = torch.sum(torch.argmax(output_positive, dim=1) == target_positive).cpu()
             accurate_labels_negative = torch.sum(torch.argmax(output_negative, dim=1) == target_negative).cpu()

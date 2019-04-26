@@ -2,12 +2,13 @@ import torch
 import torch.nn.functional as F
 from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
 import numpy as np
+from siamese_models import TripletLoss
 
 
-
-def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg):
+def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg, tloss=False):
 
     model.train()
+    criterion = TripletLoss()
 
     accurate_labels = 0
     all_labels = 0
@@ -26,8 +27,8 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
             data[i] = data[i].to(device)
 
         optimizer.zero_grad()
-        output_positive = model(data[:2])
-        output_negative = model(data[0:3:2])
+        output_positive, emb_a, emb_p = model(data[:2])
+        output_negative, _, emb_n = model(data[0:3:2])
 
         target = target.type(torch.LongTensor).to(device)
         target_positive = torch.squeeze(target[:, 0])
@@ -36,28 +37,28 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg)
         loss_positive = F.cross_entropy(output_positive, target_positive)
         loss_negative = F.cross_entropy(output_negative, target_negative)
 
-        loss = loss_positive + loss_negative
+        classif_loss = loss_positive + loss_negative
+        triplet_loss = criterion(emb_a, emb_p, emb_n)
+
+        norm_loss_p = output_positive.shape[0] * loss_positive.item()
+        norm_loss_n = output_negative.shape[0] * loss_negative.item()
+
+        if tloss:
+
+            loss = classif_loss + triplet_loss
+            norm_tloss = output_positive.shape[0] * triplet_loss.item()
+            running_loss += norm_loss_p + norm_loss_n + norm_tloss
+
+        else:
+
+            loss = classif_loss
+
+            running_loss += norm_loss_p + norm_loss_n
 
         loss.backward()
 
         optimizer.step()
 
-        """
-        #Weight imprinting norm
-        try:
-            model.weight_norm()
-
-        except Exception as e:
-
-            print(str(e))
-            pass
-
-        """
-
-        norm_loss_p = output_positive.shape[0] * loss_positive.item()
-        norm_loss_n = output_negative.shape[0] * loss_negative.item()
-
-        running_loss += norm_loss_p + norm_loss_n
 
         accurate_labels_positive = torch.sum(torch.argmax(output_positive, dim=1) == target_positive).cpu()
         accurate_labels_negative = torch.sum(torch.argmax(output_negative, dim=1) == target_negative).cpu()

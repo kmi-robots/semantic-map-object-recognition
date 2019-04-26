@@ -7,7 +7,7 @@ import argparse
 #custom classes and methods
 from plot_results import gen_plots, bar_plot
 import data_loaders
-from siamese_models import SimplerNet, NCCNet, ResSiamese #, ContrastiveLoss
+from siamese_models import NCCNet, ResSiamese, ResTwoBranch #, ContrastiveLoss
 from pytorchtools import EarlyStopping
 from embedding_extractor import extract_embeddings
 from train import train
@@ -19,6 +19,8 @@ from test import test
 do_learn = True #True
 feature_extraction = False
 keep_embeddings = True
+triplet_loss = False #Adds a triplet loss component to the classifier's crossentropy loss
+two_branch = False  # If two branch version instead of Siamese network should be run
 save_frequency = 2
 batch_size = 16
 lr = 0.0001
@@ -137,8 +139,14 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
                 transforms.Normalize(means, stds)])
 
         """
-        model = ResSiamese(feature_extraction=feature_extraction, stn=STN).to(device) #SimplerNet().to(device)
 
+        if two_branch:
+
+            model = ResTwoBranch(feature_extraction=feature_extraction, stn=STN).to(device)
+
+
+        else:
+            model = ResSiamese(feature_extraction=feature_extraction, stn=STN).to(device)
 
         if feature_extraction:
 
@@ -202,10 +210,10 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
                 break
 
-            epoch_train_metrics.append(train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg))
+            epoch_train_metrics.append(train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg, tloss=triplet_loss))
 
+            val_m = validate(model, device, val_loader, metric_avg, tloss=triplet_loss)
 
-            val_m = validate(model, device, val_loader, metric_avg)
             epoch_val_metrics.append(val_m)
 
             valid_loss = val_m[0]

@@ -137,7 +137,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
                 transforms.Normalize(means, stds)])
 
         """
-        model = ResSiamese(feature_extraction, stn=STN).to(device) #SimplerNet().to(device)
+        model = ResSiamese(feature_extraction=feature_extraction, stn=STN).to(device) #SimplerNet().to(device)
 
 
         if feature_extraction:

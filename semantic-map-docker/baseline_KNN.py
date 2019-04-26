@@ -11,11 +11,11 @@ import os
 from sklearn.metrics import classification_report, accuracy_score
 from collections import Counter
 
-old_setup = True
-known_only = False
+old_setup = False
+known_only = True
+siamese_boosted = True
 
-
-def run_baseline(device, transforms,  K, N, n_support, KNOWN):
+def run_baseline(device, transforms,  K, N, n_support, KNOWN, path_to_embeds):
 
     #Derive support set
     if N == 10 and old_setup:
@@ -53,22 +53,31 @@ def run_baseline(device, transforms,  K, N, n_support, KNOWN):
 
             path_to_support = path_to_support = path_to_test + "/../train"
 
-    support_embeds = {}
-    #Create embedding space for support set
-    for root, dirs, files in os.walk(path_to_support):
 
-        if files:
+    if siamese_boosted:
 
-            classname = str(root.split('/')[-1])
+        support_embeds = torch.load(path_to_embeds)
 
-            if N==20 and known_only and classname not in KNOWN:
+    else:
 
-                continue
+        support_embeds = {}
+        #Create embedding space for support set
+        for root, dirs, files in os.walk(path_to_support):
 
-            for file in files:
+            if files:
 
-                filename = str(file.split('/')[-1])
-                support_embeds[classname+'_'+filename] = base_embedding(os.path.join(root, file), device, transforms=transforms)
+                classname = str(root.split('/')[-1])
+
+                if N == 20 and known_only and classname not in KNOWN:
+
+                    continue
+
+                for file in files:
+
+                    filename = str(file.split('/')[-1])
+                    support_embeds[classname+'_'+filename] = base_embedding(os.path.join(root, file), device, transforms=transforms)
+
+    print(len(support_embeds.keys()))
 
 
     #Map test/query embeddings to the same space

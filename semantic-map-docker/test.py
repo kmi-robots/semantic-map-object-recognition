@@ -40,7 +40,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
     #baseline KNN?
     if baseline:
 
-        run_baseline(device, trans, K, N, n_support, KNOWN)
+        run_baseline(device, trans, K, N, n_support, KNOWN, path_to_train_embeds)
 
         return None
 

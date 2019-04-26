@@ -40,13 +40,13 @@ class SimplerNet(nn.Module):
 
 from rpooling import GeM, L2N
 
-"""
+
 #Contrastive loss as defined in https://github.com/adambielski/siamese-triplet/
 class ContrastiveLoss(nn.Module):
-    \"""
+    """
     Contrastive loss
     Takes embeddings of two samples and a target label == 1 if samples are from the same class and label == 0 otherwise
-    \"""
+    """
 
     def __init__(self, margin):
         super(ContrastiveLoss, self).__init__()
@@ -59,13 +59,14 @@ class ContrastiveLoss(nn.Module):
                         (1 + -1 * target).float() * F.relu(self.margin - (distances + self.eps).sqrt()).pow(2))
         return losses.mean() if size_average else losses.sum()
 
+
 """
 class TripletLoss(nn.Module):
 
-    """
+    \"""
     Triplet loss
     Takes embeddings of an anchor sample, a positive sample and a negative sample
-    """
+    \"""
 
     def __init__(self, margin):
         super(TripletLoss, self).__init__()
@@ -77,7 +78,7 @@ class TripletLoss(nn.Module):
         losses = F.relu(distance_positive - distance_negative + self.margin)
 
         return losses.mean() if size_average else losses.sum()
-
+"""
 
 class NetForEmbedding(nn.Module):
 

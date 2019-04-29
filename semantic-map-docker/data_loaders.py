@@ -445,8 +445,10 @@ def generate_KNN_triplets(train, device):
         
         ranking = test.compute_similarity(anchor_emb, embed_space)
 
+        """
         positive_eg = None
         negative_eg = None 
+        
 
         while positive_eg is None and negative_eg is None:
             
@@ -474,11 +476,14 @@ def generate_KNN_triplets(train, device):
 
         """
         #print("And Least similar example")
+        key, val = ranking[1]
+        positive_eg = data_dict[key]
+
         key, val = ranking[-1]
         negative_eg = data_dict[key] #embed_space[key]
         #print(key)
         #print(val)
-        """
+
 
         triplet_data.append(torch.stack([img, positive_eg, negative_eg]))
         #print(torch.stack([img, positive_eg, negative_eg]).shape)

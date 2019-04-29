@@ -4,7 +4,7 @@ from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
 import numpy as np
 from siamese_models import TripletLoss
 
-def validate(model, device, test_loader, metric_avg, tloss=False):
+def validate(model, device, test_loader, metric_avg, knet=False,nnet=False):
 
     model.eval()
     criterion = TripletLoss()
@@ -24,56 +24,68 @@ def validate(model, device, test_loader, metric_avg, tloss=False):
             for i in range(len(data)):
                 data[i] = data[i].to(device)
 
-            output_positive, emb_a, emb_p = model(data[:2])
-            output_negative, _, emb_n = model(data[0:3:2])
-
             target = target.type(torch.LongTensor).to(device)
-            target_positive = torch.squeeze(target[:, 0])
-            target_negative = torch.squeeze(target[:, 1])
 
-            loss_positive = F.cross_entropy(output_positive, target_positive) #target of 1
-            loss_negative = F.cross_entropy(output_negative, target_negative) #target of 0
+            if nnet:
 
-            #loss = loss_positive + loss_negative
+                # No classification component involved
+                emb_a, emb_p, emb_n = model(data)
+                classif_loss = 0.0
 
+            elif knet:
 
-            classif_loss = loss_positive + loss_negative
-            triplet_loss = criterion(emb_a, emb_p, emb_n)
-
-            norm_loss_p = output_positive.shape[0] * loss_positive.item()
-            norm_loss_n = output_negative.shape[0] * loss_negative.item()
-
-            if tloss:
-
-                #loss = classif_loss + triplet_loss
-
-                norm_tloss = output_positive.shape[0] * triplet_loss.item()
-                running_loss += norm_loss_p + norm_loss_n + norm_tloss
+                emb_a, emb_p, emb_n, output_logits = model(data)
+                classif_loss = F.cross_entropy(output_logits, target)
 
             else:
 
-                #loss = classif_loss
+                # base resnet with binary classifier
+                output_positive, emb_a, emb_p = model(data[:2])
+                output_negative, _, emb_n = model(data[0:3:2])
 
+                target_positive = torch.squeeze(target[:, 0])
+                target_negative = torch.squeeze(target[:, 1])
+
+                loss_positive = F.cross_entropy(output_positive, target_positive)
+                loss_negative = F.cross_entropy(output_negative, target_negative)
+
+                classif_loss = loss_positive + loss_negative
+
+                norm_loss_p = output_positive.shape[0] * loss_positive.item()
+                norm_loss_n = output_negative.shape[0] * loss_negative.item()
                 running_loss += norm_loss_p + norm_loss_n
+                accurate_labels_positive = torch.sum(torch.argmax(output_positive, dim=1) == target_positive).cpu()
+                accurate_labels_negative = torch.sum(torch.argmax(output_negative, dim=1) == target_negative).cpu()
 
-            accurate_labels_positive = torch.sum(torch.argmax(output_positive, dim=1) == target_positive).cpu()
-            accurate_labels_negative = torch.sum(torch.argmax(output_negative, dim=1) == target_negative).cpu()
+                # To then calculate epoch-level precision recall F1
+                predictions.extend(torch.argmax(output_positive, dim=1).tolist())
+                predictions.extend(torch.argmax(output_negative, dim=1).tolist())
+                labels.extend(target_positive.tolist())
+                labels.extend(target_negative.tolist())
 
-            # To then calculate epoch-level precision recall F1
-            predictions.extend(torch.argmax(output_positive, dim=1).tolist())
-            predictions.extend(torch.argmax(output_negative, dim=1).tolist())
-            labels.extend(target_positive.tolist())
-            labels.extend(target_negative.tolist())
-            # Softmax of raw output to get the probability
-            # Then retain only column of the positive class
-            pos_proba.extend(F.softmax(output_positive, dim=1)[:, 1].tolist())
-            pos_proba.extend(F.softmax(output_negative, dim=1)[:, 1].tolist())
-            accurate_labels = float(accurate_labels + accurate_labels_positive + accurate_labels_negative)
-            all_labels = float(all_labels + len(target_positive) + len(target_negative))
+                accurate_labels = accurate_labels + accurate_labels_positive + accurate_labels_negative
+                all_labels = all_labels + len(target_positive) + len(target_negative)
+
+            triplet_loss = criterion(emb_a, emb_p, emb_n)
+            loss = classif_loss + triplet_loss
+
+            if nnet:
+
+                norm_tloss = emb_a.shape[0] * triplet_loss.item()
+                running_loss += norm_tloss
+                accurate_labels = 0
+                all_labels = 0  # Cannot really classify in this case
+
+            elif knet:
+                norm_tloss = emb_a.shape[0] * triplet_loss.item()
+                norm_closs = output_logits.shape[0] * classif_loss.item()
+                running_loss += norm_tloss + norm_closs
+                # Multi-class instead of binary
+                accurate_labels = torch.sum(torch.argmax(output_logits, dim=1) == torch.argmax(target, dim=1)).cpu()
+                all_labels = all_labels + 2
 
         accuracy = 100. * accurate_labels / all_labels
         epoch_loss = running_loss/all_labels
-
 
         p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
 

@@ -21,6 +21,9 @@ feature_extraction = False
 keep_embeddings = True
 triplet_loss = False #Adds a triplet loss component to the classifier's crossentropy loss
 two_branch = False  # If two branch version instead of Siamese network should be run
+KNet = False
+NNet = False
+
 save_frequency = 2
 batch_size = 16
 lr = 0.0001
@@ -67,9 +70,6 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
         # Add hardcoded mean and variance values for torchvision pre-trained modules
         means = [0.485, 0.456, 0.406]
         stds = [0.229, 0.224, 0.225]
-        #means = (0.5,)
-        #stds = (0.5,)
-        #stds = (1.0,)
 
         mnist_trans = transforms.Compose([transforms.Resize((224, 224)),
                                           transforms.Grayscale(3),
@@ -145,7 +145,16 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
             model = ResTwoBranch(feature_extraction=feature_extraction, stn=STN).to(device)
 
 
+        elif NNet:
+
+            model = NNet(feature_extraction=feature_extraction).to(device)
+
+        elif KNet:
+
+            model = KNet(feature_extraction=feature_extraction).to(device)
+
         else:
+
             model = ResSiamese(feature_extraction=feature_extraction, stn=STN).to(device)
 
         if feature_extraction:
@@ -210,9 +219,9 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
                 break
 
-            epoch_train_metrics.append(train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg, tloss=triplet_loss))
+            epoch_train_metrics.append(train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg, knet=KNet,nnet=NNet))
 
-            val_m = validate(model, device, val_loader, metric_avg, tloss=triplet_loss)
+            val_m = validate(model, device, val_loader, metric_avg, knet=KNet,nnet=NNet)
 
             epoch_val_metrics.append(val_m)
 

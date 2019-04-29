@@ -94,9 +94,6 @@ class NetForEmbedding(nn.Module):
             return x.view(x.size(0), -1)  #self.norm(self.mod_resnet(x)).squeeze(-1).squeeze(-1)
 
 
-#L2 norm and weight norm on pre-training as derived by paper
-# by Qi et al. (CVPR 2018) - Google, but on ResNet here
-
 class ResSiamese(nn.Module):
 
 
@@ -243,7 +240,130 @@ class ResSiamese(nn.Module):
         return self.l2_norm(x)
 
 
+class NNet(nn.Module):
 
+
+    """
+    Trying to replicate NNet by Zeng et al. (2018)
+    - original paper model was in Torch Lua
+    """
+
+    def __init__(self, feature_extraction=False, p=0.5, norm=True):
+
+        super().__init__()
+
+        self.embed = NetForEmbedding(feature_extraction)
+        self.embed2 = NetForEmbedding(feature_extraction)
+        self.embed3 = NetForEmbedding(feature_extraction)
+        #self.l2dis = nn.PairwiseDistance()
+        self.norm = norm
+
+        self.drop = nn.Dropout(p=p)
+        self.drop2d = nn.Dropout2d(p=0.2)
+
+
+    def forward_once(self, x):
+
+        x = self.embed(x)
+
+        return F.normalize(x) # #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
+
+    def forward_branch2(self, x):
+
+        x = self.embed2(x)
+
+        return F.normalize(x)
+
+    def forward_branch3(self, x):
+
+        x = self.embed3(x)
+
+        return F.normalize(x)
+
+
+    def forward(self, data):
+
+        x0 = self.forward_once(data[0])
+        x1 = self.forward_branch2(data[1])
+        x2 = self.forward_branch2(data[2])
+
+        return x0, x1, x2
+
+
+    def get_embedding(self, x):
+
+        x = self.embed(x)
+
+        return F.normalize(x)
+
+
+class KNet(nn.Module):
+    """
+    Trying to replicate NNet by Zeng et al. (2018)
+    - original paper model was in Torch Lua
+    https://github.com/andyzeng/arc-robot-vision/tree/master/image-matching
+    """
+
+    def __init__(self, feature_extraction=False, p=0.5, norm=True, num_classes=10):
+        super().__init__()
+
+        self.embed = NetForEmbedding(feature_extraction)
+        self.embed2 = NetForEmbedding(feature_extraction)
+        self.embed3 = NetForEmbedding(feature_extraction)
+        self.l2dis = nn.PairwiseDistance()
+        self.l2dis_neg = nn.PairwiseDistance()
+
+        self.norm = norm
+
+        self.drop = nn.Dropout(p=p)
+        self.drop2d = nn.Dropout2d(p=0.2)
+
+        self.classifier = nn.Sequential(
+
+            nn.Linear(2048,512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(512,128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(128, num_classes)
+        )
+
+
+    def forward_once(self, x):
+        x = self.embed(x)
+
+        return F.normalize(x)  # #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
+
+    def forward_branch2(self, x):
+        x = self.embed2(x)
+
+        return F.normalize(x)
+
+    def forward_branch3(self, x):
+        x = self.embed3(x)
+
+        return F.normalize(x)
+
+    def forward(self, data):
+        x0 = self.forward_once(data[0])
+        x1 = self.forward_branch2(data[1])
+        x2 = self.forward_branch2(data[2])
+
+        dis_pos = self.l2dis(x0, x1)
+        dis_neg = self.l2dis_neg(x0, x2)
+
+        joint_node = torch.cat(dis_pos, dis_neg)
+
+        return x0, x1, x2, self.classifier(joint_node)
+
+
+    def get_embedding(self, x):
+        x = self.embed(x)
+
+        return F.normalize(x)
 
 
 

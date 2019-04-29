@@ -39,7 +39,7 @@ segmentation_threshold = 0.01
 N = 20 #10 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/paper/embeddings.dat'
-K = 5
+K = 1
 path_to_bags ='./data/robot_collected.npy'
 STN = False #Whether to use Spatial Transformer module on input or not
 
@@ -151,7 +151,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
             model = NNet(feature_extraction=feature_extraction).to(device)
 
-        elif KNET:
+        elif KNET and not imprinting:
 
             model = KNet(feature_extraction=feature_extraction).to(device)
 

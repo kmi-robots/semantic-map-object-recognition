@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score, roc_auc_score
 import numpy as np
 from siamese_models import TripletLoss
 
@@ -85,16 +85,21 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg,
             norm_closs = output_logits.shape[0] * classif_loss.item()
             running_loss += norm_tloss + norm_closs
             #Multi-class instead of binary
-            accurate_labels = torch.sum(torch.argmax(output_logits, dim=1) == target).cpu()
-            all_labels = all_labels + 2*len(target)
+            predictions.extend(torch.argmax(output, dim=1).tolist())
+            labels.extend(target_positive.tolist())
+            #accurate_labels = torch.sum(torch.argmax(output_logits, dim=1) == target).cpu()
+            #all_labels = all_labels + 2*len(target)
 
             metric_avg = 'weighted' #for computing the accuracy
 
         loss.backward()
         optimizer.step()
 
+    if knet:
 
-    accuracy = 100. * accurate_labels / all_labels
+        accuracy = accuracy_score(labels, predictions)
+    else:
+        accuracy = 100. * accurate_labels / all_labels
     epoch_loss = running_loss / all_labels
 
     # Compute epoch-level metrics with sklearn

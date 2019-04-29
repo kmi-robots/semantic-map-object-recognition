@@ -86,7 +86,9 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg,
             running_loss += norm_tloss + norm_closs
             #Multi-class instead of binary
             accurate_labels = torch.sum(torch.argmax(output_logits, dim=1) == torch.argmax(target, dim=1)).cpu()
-            all_labels = all_labels + 2
+            all_labels = all_labels + 2*len(target)
+
+            metric_avg = 'weighted' #for computing the accuracy
 
         loss.backward()
         optimizer.step()

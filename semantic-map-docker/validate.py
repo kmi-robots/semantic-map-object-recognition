@@ -82,7 +82,8 @@ def validate(model, device, test_loader, metric_avg, knet=False,nnet=False):
                 running_loss += norm_tloss + norm_closs
                 # Multi-class instead of binary
                 accurate_labels = torch.sum(torch.argmax(output_logits, dim=1) == torch.argmax(target, dim=1)).cpu()
-                all_labels = all_labels + 2
+                all_labels = all_labels + 2*len(target)
+                metric_avg = 'weighted'  # for computing the accuracy
 
         accuracy = 100. * accurate_labels / all_labels
         epoch_loss = running_loss/all_labels
@@ -91,6 +92,6 @@ def validate(model, device, test_loader, metric_avg, knet=False,nnet=False):
 
         roc_auc = roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
 
-        print('Test accuracy: {}/{} ({:.6f}%)\t Loss: {:.6f}, Precision: {:.6f}, Recall: {:.6f}, F1: {:.6f}, ROC_AUC: {:.6f}'.format(int(accurate_labels), int(all_labels), accuracy, epoch_loss, p, r, f1, roc_auc))
+        print('Val accuracy: {}/{} ({:.6f}%)\t Loss: {:.6f}, Precision: {:.6f}, Recall: {:.6f}, F1: {:.6f}, ROC_AUC: {:.6f}'.format(int(accurate_labels), int(all_labels), accuracy, epoch_loss, p, r, f1, roc_auc))
 
         return torch.Tensor([epoch_loss, accuracy, float(p), float(r), float(roc_auc)])

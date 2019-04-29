@@ -18,6 +18,15 @@ HANS = False
 
 KNOWN = ['chairs', 'bottles', 'papers', 'books', 'desks', 'boxes', 'windows', 'exit-signs', 'coat-racks', 'radiators']
 NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'power-cables', 'monitors', 'people', 'plants', 'bins', 'doors' ]
+ALL= KNOWN+NOVEL
+
+class_no=0
+class_dict = {}
+
+for class_name in ALL:
+
+    class_dict[class_name] = class_no
+    class_no +=1
 
 
 class BalancedTriplets(torch.utils.data.Dataset):
@@ -35,13 +44,14 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
 
 
-    def __init__(self, root, device, train=True, transform=None,  target_transform=None, N=10, ResNet=True):
+    def __init__(self, root, device, train=True, transform=None,  target_transform=None, N=10, ResNet=True, KNet=False):
 
         self.root = os.path.expanduser(root)
         self.transform = transform
         self.target_transform = target_transform
         self.train = train  # training set or test set
         self.resnet= ResNet
+        self.knet = KNet
 
         if N == 20:
             #Use shapenet20 classes instead
@@ -69,7 +79,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
             # To then pass to new functions
 
             
-            self.train_data, self.train_labels = generate_KNN_triplets(self.train, device)
+            self.train_data, self.train_labels = generate_KNN_triplets(self.train, device, KNet= self.knet)
 
             """
             train_labels_class, train_data_class = group_by_class(train_data, train_labels, classes=10)
@@ -78,13 +88,14 @@ class BalancedTriplets(torch.utils.data.Dataset):
             self.train_data, self.train_labels = generate_balanced_triplets(train_labels_class, train_data_class)
             """
             print(self.train_data.shape)
+            print(self.train_labels.shape)
 
         else:
 
             test_data, test_labels = torch.load(
                 os.path.join(self.root, self.processed_folder, self.test_file))
 
-            self.test_data, self.test_labels = generate_KNN_triplets(self.train, device)
+            self.test_data, self.test_labels = generate_KNN_triplets(self.train, device, KNet= self.knet)
             """
             test_labels_class, test_data_class = group_by_class(test_data, test_labels, classes=10)
 
@@ -92,6 +103,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
             """
             print(self.test_data.shape)
+            print(self.test_labels.shape)
 
     def split_data(self, data_path, out_path, ratio=(.35, .35, .3)):
 
@@ -177,7 +189,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         return fmt_str
 
 
-    def read_files(self, path, trans, train=True, ResNet=True, Hans=HANS, n=20):
+    def read_files(self, path, trans, train=True, ResNet=True,  n=20):
 
         #discarded = []
         #kept=[]
@@ -266,6 +278,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         #print(set(kept))
 
         return data, labels
+
 
 
 class BalancedMNIST(MNIST):
@@ -407,7 +420,7 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
 
 import test
 
-def generate_KNN_triplets(train, device):
+def generate_KNN_triplets(train, device, KNet=False):
 
 
     # Save serialized object separately for IDs
@@ -436,7 +449,7 @@ def generate_KNN_triplets(train, device):
     #print(len(embed_space.keys()))
 
     triplet_data=[]
-    binary_labels = []
+    labels = []
 
     for imgkey,img in data_dict.items():
 
@@ -445,7 +458,7 @@ def generate_KNN_triplets(train, device):
         
         ranking = test.compute_similarity(anchor_emb, embed_space)
 
-        """
+
         positive_eg = None
         negative_eg = None 
         
@@ -483,19 +496,33 @@ def generate_KNN_triplets(train, device):
         negative_eg = data_dict[key] #embed_space[key]
         #print(key)
         #print(val)
-
+        """
 
         triplet_data.append(torch.stack([img, positive_eg, negative_eg]))
         #print(torch.stack([img, positive_eg, negative_eg]).shape)
 
-        binary_labels.append([1,0])
+        if KNet:
+
+            temp = torch.zeros(len(ALL))
+            class_no = class_dict[anchor_class]
+            temp[class_no] = 1 #Make a one-hot encoding of it
 
 
-    #print(torch.stack(triplet_data).shape)
-    #print(torch.tensor(binary_labels).shape)
+            labels.append(temp)
+
+        else:
 
 
-    return torch.stack(triplet_data), torch.tensor(binary_labels)
+            labels.append([1,0])
+
+    if KNet:
+
+        return torch.stack(triplet_data), torch.stack(labels)
+
+
+    else:
+
+        return torch.stack(triplet_data), torch.tensor(labels)
 
 
 def group_by_class(data, labels, classes=10, Hans =HANS):   #ids=None

@@ -7,7 +7,7 @@ import argparse
 #custom classes and methods
 from plot_results import gen_plots, bar_plot
 import data_loaders
-from siamese_models import NCCNet, ResSiamese, ResTwoBranch #, ContrastiveLoss
+from siamese_models import NCCNet, ResSiamese, ResTwoBranch, KNet, NNet #, ContrastiveLoss
 from pytorchtools import EarlyStopping
 from embedding_extractor import extract_embeddings
 from train import train
@@ -21,8 +21,8 @@ feature_extraction = False
 keep_embeddings = True
 triplet_loss = False #Adds a triplet loss component to the classifier's crossentropy loss
 two_branch = False  # If two branch version instead of Siamese network should be run
-KNet = False
-NNet = False
+KNET = True
+NNET = False
 
 save_frequency = 2
 batch_size = 16
@@ -145,11 +145,11 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
             model = ResTwoBranch(feature_extraction=feature_extraction, stn=STN).to(device)
 
 
-        elif NNet:
+        elif NNET:
 
             model = NNet(feature_extraction=feature_extraction).to(device)
 
-        elif KNet:
+        elif KNET:
 
             model = KNet(feature_extraction=feature_extraction).to(device)
 
@@ -195,15 +195,16 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
                 data_loaders.BalancedMNIST('./data', train=False, transform=mnist_trans, download=False), batch_size=batch_size,
                 shuffle=False)
 
+
         else:
 
 
             train_loader = torch.utils.data.DataLoader(
-               data_loaders.BalancedTriplets('./data', device, train=True, N=N, transform=base_trans, ResNet=ResNet), batch_size=batch_size,
+               data_loaders.BalancedTriplets('./data', device, train=True, N=N, transform=base_trans, ResNet=ResNet, KNet=KNET), batch_size=batch_size,
                shuffle=True)
 
             val_loader = torch.utils.data.DataLoader(
-                data_loaders.BalancedTriplets('./data', device, train=False, N=N, transform=base_trans, ResNet=ResNet), batch_size=batch_size,
+                data_loaders.BalancedTriplets('./data', device, train=False, N=N, transform=base_trans, ResNet=ResNet, KNet=KNET), batch_size=batch_size,
                 shuffle=False)
 
         optimizer = optim.SGD(params_to_update, lr=lr, momentum=momentum, weight_decay=weight_decay )
@@ -219,9 +220,9 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
                 break
 
-            epoch_train_metrics.append(train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg, knet=KNet,nnet=NNet))
+            epoch_train_metrics.append(train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg, knet=KNET,nnet=NNET))
 
-            val_m = validate(model, device, val_loader, metric_avg, knet=KNet,nnet=NNet)
+            val_m = validate(model, device, val_loader, metric_avg, knet=KNET,nnet=NNET)
 
             epoch_val_metrics.append(val_m)
 

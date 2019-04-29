@@ -7,13 +7,13 @@ import argparse
 #custom classes and methods
 from plot_results import gen_plots, bar_plot
 import data_loaders
-from siamese_models import NCCNet, ResSiamese, ResTwoBranch, KNet, NNet #, ContrastiveLoss
+from siamese_models import NCCNet, ResSiamese, ResTwoBranch, KNet, NNet, ImprintedKNet #, ContrastiveLoss
 from pytorchtools import EarlyStopping
 from embedding_extractor import extract_embeddings
 from train import train
 from validate import validate
 from test import test
-
+from imprint import imprint
 
 #These parameters can be tweaked---------------------------------------------------------#
 do_learn = True #True
@@ -23,6 +23,8 @@ triplet_loss = False #Adds a triplet loss component to the classifier's crossent
 two_branch = False  # If two branch version instead of Siamese network should be run
 KNET = True
 NNET = False
+imprinting = False
+
 
 save_frequency = 2
 batch_size = 16
@@ -153,6 +155,10 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
             model = KNet(feature_extraction=feature_extraction).to(device)
 
+        elif imprinting:
+            model = ImprintedKNet(feature_extraction=feature_extraction).to(device)
+
+
         else:
 
             model = ResSiamese(feature_extraction=feature_extraction, stn=STN).to(device)
@@ -217,6 +223,10 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
         epoch_train_metrics = [] #torch.empty((1,2))#((num_epochs, 2))
         epoch_val_metrics = [] #torch.empty_like(epoch_train_metrics)
+
+        #Imprint weight of the model classifier first
+        if imprinting:
+            imprint(model, device, train_loader)
 
         for epoch in range(num_epochs):
 

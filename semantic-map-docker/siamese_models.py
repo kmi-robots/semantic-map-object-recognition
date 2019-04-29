@@ -299,7 +299,7 @@ class NNet(nn.Module):
 
 class KNet(nn.Module):
     """
-    Trying to replicate NNet by Zeng et al. (2018)
+    Trying to replicate KNet by Zeng et al. (2018)
     - original paper model was in Torch Lua
     https://github.com/andyzeng/arc-robot-vision/tree/master/image-matching
     """
@@ -365,6 +365,102 @@ class KNet(nn.Module):
 
         return F.normalize(x)
 
+
+
+class ImprintedKNet(nn.Module):
+
+    """
+    Adding weight imprinting on our implementation of KNet by Zeng et al. (2018)
+    - original paper model was in Torch Lua
+    https://github.com/andyzeng/arc-robot-vision/tree/master/image-matching
+    """
+
+    def __init__(self, feature_extraction=False, p=0.5, norm=True, num_classes=10):
+        super().__init__()
+
+        self.embed = NetForEmbedding(feature_extraction)
+        self.embed2 = NetForEmbedding(feature_extraction)
+        self.embed3 = NetForEmbedding(feature_extraction)
+
+        self.norm = norm
+
+        self.fcs1 = nn.Sequential(
+
+            nn.Linear(2048,512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(512,128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Dropout(p=0.5)
+
+        )
+
+        self.fc2 = nn.Linear(128, num_classes, bias=False) #Removed bias from last layer
+
+        self.scale = nn.Parameter(torch.FloatTensor([10]))
+
+
+    def forward_once(self, x):
+        x = self.embed(x)
+
+        return F.normalize(x)  # #x.view(x.size(0), -1) #self.fc(x.view(x.size(0), -1)) #self.drop(self.linear2(x))
+
+    def forward_branch2(self, x):
+        x = self.embed2(x)
+
+        return F.normalize(x)
+
+    def forward_branch3(self, x):
+        x = self.embed3(x)
+
+        return F.normalize(x)
+
+    def forward(self, data):
+
+        x0 = self.forward_once(data[0])
+        x1 = self.forward_branch2(data[1])
+        x2 = self.forward_branch2(data[2])
+
+        res = self.scale(self.l2_norm(self.fcs1(x0)))
+
+        return x0, x1, x2, self.fc2(res)
+
+
+    def get_embedding(self, x):
+        x = self.embed(x)
+
+        return F.normalize(x)
+
+    def extract(self, x):
+
+        x = self.get_embedding(x)
+        return self.scale(self.l2_norm(self.fcs1(x)))
+
+    def l2_norm(self, x):
+        input_size = x.size()
+
+        buffer = torch.pow(x, 2)
+
+        normp = torch.sum(buffer, 1).add_(1e-10)
+
+        norm = torch.sqrt(normp)
+
+        _output = torch.div(x, norm.view(-1, 1).expand_as(x))
+
+        output = _output.view(input_size)
+
+        return output
+
+
+    def weight_norm(self):
+
+        w = self.linear2.weight.data
+
+        norm = w.norm(p=2, dim=1, keepdim=True)
+
+        self.linear2.weight.data = w.div(norm.expand_as(w))
 
 
 
@@ -492,31 +588,6 @@ class ResTwoBranch(nn.Module):
 
         return self.linear3(self.drop(res)), x0, x1
 
-    def l2_norm(self, x):
-
-        input_size = x.size()
-
-        buffer = torch.pow(x, 2)
-
-        normp = torch.sum(buffer, 1).add_(1e-10)
-
-        norm = torch.sqrt(normp)
-
-        _output = torch.div(x, norm.view(-1, 1).expand_as(x))
-
-        output = _output.view(input_size)
-
-        return output
-
-    """
-    def weight_norm(self):
-
-        w = self.linear2.weight.data
-
-        norm = w.norm(p=2, dim=1, keepdim=True)
-
-        self.linear2.weight.data = w.div(norm.expand_as(w))
-    """
 
     def get_embedding(self, x):
 

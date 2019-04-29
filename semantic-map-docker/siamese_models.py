@@ -352,12 +352,12 @@ class KNet(nn.Module):
         x1 = self.forward_branch2(data[1])
         x2 = self.forward_branch2(data[2])
 
-        dis_pos = self.l2dis(x0, x1)
-        dis_neg = self.l2dis_neg(x0, x2)
+        #dis_pos = self.l2dis(x0, x1)
+        #dis_neg = self.l2dis_neg(x0, x2)
 
-        joint_node = torch.cat(dis_pos, dis_neg)
+        #joint_node = torch.cat(dis_pos, dis_neg)
 
-        return x0, x1, x2, self.classifier(joint_node)
+        return x0, x1, x2, self.classifier(x0)
 
 
     def get_embedding(self, x):

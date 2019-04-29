@@ -37,7 +37,7 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg,
             classif_loss = 0.0
 
         elif knet:
-
+            target = torch.max(target, 1)[1]
             emb_a, emb_p, emb_n, output_logits = model(data)
             classif_loss = F.cross_entropy(output_logits, target)
 
@@ -85,7 +85,7 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg,
             norm_closs = output_logits.shape[0] * classif_loss.item()
             running_loss += norm_tloss + norm_closs
             #Multi-class instead of binary
-            accurate_labels = torch.sum(torch.argmax(output_logits, dim=1) == torch.argmax(target, dim=1)).cpu()
+            accurate_labels = torch.sum(torch.argmax(output_logits, dim=1) == target).cpu()
             all_labels = all_labels + 2*len(target)
 
             metric_avg = 'weighted' #for computing the accuracy

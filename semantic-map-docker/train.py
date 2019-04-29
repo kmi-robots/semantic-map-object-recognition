@@ -73,12 +73,12 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg,
         triplet_loss = criterion(emb_a, emb_p, emb_n)
         loss = classif_loss + triplet_loss
 
-        if nnet :
+        if nnet:
 
             norm_tloss = emb_a.shape[0] * triplet_loss.item()
             running_loss += norm_tloss
             accurate_labels = 0
-            all_labels = 0 #Cannot really classify in this case
+            all_labels = all_labels + 2*data[0].shape[0] #Cannot really classify in this case
 
         elif knet:
             norm_tloss = emb_a.shape[0] * triplet_loss.item()
@@ -108,10 +108,15 @@ def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg,
     This does not take label imbalance into account.
 
     """
+    if nnet:
+        p = 0.0
+        r = p
+        f1 = p
+        sup = 0
+    else:
+        p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
 
-    p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
-
-    roc_auc = roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
+    roc_auc = 0.0 #roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
     print("Epoch {}/{}, Loss: {:.6f}, Accuracy: {:.6f}%, Precision: {:.6f}, Recall: {:.6f}, ROC_AUC: {:.6f}".format(epoch + 1, num_epochs, epoch_loss, accuracy, p, r, roc_auc))
     # print(torch.Tensor([epoch_loss, accuracy]))
 

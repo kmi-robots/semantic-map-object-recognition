@@ -89,9 +89,15 @@ def validate(model, device, test_loader, metric_avg, knet=False,nnet=False):
         accuracy = 100. * accurate_labels / all_labels
         epoch_loss = running_loss/all_labels
 
-        p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
+        if nnet:
+            p = 0.0
+            r = p
+            f1 = p
+            sup = 0
+        else:
+            p, r, f1, sup = precision_recall_fscore_support(np.asarray(labels), np.asarray(predictions), average=metric_avg)
 
-        roc_auc = roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
+        roc_auc = 0.0 #roc_auc_score(np.asarray(labels), np.asarray(pos_proba))
 
         print('Val accuracy: {}/{} ({:.6f}%)\t Loss: {:.6f}, Precision: {:.6f}, Recall: {:.6f}, F1: {:.6f}, ROC_AUC: {:.6f}'.format(int(accurate_labels), int(all_labels), accuracy, epoch_loss, p, r, f1, roc_auc))
 

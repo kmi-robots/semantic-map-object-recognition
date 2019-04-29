@@ -23,7 +23,7 @@ ALL= KNOWN+NOVEL
 class_no=0
 class_dict = {}
 
-for class_name in ALL:
+for class_name in KNOWN:
 
     class_dict[class_name] = class_no
     class_no +=1
@@ -503,7 +503,7 @@ def generate_KNN_triplets(train, device, KNet=False):
 
         if KNet:
 
-            temp = torch.zeros(len(ALL))
+            temp = torch.zeros(len(KNOWN))
             class_no = class_dict[anchor_class]
             temp[class_no] = 1 #Make a one-hot encoding of it
 
@@ -511,7 +511,6 @@ def generate_KNN_triplets(train, device, KNet=False):
             labels.append(temp)
 
         else:
-
 
             labels.append([1,0])
 

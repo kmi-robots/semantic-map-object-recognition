@@ -17,7 +17,7 @@ class ContrastiveLoss(nn.Module):
     Takes embeddings of two samples and a target label == 1 if samples are from the same class and label == 0 otherwise
     """
 
-    def __init__(self, margin):
+    def __init__(self, margin=2.0):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
         self.eps = 1e-9
@@ -37,7 +37,7 @@ class TripletLoss(nn.Module):
     Takes embeddings of an anchor sample, a positive sample and a negative sample
     """
 
-    def __init__(self, margin):
+    def __init__(self, margin=2.0):
         super(TripletLoss, self).__init__()
         self.margin = margin
 

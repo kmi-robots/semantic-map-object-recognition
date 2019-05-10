@@ -126,8 +126,6 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         #print("Keeping label produced by YOLO as %s \n" % yolo_label)
                     """
 
-
-
                     if yolo_label in keepers:
 
                         #Just keeping prediction without adding to other embeddings

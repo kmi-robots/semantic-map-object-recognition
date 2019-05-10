@@ -53,7 +53,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         try:
 
-            img_mat = np.load(path_to_bags, encoding = 'latin1')
+            img_mat = np.load(path_to_bags, encoding = 'latin1', allow_pickle=True)
             #print(len(img_mat))
             #print(img_mat[0])
         except Exception as e:
@@ -96,7 +96,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     try:
 
                         ob2 = BGRtoRGB(obj)
-                        Image.fromarray(ob2, mode='RGB').show()
+                        #Image.fromarray(ob2, mode='RGB').show()
+
 
                     except:
 
@@ -106,7 +107,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                     qembedding = array_embedding(model, model_checkpoint, obj, \
                                                  device, transforms=trans)
-
+                    """
                     if yolo_label in keepers:
 
                         #Add to collection of known objects for future rankings
@@ -122,9 +123,19 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         #img_id = label +'_'+str(idx)+ '_'+ str(timestamp)
                         #train_embeds[img_id] = qembedding
 
-                        print("Keeping label produced by YOLO as %s \n" % yolo_label)
+                        #print("Keeping label produced by YOLO as %s \n" % yolo_label)
+                    """
+
+
+
+                    if yolo_label in keepers:
+
+                        #Just keeping prediction without adding to other embeddings
+                        print("Spotted a %s \n" % yolo_label)
 
                     else:
+
+                        print("YOLO says this is a %s \n" % yolo_label)
                         #Go ahead and classify by similarity
                         ranking = compute_similarity(qembedding, train_embeds)
 
@@ -133,10 +144,10 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                             label = keyr.split("_")[0]
 
                             print("The top most similar object is %s \n" % label)
-                            outr("The top most similar object is %s \n" % label)
+                            outr.write("The top most similar object is %s \n" % label)
 
                             print("With unique ID %s \n" % keyr)
-                            outr("With unique ID %s \n" % keyr)
+                            outr.write("With unique ID %s \n" % keyr)
 
                         else:
                             print("The %i most similar objects to the provided image are: \n")
@@ -179,10 +190,10 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 print("%EOF---------------------------------------------------------------------% \n")
 
         #Save updated embeddings after YOLO segmentation
-        with open(path_to_train_embeds, mode='wb') as outf:
-            torch.save(obj=train_embeds, f=outf)
+        #with open(path_to_train_embeds, mode='wb') as outf:
+        #    torch.save(obj=train_embeds, f=outf)
 
-        print("Updated embeddings saved under %s" % path_to_train_embeds)
+        #print("Updated embeddings saved under %s" % path_to_train_embeds)
 
         return None
 

@@ -423,7 +423,7 @@ class ImprintedKNet(nn.Module):
         x1 = self.forward_branch2(data[1])
         x2 = self.forward_branch2(data[2])
 
-        res = self.scale(self.l2_norm(self.fcs1(x0)))
+        res = self.scale * self.l2_norm(self.fcs1(x0))
 
         return x0, x1, x2, self.fc2(res)
 
@@ -436,7 +436,7 @@ class ImprintedKNet(nn.Module):
     def extract(self, x):
 
         x = self.get_embedding(x)
-        return self.scale(self.l2_norm(self.fcs1(x)))
+        return self.scale *self.l2_norm(self.fcs1(x))
 
     def l2_norm(self, x):
         input_size = x.size()

@@ -22,7 +22,7 @@ WEIGHTS='./data/yolo/yolov3.weights'
 # read class names from text file
 classes = None
 with open(CLASSES, 'r') as f:
-    classes = [line.strip() for line in f.readlines()]
+    classes = [line.strip() for line in f.readlines()] + ['saliency region']
 
 scale = 0.00392 # 1/255.  factor
 conf_threshold = 0.01 #0.5
@@ -47,6 +47,21 @@ def draw_bounding_box(img, class_id, confidence, x, y, x_plus_w, y_plus_h):
     cv2.rectangle(img, (x,y), (x_plus_w,y_plus_h), color, 2)
     cv2.putText(img, label, (x-10,y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
+def get_obj_saliency_map(rgb_img):
+
+    saliency = cv2.saliency.ObjectnessBING_create()
+    saliency.setTrainingPath('./data/objectness_trained_model')
+    success_flag, saliencyMap = saliency.computeSaliency(rgb_img)
+
+    return saliencyMap
+
+def get_static_saliency_map(rgb_img):
+
+    saliency = cv2.saliency.StaticSaliencySpectralResidual_create()
+    success_flag, saliencyMap = saliency.computeSaliency(rgb_img)
+
+    return (saliencyMap * 255).astype("uint8")
+
 
 def segment(temp_path, img):
 
@@ -54,12 +69,56 @@ def segment(temp_path, img):
     Height = img.shape[0]
 
     img = cv2.imread(temp_path)
+    temp = img.copy()
+
+
+    #Denoise
+    denoised = cv2.fastNlMeansDenoisingColored(img, None, 10,10,7,15 )
 
     # read pre-trained model and config file
     net = cv2.dnn.readNet(WEIGHTS, CONFIG)
 
+    saliency_map = get_static_saliency_map(denoised)
+    #binarize result
+
+    output = cv2.threshold(saliency_map, 0, 255,cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+
+    #find bounding rectangles
+    contours, hierarchy = cv2.findContours(output, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    for cnt in contours:
+
+        x,y,w,h = cv2.boundingRect(cnt)
+
+        draw_bounding_box(temp, -1, None, x, y, x+w, y+h)
+
+    #Uncomment for objectness saliency, Note: needs pre-trained model to run
+    """
+    saliency_map = get_obj_saliency_map(img)
+
+    for i in range(0, min(saliency_map.shape[0], 10)):
+        #for each candidate salient region
+        startX, startY, endX, endY = saliency_map[i].flatten()
+
+        output = img.copy()
+
+        draw_bounding_box(output, -1, None, startX, startY, endX, endY)
+
+    """
+
+    #Visualise binarised saliency regions
+    #cv2.imshow('Saliency',output)
+    #cv2.waitKey(5000)
+    #cv2.destroyAllWindows()
+
+
+    #Visualise bboxes for saliency regions only
+    #cv2.imshow('Saliency', img)
+    #cv2.waitKey(5000)
+    #cv2.destroyAllWindows()
+
     # create input blob
-    blob = cv2.dnn.blobFromImage(img, scale, (416, 416), (0, 0, 0), True, crop=False)
+    blob = cv2.dnn.blobFromImage(denoised, scale, (416, 416), (0, 0, 0), True, crop=False)
     # set input blob for the network
     net.setInput(blob)
 
@@ -99,22 +158,28 @@ def segment(temp_path, img):
 
     predictions = []
 
-    for i in indices:
-        i = i[0]
-        box = boxes[i]
-        x = round(box[0])
-        y = round(box[1])
-        w = round(box[2])
-        h = round(box[3])
 
-        #draw_bounding_box(img, class_ids[i], confidences[i], x, y, x + w, y + h)
-        predictions.append((img[y:y+h, x:x+w],str(classes[class_ids[i]])))
+    if len(list(indices))>0:
+
+        for i in indices.flatten():
+
+
+            box = boxes[i]
+            x = round(box[0])
+            y = round(box[1])
+            w = round(box[2])
+            h = round(box[3])
+
+
+            draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
+            tmp = img.copy()
+            predictions.append((tmp[y:y+h, x:x+w],str(classes[class_ids[i]])))
 
     # display output image
 
-    #cv2.imshow('prediction',img)
-    #cv2.waitKey(5000)
-    #cv2.destroyAllWindows()
+    cv2.imshow('union',temp)
+    cv2.waitKey(5000)
+    cv2.destroyAllWindows()
 
     return predictions
 

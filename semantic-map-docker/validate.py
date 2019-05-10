@@ -75,24 +75,22 @@ def validate(model, device, test_loader, metric_avg, knet=False,nnet=False):
                 norm_tloss = emb_a.shape[0] * triplet_loss.item()
                 running_loss += norm_tloss
                 accurate_labels = 0
-                all_labels = 0  # Cannot really classify in this case
+                all_labels = all_labels + data[0].shape[0] # Cannot really classify in this case
 
             elif knet:
                 norm_tloss = emb_a.shape[0] * triplet_loss.item()
                 norm_closs = output_logits.shape[0] * classif_loss.item()
                 running_loss += norm_tloss + norm_closs
                 # Multi-class instead of binary
-                predictions.extend(torch.argmax(output, dim=1).tolist())
-                labels.extend(target_positive.tolist())
+                predictions.extend(torch.argmax(output_logits, dim=1).tolist())
+                labels.extend(target.tolist())
                 #accurate_labels = torch.sum(torch.argmax(output_logits, dim=1) == target).cpu()
-                #all_labels = all_labels + 2*len(target)
+                all_labels = all_labels + len(target)
                 metric_avg = 'weighted'  # for computing the accuracy
 
-        if knet:
+        accuracy = accuracy_score(labels, predictions)
 
-            accuracy = accuracy_score(labels, predictions)
-        else:
-            accuracy = 100. * accurate_labels / all_labels
+        #accuracy = 100. * accurate_labels / all_labels
         epoch_loss = running_loss/all_labels
 
         if nnet:

@@ -73,6 +73,7 @@ def array_embedding(model, path_to_state, img_array,  device, transforms=None):
     Same as path_embedding but requiring image array instead of path
     to image file as input
     """
+    #model = ResSiamese(feature_extraction=True).to(device)
     model.load_state_dict(torch.load(path_to_state, map_location={'cuda:0': 'cpu'}))
     model.eval()
 
@@ -85,7 +86,6 @@ def array_embedding(model, path_to_state, img_array,  device, transforms=None):
 
     #Extract embedding for the query image
     return model.get_embedding(img)
-
 
 
 def base_embedding(path_to_img,  device, transforms=None):
@@ -105,22 +105,3 @@ def base_embedding(path_to_img,  device, transforms=None):
     return model.get_embedding(img)
 
 
-
-"""
-
-def permute(embedding):
-
-    #Returns the input embedding permutation
-    return torch.argsort(embedding, dim=1, descending=True)
-
-def truncate(embedding, K=100):
-
-    return
-
-def toText(embedding):
-
-    # Assigns codewords to the input embedding
-
-    return
-
-"""

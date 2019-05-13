@@ -32,6 +32,7 @@ with open(CLASSES, 'r') as f:
 scale = 0.00392 # 1/255.  factor
 conf_threshold = 0.01 #0.5
 nms_threshold = 0.1 #0.4
+overlapThresh = 0.1
 
 # generate different colors for different classes
 COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
@@ -68,6 +69,159 @@ def get_static_saliency_map(rgb_img):
     success_flag, saliencyMap = saliency.computeSaliency(rgb_img)
 
     return (saliencyMap * 255).astype("uint8")
+
+"""
+# Based on Malisiewicz et al., but after applying filter on area
+def non_max_suppression_fast(boxes, overlapThresh):
+
+    # if there are no boxes, return an empty list
+    if len(boxes) == 0:
+        return []
+
+    # initialize the list of picked indexes
+    pick = []
+
+    # grab the coordinates of the bounding boxes
+    x1 = boxes[:, 0]
+    y1 = boxes[:, 1]
+    x2 = boxes[:, 2]
+    y2 = boxes[:, 3]
+
+    # compute the area of the bounding boxes and sort the bounding
+    # boxes by the bottom-right y-coordinate of the bounding box
+    area = (x2 - x1 + 1) * (y2 - y1 + 1)
+
+    #Difference: added filter on area
+    bigids = np.where(area > 100000)
+
+    area = np.delete(area, bigids)
+    x1 = np.delete(x1, bigids)
+    x2 = np.delete(x2, bigids)
+    y1 = np.delete(y1, bigids)
+    y2 = np.delete(y2, bigids)
+
+    idxs = np.argsort(x1)
+
+    # keep looping while some indexes still remain in the indexes
+    # list
+    while len(idxs) > 0:
+
+        # grab the last index in the indexes list and add the
+        # index value to the list of picked indexes
+        last = len(idxs) - 1
+        i = idxs[last]
+
+        pick.append(i)
+
+        # find the largest (x, y) coordinates for the start of
+        # the bounding box and the smallest (x, y) coordinates
+        # for the end of the bounding box
+
+        xx1 = np.maximum(x1[i], x1[idxs[:last]])
+        yy1 = np.maximum(y1[i], y1[idxs[:last]])
+        xx2 = np.minimum(x2[i], x2[idxs[:last]])
+        yy2 = np.minimum(y2[i], y2[idxs[:last]])
+
+        # compute the width and height of the bounding box
+        w = np.maximum(0, xx2 - xx1 + 1)
+        h = np.maximum(0, yy2 - yy1 + 1)
+
+        # compute the ratio of overlap
+        overlap = (w * h) / area[idxs[:last]]
+
+        idxs = np.delete(idxs, np.concatenate(([last],np.where(overlap > overlapThresh)[0])))
+
+
+    # return only the bounding boxes that were picked using the
+    # integer data type
+    return boxes[pick].astype("int")
+"""
+
+
+def checkRectangles(rects, overlapThresh, tol=100):
+    rectsCC = rects[:] #copy of rect
+
+    for coords1 in rects:
+
+        # print(coords1)
+
+        # top-left coordinates (origin point)
+        x1 = coords1[0]
+        y1 = coords1[1]
+        # bottom right coordinates
+        x_br_1 = coords1[2]
+        y_br_1 = coords1[3]
+
+        area1 = (x_br_1 - x1 + 1) * (y_br_1 - y1 + 1)
+        pos = rects.index(coords1)
+
+        # Loops over all the other elements except the firstly considered one
+        for coords2 in [r for r in rects if rects.index(r) != pos]:
+
+            # print(coords2)
+
+            # top-left coordinates (origin point)
+            x2 = coords2[0]
+            y2 = coords2[1]
+            # bottom right coordinates
+            x_br_2 = coords2[2]
+            y_br_2 = coords2[3]
+
+            # If either rectangle 2 is included in rectangle 1
+            if (x2 >= x1-tol) and (y2 >= y1-tol) and (x_br_2 <= x_br_1+tol) and (y_br_2 <= y_br_1+tol):
+
+                # then rect2 is completely enclosed in rect1
+
+                #compute IoU then
+                xA = max(x1, x2)
+                yA = max(y1, y2)
+                xB = min(x_br_1, x_br_2)
+                yB = min(y_br_1, y_br_2)
+
+                # compute the area of intersection rectangle
+                interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+
+                area2 = (x_br_2 - x2 + 1) * (y_br_2 - y2 + 1)
+
+                # compute the intersection over union by taking the intersection
+                # area and dividing it by the sum of prediction + ground-truth
+                # areas - the interesection area
+                iou = interArea / float(area1 + area2 - interArea)
+                print(iou)
+                #Filter based on that
+                if iou >= overlapThresh:
+
+                    rectsCC.remove(coords2) #remove it from the rectangle list
+                    rects.remove(coords2)
+
+
+            # or the other way around
+            elif (x1 >= x2 - tol) and (y1 >= y2 -tol) and (x_br_1 <= x_br_2+tol) and (y_br_1 <= y_br_2+tol):
+
+                xA = max(x1, x2)
+                yA = max(y1, y2)
+                xB = min(x_br_1, x_br_2)
+                yB = min(y_br_1, y_br_2)
+
+                # compute the area of intersection rectangle
+                interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+
+                area2 = (x_br_2 - x2 + 1) * (y_br_2 - y2 + 1)
+
+                # compute the intersection over union by taking the intersection
+                # area and dividing it by the sum of prediction + ground-truth
+                # areas - the interesection area
+                iou = interArea / float(area1 + area2 - interArea)
+
+                # Filter based on that
+                if iou >= overlapThresh:
+
+                    rectsCC.remove(coords1)
+                    rects.remove(coords1)
+
+
+    # returns the updated list after this check
+    return rectsCC
 
 
 def run_YOLO(blob, net, mu=None, w=None, h=None):
@@ -130,25 +284,6 @@ def run_YOLO(blob, net, mu=None, w=None, h=None):
     return boxes, confidences, indices, class_ids
 
 
-def filter_boxes(img, S, confY, indY, idsY, confY_, indY_, idsY_):
-
-
-    #Rs = find_maxsqall1(S)
-
-    pass
-
-def backproject(source, target, levels=2, scale=1):
-    hsv = cv2.cvtColor(source, cv2.COLOR_BGR2HSV)
-    hsvt = cv2.cvtColor(target, cv2.COLOR_BGR2HSV)
-    # calculating object histogram
-    roihist = cv2.calcHist([hsv], [0, 1], None, \
-                           [levels, levels], [0, 180, 0, 256])
-
-    # normalize histogram and apply backprojection
-    cv2.normalize(roihist, roihist, 0, 255, cv2.NORM_MINMAX)
-    dst = cv2.calcBackProject([hsvt], [0, 1], roihist, [0, 180, 0, 256], scale)
-    return dst
-
 def segment(temp_path, img):
 
     Width = img.shape[1]
@@ -157,6 +292,8 @@ def segment(temp_path, img):
     img = cv2.imread(temp_path)
 
     temp = img.copy()
+    temp2 = img.copy()
+
     # Denoise image
     denoised = cv2.fastNlMeansDenoisingColored(temp, None, 10, 10, 7, 15)
 
@@ -165,32 +302,6 @@ def segment(temp_path, img):
         #Take bottom-up saliency also into account
         saliency_map = get_static_saliency_map(denoised)
 
-        bin = cv2.threshold(saliency_map.copy(), 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-        contours, hierarchy = cv2.findContours(bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        for cnt in contours:
-
-            area = cv2.contourArea(cnt)
-            """
-            #Filtering the smallest ones
-            if area > 1000:
-
-                x, y, w, h = cv2.boundingRect(cnt)
-                #print(saliency_map.shape)
-                #print(temp.shape)
-                avg_saliency = saliency_map[x:x+w, y:y+h].mean()
-                #print(avg_saliency)
-
-                #skip nans
-                if math.isnan(avg_saliency):
-                   continue
-
-                color = COLORS[-1]
-                cv2.rectangle(temp, (x, y), (x+w, y+h), color, 2)
-                cv2.putText(temp, str(round(avg_saliency,2)), (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-                #draw_bounding_box(temp, -1, None, x, y, x + w, y + h)
-            """
 
     elif w_saliency and not static:
 
@@ -202,46 +313,7 @@ def segment(temp_path, img):
 
             output = img.copy()
 
-            draw_bounding_box(output, -1, None, startX, startY, endX, endY)
-
-    """
-    start = img.copy()
-
-    #Mean-shift filter
-    d = denoised.copy()
-    mshift = cv2.pyrMeanShiftFiltering(d, 2, 10, d, 4)
-
-    #backproject hue hist values on img itself
-    backproj = np.uint8(backproject(mshift, mshift, levels=2))
-
-    saliency_map = get_static_saliency_map(mshift) #denoised)
-
-
-    #saliency_map = get_static_saliency_map()
-    #binarize result
-
-    #Find fixation points as done in lit, e.g., Karaoguz and Jensfelt 2018
-    fix_points=[]
-
-    for cnt in contours:
-
-        #Compute centroid of each contour
-        # i.e., convert from shape moments
-
-        area = cv2.contourArea(cnt)
-
-        if area > 2000:
-            M = cv2.moments(cnt)
-            cX = int(M["m10"] / M["m00"])
-            cY = int(M["m01"] / M["m00"])
-            fix_points.append((cX, cY))
-
-            x, y, w, h = cv2.boundingRect(cnt)
-
-            draw_bounding_box(temp, -1, None, x, y, x+w, y+h)
-
-
-    """
+            #draw_bounding_box(output, -1, None, startX, startY, endX, endY)
 
     #Visualise binarised saliency regions
     #cv2.imshow('Saliency',bin)
@@ -260,60 +332,70 @@ def segment(temp_path, img):
 
     net.setInput(blob)
 
-    boxes, confidences, indices, class_ids = run_YOLO(blob, net, mu=conf_threshold, w=Width,h=Height)
-
-    #Algorithm to combine saliency regions with YOLO boxes
-    #union = filter_boxes(temp, bin, confidences, indices, class_ids, hi_confs, hi_indices, hi_cids)
+    yolo_boxes, confidences, indices, class_ids = run_YOLO(blob, net, mu=conf_threshold, w=Width,h=Height)
 
     #yolo_map = np.zeros_like(saliency_map)
     predictions = []
+    all_boxes=[]
 
     if len(list(indices))>0:
     #if len(list(boxes))>0:
 
         for i in indices.flatten():#for i,box in enumerate(boxes): #
 
-            box = boxes[i]
+            box = yolo_boxes[i]
             x = round(box[0])
             y = round(box[1])
             w = round(box[2])
             h = round(box[3])
 
             #assign conf value of box to all pixels in that box
-
-            saliency_map[x:x+w,y:y+h]= confidences[i]*100
+            saliency_map[x:x+w,y:y+h] = confidences[i]*100
 
             draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
+            all_boxes.append([x,y,x+w,y+h])
+
             tmp = img.copy()
             predictions.append((tmp[y:y+h, x:x+w],str(classes[class_ids[i]])))
 
     bin2 = cv2.threshold(saliency_map, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-    temp2 = img.copy()
+
     contours, hierarchy = cv2.findContours(bin2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     for cnt in contours:
-        area = cv2.contourArea(cnt)
 
-        #Filtering the smallest ones
-        if area > 1000:
+       area = round(cv2.contourArea(cnt))
+       x, y, w, h = cv2.boundingRect(cnt)
+       area = (int(x)+int(w) - int(x) + 1) * (int(y)+int(h) - int(y) + 1)
+
+       #Filtering the smallest ones
+       if area> 2000:
 
             x, y, w, h = cv2.boundingRect(cnt)
             #print(saliency_map.shape)
             #print(temp.shape)
-            """
-            avg_saliency = saliency_map[x:x+w, y:y+h].mean()
-            #print(avg_saliency)
 
-            skip nans
-            if math.isnan(avg_saliency):
-               continue
+            #Add also boxes from saliency
+            all_boxes.append([x,y,x+w,y+h])
+            predictions.append((tmp[y:y + h, x:x + w], classes[-1]))
 
-            color = COLORS[-1]
-            cv2.rectangle(temp, (x, y), (x+w, y+h), color, 2)
-            cv2.putText(temp, str(round(avg_saliency,2)), (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-            """
             draw_bounding_box(temp, -1, None, x, y, x + w, y + h)
 
+
+    print(np.asarray(all_boxes).shape)
+    filtered_boxes = checkRectangles(all_boxes, overlapThresh)
+    print(len(filtered_boxes))
+
+    for box in filtered_boxes:
+
+        x = box[0]
+        y = box[1]
+        x2 = box[2]
+        y2 = box[3]
+
+        color = COLORS[-1]
+        cv2.rectangle(temp2, (x, y), (x2, y2), color, 2)
+        cv2.putText(temp2, classes[-1], (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
 
     # Visualise saliency+yoloconf regions
@@ -321,10 +403,13 @@ def segment(temp_path, img):
     #cv2.waitKey(5000)
     #cv2.destroyAllWindows()
 
-    # display yolo-only image
 
-    cv2.imshow('union',temp)
-    cv2.waitKey(10000)
+    cv2.imshow('union', temp)
+    cv2.waitKey(6000)
+    cv2.destroyAllWindows()
+
+    cv2.imshow('union',temp2)
+    cv2.waitKey(6000)
     cv2.destroyAllWindows()
 
     return predictions

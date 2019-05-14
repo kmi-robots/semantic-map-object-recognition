@@ -39,7 +39,7 @@ segmentation_threshold = 0.01
 N = 20 #10 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/paper/embeddings_absL1moved.dat'
-K = 1
+K = 5 #
 path_to_bags ='./data/robot_collected.npy'
 STN = False #Whether to use Spatial Transformer module on input or not
 

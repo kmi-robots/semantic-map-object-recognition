@@ -43,8 +43,8 @@ COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
 net = cv2.dnn.readNet(WEIGHTS, CONFIG)
 
 def get_output_layers(net):
-    layer_names = net.getLayerNames()
 
+    layer_names = net.getLayerNames()
     output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
     return output_layers
 
@@ -70,78 +70,13 @@ def get_static_saliency_map(rgb_img):
 
     return (saliencyMap * 255).astype("uint8")
 
-"""
-# Based on Malisiewicz et al., but after applying filter on area
-def non_max_suppression_fast(boxes, overlapThresh):
-
-    # if there are no boxes, return an empty list
-    if len(boxes) == 0:
-        return []
-
-    # initialize the list of picked indexes
-    pick = []
-
-    # grab the coordinates of the bounding boxes
-    x1 = boxes[:, 0]
-    y1 = boxes[:, 1]
-    x2 = boxes[:, 2]
-    y2 = boxes[:, 3]
-
-    # compute the area of the bounding boxes and sort the bounding
-    # boxes by the bottom-right y-coordinate of the bounding box
-    area = (x2 - x1 + 1) * (y2 - y1 + 1)
-
-    #Difference: added filter on area
-    bigids = np.where(area > 100000)
-
-    area = np.delete(area, bigids)
-    x1 = np.delete(x1, bigids)
-    x2 = np.delete(x2, bigids)
-    y1 = np.delete(y1, bigids)
-    y2 = np.delete(y2, bigids)
-
-    idxs = np.argsort(x1)
-
-    # keep looping while some indexes still remain in the indexes
-    # list
-    while len(idxs) > 0:
-
-        # grab the last index in the indexes list and add the
-        # index value to the list of picked indexes
-        last = len(idxs) - 1
-        i = idxs[last]
-
-        pick.append(i)
-
-        # find the largest (x, y) coordinates for the start of
-        # the bounding box and the smallest (x, y) coordinates
-        # for the end of the bounding box
-
-        xx1 = np.maximum(x1[i], x1[idxs[:last]])
-        yy1 = np.maximum(y1[i], y1[idxs[:last]])
-        xx2 = np.minimum(x2[i], x2[idxs[:last]])
-        yy2 = np.minimum(y2[i], y2[idxs[:last]])
-
-        # compute the width and height of the bounding box
-        w = np.maximum(0, xx2 - xx1 + 1)
-        h = np.maximum(0, yy2 - yy1 + 1)
-
-        # compute the ratio of overlap
-        overlap = (w * h) / area[idxs[:last]]
-
-        idxs = np.delete(idxs, np.concatenate(([last],np.where(overlap > overlapThresh)[0])))
-
-
-    # return only the bounding boxes that were picked using the
-    # integer data type
-    return boxes[pick].astype("int")
-"""
 
 
 def checkRectangles(rects, overlapThresh, tol=100):
-    rectsCC = rects[:] #copy of rect
 
-    for coords1 in rects:
+    rectsCC = rects.copy() #copy of rect
+
+    for coords1,label1 in rects:
 
         # print(coords1)
 
@@ -153,10 +88,10 @@ def checkRectangles(rects, overlapThresh, tol=100):
         y_br_1 = coords1[3]
 
         area1 = (x_br_1 - x1 + 1) * (y_br_1 - y1 + 1)
-        pos = rects.index(coords1)
+        pos = rects.index((coords1,label1))
 
         # Loops over all the other elements except the firstly considered one
-        for coords2 in [r for r in rects if rects.index(r) != pos]:
+        for coords2, label2 in [(r,l) for (r,l) in rects if rects.index((r,l)) != pos]:
 
             # print(coords2)
 
@@ -187,12 +122,12 @@ def checkRectangles(rects, overlapThresh, tol=100):
                 # area and dividing it by the sum of prediction + ground-truth
                 # areas - the interesection area
                 iou = interArea / float(area1 + area2 - interArea)
-                print(iou)
+
                 #Filter based on that
                 if iou >= overlapThresh:
 
-                    rectsCC.remove(coords2) #remove it from the rectangle list
-                    rects.remove(coords2)
+                    rectsCC.remove((coords2,label2)) #remove it from the rectangle list
+                    rects.remove((coords2,label2))
 
 
             # or the other way around
@@ -216,8 +151,8 @@ def checkRectangles(rects, overlapThresh, tol=100):
                 # Filter based on that
                 if iou >= overlapThresh:
 
-                    rectsCC.remove(coords1)
-                    rects.remove(coords1)
+                    rectsCC.remove((coords1,label1))
+                    rects.remove((coords1,label1))
 
 
     # returns the updated list after this check
@@ -239,7 +174,6 @@ def run_YOLO(blob, net, mu=None, w=None, h=None):
     # for each detection from each output layer
     # get the confidence, class id, bounding box params
     # and ignore weak detections
-
 
     for out in outs:
 
@@ -335,7 +269,7 @@ def segment(temp_path, img):
     yolo_boxes, confidences, indices, class_ids = run_YOLO(blob, net, mu=conf_threshold, w=Width,h=Height)
 
     #yolo_map = np.zeros_like(saliency_map)
-    predictions = []
+    #predictions = []
     all_boxes=[]
 
     if len(list(indices))>0:
@@ -352,11 +286,11 @@ def segment(temp_path, img):
             #assign conf value of box to all pixels in that box
             saliency_map[x:x+w,y:y+h] = confidences[i]*100
 
-            draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
-            all_boxes.append([x,y,x+w,y+h])
+            #draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
+            all_boxes.append(([x,y,x+w,y+h], str(classes[class_ids[i]])))
 
             tmp = img.copy()
-            predictions.append((tmp[y:y+h, x:x+w],str(classes[class_ids[i]])))
+            #predictions.append((tmp[y:y+h, x:x+w],str(classes[class_ids[i]])))
 
     bin2 = cv2.threshold(saliency_map, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
@@ -376,26 +310,26 @@ def segment(temp_path, img):
             #print(temp.shape)
 
             #Add also boxes from saliency
-            all_boxes.append([x,y,x+w,y+h])
-            predictions.append((tmp[y:y + h, x:x + w], classes[-1]))
+            all_boxes.append(([x,y,x+w,y+h],classes[-1]))
+            #draw_bounding_box(temp, -1, None, x, y, x + w, y + h)
 
-            draw_bounding_box(temp, -1, None, x, y, x + w, y + h)
-
-
-    print(np.asarray(all_boxes).shape)
+    #print(np.asarray(all_boxes).shape)
     filtered_boxes = checkRectangles(all_boxes, overlapThresh)
-    print(len(filtered_boxes))
+    #print(len(filtered_boxes))
 
-    for box in filtered_boxes:
+    """
+    for box,l in filtered_boxes:
 
         x = box[0]
         y = box[1]
         x2 = box[2]
         y2 = box[3]
 
-        color = COLORS[-1]
+
+        color = COLORS[classes.index(l)]
         cv2.rectangle(temp2, (x, y), (x2, y2), color, 2)
-        cv2.putText(temp2, classes[-1], (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        cv2.putText(temp2, l, (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
 
 
     # Visualise saliency+yoloconf regions
@@ -412,5 +346,6 @@ def segment(temp_path, img):
     cv2.waitKey(6000)
     cv2.destroyAllWindows()
 
-    return predictions
+    """
+    return filtered_boxes
 

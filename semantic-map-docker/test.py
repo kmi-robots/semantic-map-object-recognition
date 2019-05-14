@@ -80,12 +80,16 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 print("Analyzing frame %s" % timestamp)
                 outr.write("Analyzing frame %s" % timestamp)
 
-                yolo_preds = segment('temp.jpg', img)
+                predicted_boxes = segment('temp.jpg', img)
 
 
-                for idx, (obj, yolo_label) in enumerate(yolo_preds):
+                for idx, (coords, segm_label) in enumerate(predicted_boxes):
 
                     print("Looking at %i -th object in this frame \n" % idx)
+
+
+                    img_ = img.copy()
+                    obj = img_[coords[1]:coords[3],coords[0]:coords[2]]
 
                     if str(obj) ==  "[]":
 
@@ -95,14 +99,16 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                     try:
 
-                        ob2 = BGRtoRGB(obj)
-                        #Image.fromarray(ob2, mode='RGB').show()
+                        #ob2 = BGRtoRGB(obj)
+                        cv2.imshow('union', obj)
+                        cv2.waitKey(6000)
+                        cv2.destroyAllWindows()
 
 
                     except:
 
                         print(type(obj))
-                        print(yolo_label)
+                        print(segm_label)
                     #Pre-process as usual validation/test images to extract embedding
 
                     qembedding = array_embedding(model, model_checkpoint, obj, \
@@ -126,14 +132,14 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         #print("Keeping label produced by YOLO as %s \n" % yolo_label)
                     """
 
-                    if yolo_label in keepers:
+                    if segm_label in keepers:
 
                         #Just keeping prediction without adding to other embeddings
-                        print("Spotted a %s \n" % yolo_label)
+                        print("Spotted a %s \n" % segm_label)
 
                     else:
 
-                        print("YOLO says this is a %s \n" % yolo_label)
+                        print("YOLO says this is a %s \n" % segm_label)
                         #Go ahead and classify by similarity
                         ranking = compute_similarity(qembedding, train_embeds)
 

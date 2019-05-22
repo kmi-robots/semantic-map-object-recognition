@@ -34,6 +34,7 @@ def main(path_to_bag):
 
     for bagf in os.listdir(path_to_bag):
 
+        print(bagf)
         bag = rosbag.Bag(os.path.join(path_to_bag, bagf))
         bridge = CvBridge()
 
@@ -41,11 +42,15 @@ def main(path_to_bag):
         
         for topic, msg, _ in bag.read_messages():
 
+            #Filter depth data or other topics in case any other was collected
+            if topic != '/camera/rgb/image_raw':
+                continue
+
             current = msg.header.stamp.to_sec()
 
             if forLabels:
 
-                cv2.imwrite(os.path.join(os.environ['HOME'],'/main/input/img_'+bagf+'_'+str(current)+'.png'),\
+                cv2.imwrite(os.path.join(os.environ['HOME'],'OpenLabeling/main/input/img_'+bagf+'_'+str(current)+'.png'),\
                              bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"))
                 continue
 

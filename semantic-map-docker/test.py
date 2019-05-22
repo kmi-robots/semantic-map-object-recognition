@@ -101,7 +101,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                         #ob2 = BGRtoRGB(obj)
                         cv2.imshow('union', obj)
-                        cv2.waitKey(6000)
+                        cv2.waitKey(1000)
                         cv2.destroyAllWindows()
 
 
@@ -140,54 +140,55 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     else:
 
                         print("YOLO says this is a %s \n" % segm_label)
-                        #Go ahead and classify by similarity
-                        ranking = compute_similarity(qembedding, train_embeds)
 
-                        if K == 1:
-                            keyr, val = ranking[0]
-                            label = keyr.split("_")[0]
+                    #Go ahead and classify by similarity
+                    ranking = compute_similarity(qembedding, train_embeds)
 
-                            print("The top most similar object is %s \n" % label)
-                            outr.write("The top most similar object is %s \n" % label)
+                    if K == 1:
+                        keyr, val = ranking[0]
+                        label = keyr.split("_")[0]
 
-                            print("With unique ID %s \n" % keyr)
-                            outr.write("With unique ID %s \n" % keyr)
+                        print("The top most similar object is %s \n" % label)
+                        outr.write("The top most similar object is %s \n" % label)
+
+                        print("With unique ID %s \n" % keyr)
+                        outr.write("With unique ID %s \n" % keyr)
+
+                    else:
+                        print("The %i most similar objects to the provided image are: \n")
+                        outr.write("The %i most similar objects to the provided image are: \n" % K)
+
+                        votes = Counter()
+                        ids = {}
+
+                        #Majority voting with discounts by distance from top position
+                        for k,(key, val) in enumerate(ranking[:K]):
+
+                            label = key.split("_")[0]  # [:-1]
+
+                            votes[label] += 1/(k+1)
+
+                            ids[label] = key
+
+                            print(label + ": " + str(val) + "\n")
+                            outr.write(label + ": " + str(val) + "\n")
+                            print("With unique ID %s \n" % key)
+                            outr.write("With unique ID %s \n" % key)
+
+                        win_label, win_score = max(votes.items(), key=lambda x: x[1])
+                        win_id = ids[win_label]
+
+                        if win_score > 1.0:
+
+                            print("The most similar object by majority voting is %s \n" % win_label)
+                            outr.write("The most similar object by majority voting is %s \n" % win_label)
+                            print("With unique ID %s \n" % win_id)
+                            outr.write("With unique ID %s \n" % win_id)
 
                         else:
-                            print("The %i most similar objects to the provided image are: \n")
-                            outr.write("The %i most similar objects to the provided image are: \n" % K)
 
-                            votes = Counter()
-                            ids = {}
-
-                            #Majority voting with discounts by distance from top position
-                            for k,(key, val) in enumerate(ranking[:K]):
-
-                                label = key.split("_")[0]  # [:-1]
-
-                                votes[label] += 1/(k+1)
-
-                                ids[label] = key
-
-                                print(label + ": " + str(val) + "\n")
-                                outr.write(label + ": " + str(val) + "\n")
-                                print("With unique ID %s \n" % key)
-                                outr.write("With unique ID %s \n" % key)
-
-                            win_label, win_score = max(votes.items(), key=lambda x: x[1])
-                            win_id = ids[win_label]
-
-                            if win_score > 1.0:
-
-                                print("The most similar object by majority voting is %s \n" % win_label)
-                                outr.write("The most similar object by majority voting is %s \n" % win_label)
-                                print("With unique ID %s \n" % win_id)
-                                outr.write("With unique ID %s \n" % win_id)
-
-                            else:
-
-                                print("Not sure about how to classify this object")
-                                outr.write("Not sure about how to classify this object")
+                            print("Not sure about how to classify this object")
+                            outr.write("Not sure about how to classify this object")
 
 
 

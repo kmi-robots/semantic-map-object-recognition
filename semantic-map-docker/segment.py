@@ -284,7 +284,7 @@ def segment(temp_path, img):
             h = round(box[3])
 
             #assign conf value of box to all pixels in that box
-            saliency_map[x:x+w,y:y+h] = confidences[i]*100
+            #saliency_map[x:x+w,y:y+h] = confidences[i]*100
 
             #draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
             all_boxes.append(([x,y,x+w,y+h], str(classes[class_ids[i]])))
@@ -331,7 +331,6 @@ def segment(temp_path, img):
         cv2.putText(temp2, l, (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
 
-
     # Visualise saliency+yoloconf regions
     #cv2.imshow('Saliency', temp2)
     #cv2.waitKey(5000)
@@ -347,5 +346,9 @@ def segment(temp_path, img):
     cv2.destroyAllWindows()
 
     """
+    # Visualise saliency+yoloconf regions
+    cv2.imshow('Saliency', img)
+    cv2.waitKey(1000)
+    cv2.destroyAllWindows()
     return filtered_boxes
 

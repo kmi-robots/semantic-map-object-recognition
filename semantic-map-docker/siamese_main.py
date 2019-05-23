@@ -40,7 +40,9 @@ N = 20 #10 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/paper/embeddings_absL1moved.dat'
 K = 5 #
-path_to_bags ='./data/robot_collected.npy'
+
+path_to_bags = './data/tagged_KMi.json' #'./data/robot_collected.npy'
+
 STN = False #Whether to use Spatial Transformer module on input or not
 
 if STN:
@@ -292,7 +294,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('it', help='Input type at inference time: can be one between reference or pickled')
+    parser.add_argument('it', help='Input type at inference time: can be one between reference, pickled or json (if environment data have been tagged)')
     args = parser.parse_args()
 
     main(args.it, NCC=False, MNIST=False, ResNet=True)

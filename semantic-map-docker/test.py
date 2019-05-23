@@ -5,10 +5,11 @@ from segment import segment
 import numpy as np
 from PIL import Image
 import cv2
-from collections import Counter
+from collections import Counter, OrderedDict
 from data_loaders import BGRtoRGB
 from sklearn.metrics import classification_report, accuracy_score
 from baseline_KNN import run_baseline
+import json
 
 #Set of labels to retain from segmentation
 keepers= ['person','chair','potted plant']
@@ -32,6 +33,23 @@ def compute_similarity(qembedding, train_embeds):
 
     return ranking
 
+def load_jsondata(path_to_json):
+
+    """
+    Assumes that the JSON is formatted as the output returned
+    by the VGG Image Annotator (VIA)
+    [http://www.robots.ox.ac.uk/~vgg/software/via/]
+
+    :param path_to_json:
+    :return: default path to all images, image data with regions and labels
+    """
+
+    with open(path_to_json, 'r') as jf:
+
+        test_data = json.load(jf)
+
+    return test_data["_via_settings"]["core"]["default_filepath"], OrderedDict(test_data['_via_img_metadata'])
+
 
 
 def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K, N, sthresh= 1.0):
@@ -46,6 +64,49 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
     # Code for test/inference time on one(few) shot(s)
     # for each query image
+
+    if data_type == 'json':
+
+        base_path, img_collection = load_jsondata(path_to_bags)
+
+        with open('pt_results/ranking_log.txt', 'a') as outr:
+
+            for data_point in img_collection.values():
+
+                img = cv2.imread(os.path.join(base_path, data_point["filename"]))
+                img = BGRtoRGB(img)
+
+                print("%-----------------------------------------------------------------------% \n")
+                print("Analyzing frame %s" % data_point["filename"])
+                outr.write("Analyzing frame %s" % data_point["filename"])
+
+                bboxes = data_point["regions"]
+
+                #For each bounding box
+                for region in bboxes:
+
+                    #create a copy, crop it to region and store ground truth label
+                    obj = img.copy()
+
+                    box_data = region["shape_attributes"]
+                    x = box_data["x"]
+                    y = box_data["y"]
+                    w = box_data["width"]
+                    h = box_data["height"]
+
+                    obj = obj[y:y+h,x:x+w]
+
+                    gt_label = region["region_attributes"]["class"]
+
+                    cv2.imshow('union', obj)
+                    cv2.waitKey(2000)
+                    cv2.destroyAllWindows()
+                    print(gt_label)
+
+        return None
+
+
+
 
     if data_type == 'pickled':
 

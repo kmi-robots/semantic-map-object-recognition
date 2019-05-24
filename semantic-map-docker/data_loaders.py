@@ -20,7 +20,7 @@ KNOWN = ['chairs', 'bottles', 'papers', 'books', 'desks', 'boxes', 'windows', 'e
 NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'power-cables', 'monitors', 'people', 'plants', 'bins', 'doors' ]
 ALL= KNOWN+NOVEL
 
-class_no=0
+class_no =0
 class_dict = {}
 
 for class_name in KNOWN:
@@ -28,8 +28,11 @@ for class_name in KNOWN:
     class_dict[class_name] = class_no
     class_no +=1
 
+n = 25
 
 class BalancedTriplets(torch.utils.data.Dataset):
+
+    global n
 
     """Generic class to load custom dataset and generate balanced triplets
        in the form <anchor, positive example, negative example>
@@ -51,25 +54,31 @@ class BalancedTriplets(torch.utils.data.Dataset):
         self.train = train  # training set or test set
         self.resnet= ResNet
         self.knet = KNet
-        self.KMidata = os.path.join(self.root, 'KMi_collection/')
+        self.KMidata = 'KMi_collection/'
 
-        if N == 20:
+        n = N
+
+
+        if n == 20:
             #Use shapenet20 classes instead
             self.raw_folder = 'shapenet20'
             self.training_file = 'shp20_training.pt'
             self.test_file = 'shp20_test.pt'
 
-        elif N == 25:
+        elif n == 25:
             #Use shapenet20 classes instead
             self.raw_folder = 'shapenet25'
-            self.training_file = 'kmishp25_training.pt'
-            self.test_file = 'kmishp25_test.pt'
+            self.training_file = 'shp25_training.pt'
+            self.test_file = 'shp25_test.pt'
+            self.trainref_file = 'kmi25_training.pt'
+            self.valref_file = 'kmi25_val.pt'
+
 
 
         if not os.path.isdir(os.path.join(self.root, self.processed_folder)):
             os.mkdir(os.path.join(self.root, self.processed_folder))
 
-        self.prep(self.transform, self.train, N=N, resnet=self.resnet)
+        self.prep(self.transform, self.train, resnet=self.resnet)
 
         if not self._check_exists(self.train):
             raise RuntimeError('Dataset not found.')
@@ -77,8 +86,8 @@ class BalancedTriplets(torch.utils.data.Dataset):
         if self.train:
 
             # Load explicitly from processed MNIST files created
-            train_data, train_labels = torch.load(
-                os.path.join(self.root, self.processed_folder, self.training_file))
+            #train_data, train_labels = torch.load(
+            #    os.path.join(self.root, self.processed_folder, self.training_file))
 
             #print(train_data.shape)
 
@@ -98,8 +107,8 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
         else:
 
-            test_data, test_labels = torch.load(
-                os.path.join(self.root, self.processed_folder, self.test_file))
+            #test_data, test_labels = torch.load(
+            #    os.path.join(self.root, self.processed_folder, self.test_file))
 
             self.test_data, self.test_labels = generate_KNN_triplets(self.train, device, KNet= self.knet)
             """
@@ -157,29 +166,36 @@ class BalancedTriplets(torch.utils.data.Dataset):
         else:
             return os.path.exists(os.path.join(self.root, self.processed_folder, self.test_file))
 
-    def prep(self, trans, train=True, N=20, resnet=True):
+    def prep(self, trans, train=True, resnet=True):
 
         print('Reading images and labels...')
 
         #Load from local
         if train:
-      
-            training_set = (self.read_files(os.path.join(self.root, self.raw_folder, 'train'), trans, n=N, ResNet=resnet ))
+
+            training_set = (self.read_files(os.path.join(self.root, self.raw_folder, 'train'), trans, ResNet=resnet ))
             # Save as .pt files
 
-            ref_set = (self.read_files(os.path.join(self.root, self.KMidata, 'train'), trans, n=N, ResNet=resnet ))
+            ref_set = (self.read_files(os.path.join(self.root, self.KMidata, 'train'), trans, ResNet=resnet , KMI=True))
 
             with open(os.path.join(self.root, self.processed_folder, self.training_file), 'wb') as f:
                 torch.save(training_set, f)
 
+            with open(os.path.join(self.root, self.processed_folder, self.trainref_file), 'wb') as f:
+                torch.save(ref_set, f)
+
         else:
 
-            test_set = (self.read_files(os.path.join(self.root, self.raw_folder, self.to_val), trans, n=N, ResNet=resnet,train=False))
-            ref_set = (self.read_files(os.path.join(self.root, self.KMidata, 'val'), trans, n=N, ResNet=resnet))
+            test_set = (self.read_files(os.path.join(self.root, self.raw_folder, self.to_val), trans, ResNet=resnet,train=False))
+
+            ref_set = (self.read_files(os.path.join(self.root, self.KMidata, 'val'), trans, ResNet=resnet, train=False, KMI=True))
 
             with open(os.path.join(self.root, self.processed_folder, self.test_file), 'wb') as f:
 
                 torch.save(test_set, f)
+
+            with open(os.path.join(self.root, self.processed_folder, self.valref_file), 'wb') as f:
+                torch.save(ref_set, f)
 
         print('Done!')
 
@@ -198,20 +214,22 @@ class BalancedTriplets(torch.utils.data.Dataset):
         return fmt_str
 
 
-    def read_files(self, path, trans, train=True, ResNet=True,  n=20):
+    def read_files(self, path, trans, train=True, ResNet=True, KMI=False):
 
         #discarded = []
         #kept=[]
+        global n
 
-        #if train and n == 20:
-
-        #    total = 200
 
         if train:
 
             total = 100
 
-        elif (not train) and (n==10):
+            if not KMI:
+
+                total = 250
+
+        elif (not train) and (n == 10):
 
             total = 82
 
@@ -221,7 +239,10 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
         elif (not train) and (n == 25):
 
-            total = 25
+                if KMI:
+                    total = 25
+                else:
+                    total = 125
 
         if ResNet:
 
@@ -245,6 +266,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
                 classname = str(root.split('/')[-1])
 
+
                 if n == 20 and (classname not in KNOWN):
 
                     #discarded.append(classname)
@@ -258,14 +280,19 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
                 for file in files:
 
-                    img_tensor = img_preproc(os.path.join(root, file), trans) #torch.from_numpy(img_preproc(os.path.join(root, file)))
-                    filename = str(file.split('/')[-1])
+
                     try:
+                        filename = str(file.split('/')[-1])
+                        img_tensor = img_preproc(os.path.join(root, file),trans)  # torch.from_numpy(img_preproc(os.path.join(root, file)))
                         data[iteration, :] = img_tensor
+
                     except Exception as e:
+
+                        print(total)
                         print(str(e))
                         print(classname)
                         print(filename)
+
                     labels[iteration] = torch.LongTensor([class_])
 
                     # ID = <classname_filename>
@@ -277,11 +304,17 @@ class BalancedTriplets(torch.utils.data.Dataset):
                 class_ += 1
 
         #Save serialized object separately for IDs
-        if train:
+        if train and KMI:
+            fname = 'kmi_training.dat'
+
+        elif train and not KMI:
             fname = 'training.dat'
 
+        elif not train and KMI:
+            fname = 'kmi_test.dat'
+
         else:
-            fname = 'test.dat'
+            fname = "test.dat"
 
         with open(os.path.join(self.root, self.processed_folder, fname), 'wb') as f:
 
@@ -363,7 +396,7 @@ class BalancedMNIST(MNIST):
                 img = self.transform(img)
 
             """
-            img_ar.append(img)
+            img_ar.append(i)
 
         """
         if self.target_transform is not None:
@@ -435,15 +468,19 @@ import test
 
 def generate_KNN_triplets(train, device, KNet=False):
 
+    global n
 
     # Save serialized object separately for IDs
     if train:
         fname = 'training.dat'
+        kfname ='kmi_training.dat'
 
     else:
         fname = 'test.dat'
+        kfname = 'kmi_test.dat'
 
     data_dict = torch.load(os.path.join('./data/processed', fname))
+    kmi_dict = torch.load(os.path.join('./data/processed', kfname))
 
     #extract embeddings on all set given
     #pre-trained ResNet without retrain
@@ -459,46 +496,44 @@ def generate_KNN_triplets(train, device, KNet=False):
         img_tensor = img.view(1, img.shape[0], img.shape[1], img.shape[2]).to(device)
         embed_space[imgkey] = model.get_embedding(img_tensor)
 
-    #print(len(embed_space.keys()))
 
     triplet_data=[]
     labels = []
 
-    for imgkey,img in data_dict.items():
+    #CHANGED: anchors are KMi natural scenes now
+    for imgkey,img in kmi_dict.items():
 
-        anchor_emb = embed_space[imgkey]
+        img_tensor = img.view(1, img.shape[0], img.shape[1], img.shape[2]).to(device)
+        anchor_emb = model.get_embedding(img_tensor)
+
         anchor_class = imgkey.split("_")[0]
         
         ranking = test.compute_similarity(anchor_emb, embed_space)
 
-
         positive_eg = None
-        negative_eg = None 
-        
+        negative_eg = None
 
-        while positive_eg is None and negative_eg is None:
-            
-            for i in range(1,len(ranking)):
+        #CHANGED: now not needed, two spaces are different
+        for i in range(len(ranking)):
+        # i.e., not starting from zero to exclude the embed itself
 
-                #i.e., not starting from zero to exclude the embed itself
-                key, val = ranking[i]
+        #for i in range(1,len(ranking)):
 
-                top_match = data_dict[key]  # embed_space[key]
+            key, val = ranking[i]
 
-                top_class = key.split("_")[0]
+            top_match = data_dict[key]  # embed_space[key]
 
-                if top_class == anchor_class and positive_eg is None:
+            top_class = key.split("_")[0]
 
-                    positive_eg = top_match
+            if top_class == anchor_class and positive_eg is None:
+
+                positive_eg = top_match
 
 
-                elif top_class != anchor_class and negative_eg is None:
+            elif top_class != anchor_class and negative_eg is None:
 
-                    negative_eg = top_match
+                negative_eg = top_match
 
-        #print("Second Most similar example") # Because we need to exclude the image itself
-        #print(key)
-        #print(val)
 
         """
         #print("And Least similar example")
@@ -511,14 +546,15 @@ def generate_KNN_triplets(train, device, KNet=False):
         #print(val)
         """
 
+
         triplet_data.append(torch.stack([img, positive_eg, negative_eg]))
         #print(torch.stack([img, positive_eg, negative_eg]).shape)
 
         if KNet:
 
-            temp = torch.zeros(len(KNOWN))
-            class_no = class_dict[anchor_class]
-            temp[class_no] = 1 #Make a one-hot encoding of it
+            temp = torch.zeros(n)#(len(KNOWN))
+            n = class_dict[anchor_class]
+            temp[n] = 1 #Make a one-hot encoding of it
 
 
             labels.append(temp)

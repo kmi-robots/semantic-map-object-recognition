@@ -20,11 +20,10 @@ do_learn = True #False
 feature_extraction = False
 keep_embeddings = True
 
-triplet_loss = False #Adds a triplet loss component to the classifier's crossentropy loss
-two_branch = False  # If two branch version instead of Siamese network should be run
 KNET = False
-NNET = False
+NNET = True
 imprinting = False
+two_branch=False
 
 save_frequency = 2
 batch_size = 16
@@ -36,7 +35,7 @@ metric_avg = 'binary'
 momentum = 0.9
 segmentation_threshold = 0.01
 
-N = 20 #10 #No of object classes
+N = 25 #20 #10 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/paper/embeddings_absL1moved.dat'
 K = 5 #

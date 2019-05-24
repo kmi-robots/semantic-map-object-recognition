@@ -43,7 +43,6 @@ class BalancedTriplets(torch.utils.data.Dataset):
     to_val = 'val'
 
 
-
     def __init__(self, root, device, train=True, transform=None,  target_transform=None, N=10, ResNet=True, KNet=False):
 
         self.root = os.path.expanduser(root)
@@ -52,12 +51,19 @@ class BalancedTriplets(torch.utils.data.Dataset):
         self.train = train  # training set or test set
         self.resnet= ResNet
         self.knet = KNet
+        self.KMidata = os.path.join(self.root, 'KMi_collection/')
 
         if N == 20:
             #Use shapenet20 classes instead
             self.raw_folder = 'shapenet20'
             self.training_file = 'shp20_training.pt'
             self.test_file = 'shp20_test.pt'
+
+        elif N == 25:
+            #Use shapenet20 classes instead
+            self.raw_folder = 'shapenet25'
+            self.training_file = 'kmishp25_training.pt'
+            self.test_file = 'kmishp25_test.pt'
 
 
         if not os.path.isdir(os.path.join(self.root, self.processed_folder)):
@@ -161,12 +167,15 @@ class BalancedTriplets(torch.utils.data.Dataset):
             training_set = (self.read_files(os.path.join(self.root, self.raw_folder, 'train'), trans, n=N, ResNet=resnet ))
             # Save as .pt files
 
+            ref_set = (self.read_files(os.path.join(self.root, self.KMidata, 'train'), trans, n=N, ResNet=resnet ))
+
             with open(os.path.join(self.root, self.processed_folder, self.training_file), 'wb') as f:
                 torch.save(training_set, f)
 
         else:
 
             test_set = (self.read_files(os.path.join(self.root, self.raw_folder, self.to_val), trans, n=N, ResNet=resnet,train=False))
+            ref_set = (self.read_files(os.path.join(self.root, self.KMidata, 'val'), trans, n=N, ResNet=resnet))
 
             with open(os.path.join(self.root, self.processed_folder, self.test_file), 'wb') as f:
 
@@ -209,6 +218,10 @@ class BalancedTriplets(torch.utils.data.Dataset):
         elif (not train) and (n == 20):
 
             total = 50
+
+        elif (not train) and (n == 25):
+
+            total = 25
 
         if ResNet:
 

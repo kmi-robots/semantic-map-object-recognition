@@ -4,7 +4,7 @@ extracted from a pre-trained ResNet without siamese
 re-train/fine-tuning
 
 """
-
+import torch
 from embedding_extractor import base_embedding
 import test
 import os

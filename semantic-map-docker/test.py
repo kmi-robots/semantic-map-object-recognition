@@ -1,5 +1,5 @@
 import torch
-from embedding_extractor import path_embedding, array_embedding
+from embedding_extractor import path_embedding, array_embedding, base_embedding
 import os
 from segment import segment
 import numpy as np
@@ -18,6 +18,7 @@ NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'powe
 
 n_support = 10
 baseline = False  #Run KNN baseline or not?
+
 
 def compute_similarity(qembedding, train_embeds):
     # Similarity matching against indexed data
@@ -50,9 +51,88 @@ def load_jsondata(path_to_json):
 
     return test_data["_via_settings"]["core"]["default_filepath"], OrderedDict(test_data['_via_img_metadata'])
 
+def extract_base_embeddings(img_path, transforms, device, path_to_output):
+
+
+    emb_space = {}
+
+
+    for root, dirs, files in os.walk(img_path):
+
+        if files:
+
+            classname = str(root.split('/')[-1])
+
+
+            for file in files:
+
+                filename = str(file.split('/')[-1])
+
+                emb_space[classname+'_'+filename] = base_embedding(os.path.join(root, file), device, transforms)
+
+
+    with open(path_to_output,mode='wb') as outj:
+
+        torch.save(obj=emb_space, f=outj)
+
+    return emb_space
+
+def KNN(input_e, all_embs, K, logfile):
+
+    ranking = compute_similarity(input_e, all_embs)
+
+    if K == 1:
+        keyr, val = ranking[0]
+        label = keyr.split("_")[0]
+
+        print("The top most similar object is %s \n" % label)
+        logfile.write("The top most similar object is %s \n" % label)
+
+        print("With unique ID %s \n" % keyr)
+        logfile.write("With unique ID %s \n" % keyr)
+
+        return label
+
+    else:
+        print("The %i most similar objects to the provided image are: \n")
+        logfile.write("The %i most similar objects to the provided image are: \n" % K)
+
+        votes = Counter()
+        ids = {}
+
+        # Majority voting with discounts by distance from top position
+        for k, (key, val) in enumerate(ranking[:K]):
+            label = key.split("_")[0]  # [:-1]
+
+            votes[label] += 1 / (k + 1)
+
+            ids[label] = key
+
+            print(label + ": " + str(val) + "\n")
+            logfile.write(label + ": " + str(val) + "\n")
+            print("With unique ID %s \n" % key)
+            logfile.write("With unique ID %s \n" % key)
+
+        win_label, win_score = max(votes.items(), key=lambda x: x[1])
+        win_id = ids[win_label]
+
+        if win_score > 1.0:
+
+            print("The most similar object by majority voting is %s \n" % win_label)
+            logfile.write("The most similar object by majority voting is %s \n" % win_label)
+            print("With unique ID %s \n" % win_id)
+            logfile.write("With unique ID %s \n" % win_id)
+
+        else:
+
+            print("Not sure about how to classify this object")
+            logfile.write("Not sure about how to classify this object")
+
+        return win_label
 
 
 def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K, N, sthresh= 1.0):
+
 
 
     #baseline KNN?
@@ -67,6 +147,33 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
     if data_type == 'json':
 
+        path_to_space = os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
+
+        tgt_path = os.path.join(path_to_bags.split('test')[0], 'train')
+
+        out_imgs = os.path.join(path_to_bags.split('test')[0], 'output_predictions')
+
+        if not os.path.isfile(path_to_space):
+
+            print("Creating embedding space")
+
+            #Extract embeddings for reference images also taken in natural environment
+            embedding_space = extract_base_embeddings(tgt_path, trans, device, path_to_space)
+
+        else:
+
+            print("Loading cached embedding space")
+            embedding_space = torch.load(path_to_space) #, map_location={'cuda:0': 'cpu'})
+
+        #For drawing the predictions
+        all_classes = list(set([key.split('_')[0] for key in embedding_space.keys()]))
+        COLORS = np.random.uniform(0, 255, size=(len(all_classes), 3))
+
+        y_true = []
+        y_pred = []
+
+        cardinalities = Counter()
+
         base_path, img_collection = load_jsondata(path_to_bags)
 
         with open('pt_results/ranking_log.txt', 'a') as outr:
@@ -74,7 +181,12 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
             for data_point in img_collection.values():
 
                 img = cv2.imread(os.path.join(base_path, data_point["filename"]))
-                img = BGRtoRGB(img)
+
+                if ".bag" in data_point["filename"]:
+                    img = BGRtoRGB(img)
+
+                # create copy to draw predictions on
+                out_img = img.copy()
 
                 print("%-----------------------------------------------------------------------% \n")
                 print("Analyzing frame %s" % data_point["filename"])
@@ -86,6 +198,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 for region in bboxes:
 
                     #create a copy, crop it to region and store ground truth label
+
                     obj = img.copy()
 
                     box_data = region["shape_attributes"]
@@ -96,15 +209,45 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                     obj = obj[y:y+h,x:x+w]
 
+                    cv2.imwrite('./temp.png', obj)
+                    input_emb = base_embedding('./temp.png', device, trans)
+
                     gt_label = region["region_attributes"]["class"]
 
+                    """
+                    Visualize current object
+                    
                     cv2.imshow('union', obj)
                     cv2.waitKey(2000)
                     cv2.destroyAllWindows()
-                    print(gt_label)
+                    """
+
+                    cardinalities[gt_label] +=1
+                    y_true.append(gt_label)
+
+                    # Find (K)NN from input embedding
+                    prediction= KNN(input_emb, embedding_space, K, outr)
+                    y_pred.append(prediction)
+
+                    #draw prediction
+                    color = COLORS[all_classes.index(prediction)]
+                    cv2.rectangle(out_img, (x, y), (x+w, y+h), color, 2)
+                    if y-10 >0:
+                        cv2.putText(out_img, prediction, (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                    else:
+                        cv2.putText(out_img, prediction, (x - 10, y +h + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+                print("%EOF---------------------------------------------------------------------% \n")
+                cv2.imwrite(os.path.join(out_imgs, data_point["filename"]), out_img)
+        #Check no. of instances per class
+        #print(cardinalities)
+
+        #Evaluation
+        print("Class-wise test results \n")
+        print(classification_report(y_true, y_pred))  # , target_names=all_classes))
+        print(accuracy_score(y_true, y_pred))
 
         return None
-
 
 
 
@@ -203,54 +346,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         print("YOLO says this is a %s \n" % segm_label)
 
                     #Go ahead and classify by similarity
-                    ranking = compute_similarity(qembedding, train_embeds)
 
-                    if K == 1:
-                        keyr, val = ranking[0]
-                        label = keyr.split("_")[0]
-
-                        print("The top most similar object is %s \n" % label)
-                        outr.write("The top most similar object is %s \n" % label)
-
-                        print("With unique ID %s \n" % keyr)
-                        outr.write("With unique ID %s \n" % keyr)
-
-                    else:
-                        print("The %i most similar objects to the provided image are: \n")
-                        outr.write("The %i most similar objects to the provided image are: \n" % K)
-
-                        votes = Counter()
-                        ids = {}
-
-                        #Majority voting with discounts by distance from top position
-                        for k,(key, val) in enumerate(ranking[:K]):
-
-                            label = key.split("_")[0]  # [:-1]
-
-                            votes[label] += 1/(k+1)
-
-                            ids[label] = key
-
-                            print(label + ": " + str(val) + "\n")
-                            outr.write(label + ": " + str(val) + "\n")
-                            print("With unique ID %s \n" % key)
-                            outr.write("With unique ID %s \n" % key)
-
-                        win_label, win_score = max(votes.items(), key=lambda x: x[1])
-                        win_id = ids[win_label]
-
-                        if win_score > 1.0:
-
-                            print("The most similar object by majority voting is %s \n" % win_label)
-                            outr.write("The most similar object by majority voting is %s \n" % win_label)
-                            print("With unique ID %s \n" % win_id)
-                            outr.write("With unique ID %s \n" % win_id)
-
-                        else:
-
-                            print("Not sure about how to classify this object")
-                            outr.write("Not sure about how to classify this object")
-
+                    win_label = KNN(qembedding, train_embeds, K, outr)
 
 
                 print("%EOF---------------------------------------------------------------------% \n")

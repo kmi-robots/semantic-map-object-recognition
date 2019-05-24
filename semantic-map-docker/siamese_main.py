@@ -25,7 +25,6 @@ KNET = False
 NNET = False
 imprinting = False
 
-
 save_frequency = 2
 batch_size = 16
 lr = 0.0001
@@ -39,9 +38,9 @@ segmentation_threshold = 0.01
 N = 20 #10 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/paper/embeddings_absL1moved.dat'
-K = 5 #
+K = 1 #
 
-path_to_bags = './data/tagged_KMi.json' #'./data/robot_collected.npy'
+path_to_bags = './data/KMi_collection/test/tagged_KMi.json' #'robot_collected.npy'
 
 STN = False #Whether to use Spatial Transformer module on input or not
 

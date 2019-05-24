@@ -16,9 +16,10 @@ from test import test
 from imprint import imprint
 
 #These parameters can be tweaked---------------------------------------------------------#
-do_learn = False #True
+do_learn = True #False
 feature_extraction = False
 keep_embeddings = True
+
 triplet_loss = False #Adds a triplet loss component to the classifier's crossentropy loss
 two_branch = False  # If two branch version instead of Siamese network should be run
 KNET = False
@@ -38,7 +39,7 @@ segmentation_threshold = 0.01
 N = 20 #10 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/paper/embeddings_absL1moved.dat'
-K = 1 #
+K = 5 #
 
 path_to_bags = './data/KMi_collection/test/tagged_KMi.json' #'robot_collected.npy'
 

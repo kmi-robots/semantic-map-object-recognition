@@ -253,8 +253,8 @@ class NNet(nn.Module):
         super().__init__()
 
         self.embed = NetForEmbedding(feature_extraction)
-        self.embed2 = NetForEmbedding(feature_extraction)
-        self.embed3 = NetForEmbedding(feature_extraction)
+        self.embed2 = NetForEmbedding(feature_extraction=True) #Extracting feature on the synthetic-data branches
+        self.embed3 = NetForEmbedding(feature_extraction=True)
         #self.l2dis = nn.PairwiseDistance()
         self.norm = norm
 
@@ -308,8 +308,8 @@ class KNet(nn.Module):
         super().__init__()
 
         self.embed = NetForEmbedding(feature_extraction)
-        self.embed2 = NetForEmbedding(feature_extraction)
-        self.embed3 = NetForEmbedding(feature_extraction)
+        self.embed2 = NetForEmbedding(feature_extraction=True) #Extracting feature on the synthetic-data branches
+        self.embed3 = NetForEmbedding(feature_extraction=True)
         self.l2dis = nn.PairwiseDistance()
         self.l2dis_neg = nn.PairwiseDistance()
 

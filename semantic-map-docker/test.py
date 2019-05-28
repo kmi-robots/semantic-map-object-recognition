@@ -147,11 +147,16 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
     if data_type == 'json':
 
-        path_to_space = os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
+        path_to_space = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/embeddings_KNET_1prod.dat') #os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
+
+        path_to_state = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/checkpoint_KNET_1prod.pt')
 
         tgt_path = os.path.join(path_to_bags.split('test')[0], 'train')
-
         out_imgs = os.path.join(path_to_bags.split('test')[0], 'output_predictions')
+
+        if not os.path.isdir(out_imgs):
+
+            os.mkdir(out_imgs)
 
         if not os.path.isfile(path_to_space):
 
@@ -209,9 +214,11 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                     obj = obj[y:y+h,x:x+w]
 
+                    input_emb = array_embedding(model, path_to_state, obj,  device, transforms=trans)
+                    """
                     cv2.imwrite('./temp.png', obj)
                     input_emb = base_embedding('./temp.png', device, trans)
-
+                    """
                     gt_label = region["region_attributes"]["class"]
 
                     """

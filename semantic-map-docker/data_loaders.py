@@ -21,13 +21,14 @@ NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'powe
 ALL= KNOWN+NOVEL
 
 class_no =0
+"""
 class_dict = {}
 
 for class_name in KNOWN:
 
     class_dict[class_name] = class_no
     class_no +=1
-
+"""
 n = 25
 
 class BalancedTriplets(torch.utils.data.Dataset):
@@ -219,6 +220,7 @@ class BalancedTriplets(torch.utils.data.Dataset):
         #discarded = []
         #kept=[]
         global n
+        global class_list
 
 
         if train:
@@ -259,13 +261,14 @@ class BalancedTriplets(torch.utils.data.Dataset):
         #Subfolders are named after classes here
         iteration = 0
         class_ = 0
+        all_cs = []
 
         for root, dirs, files in os.walk(path):
 
             if files:
 
                 classname = str(root.split('/')[-1])
-
+                all_cs.append(classname)
 
                 if n == 20 and (classname not in KNOWN):
 
@@ -302,6 +305,8 @@ class BalancedTriplets(torch.utils.data.Dataset):
 
 
                 class_ += 1
+
+        class_list = list(set(all_cs))
 
         #Save serialized object separately for IDs
         if train and KMI:
@@ -469,11 +474,12 @@ import test
 def generate_KNN_triplets(train, device, KNet=False):
 
     global n
+    global class_list
 
     # Save serialized object separately for IDs
     if train:
         fname = 'training.dat'
-        kfname ='kmi_training.dat'
+        kfname = 'kmi_training.dat'
 
     else:
         fname = 'test.dat'
@@ -482,42 +488,54 @@ def generate_KNN_triplets(train, device, KNet=False):
     data_dict = torch.load(os.path.join('./data/processed', fname))
     kmi_dict = torch.load(os.path.join('./data/processed', kfname))
 
-    #extract embeddings on all set given
-    #pre-trained ResNet without retrain
+    # extract embeddings on all set given
+    # pre-trained ResNet without retrain
 
     model = ResSiamese(feature_extraction=True).to(device)
     model.eval()
 
     embed_space = {}
-    
-    for imgkey,img in data_dict.items(): #i in range(data.size(0)):
 
-        #img_tensor = data[i, :]
+    for imgkey, img in data_dict.items():  # i in range(data.size(0)):
+
+        # img_tensor = data[i, :]
         img_tensor = img.view(1, img.shape[0], img.shape[1], img.shape[2]).to(device)
         embed_space[imgkey] = model.get_embedding(img_tensor)
 
+    rgbd_embed_space = {}
 
-    triplet_data=[]
+    for imgkey, img in kmi_dict.items():  # i in range(data.size(0)):
+
+        # img_tensor = data[i, :]
+        img_tensor = img.view(1, img.shape[0], img.shape[1], img.shape[2]).to(device)
+        rgbd_embed_space[imgkey] = model.get_embedding(img_tensor)
+
+    triplet_data = []
     labels = []
 
-    #CHANGED: anchors are KMi natural scenes now
-    for imgkey,img in kmi_dict.items():
-
-        img_tensor = img.view(1, img.shape[0], img.shape[1], img.shape[2]).to(device)
-        anchor_emb = model.get_embedding(img_tensor)
+    # CHANGED: anchors are KMi natural scenes now
+    for imgkey, img in kmi_dict.items():
+        # img_tensor = img.view(1, img.shape[0], img.shape[1], img.shape[2]).to(device)
+        anchor_emb = rgbd_embed_space[imgkey]  # model.get_embedding(img_tensor)
 
         anchor_class = imgkey.split("_")[0]
-        
+
         ranking = test.compute_similarity(anchor_emb, embed_space)
+
+        # picking negative example from real imgs
+        ranking_neg = test.compute_similarity(anchor_emb, rgbd_embed_space)
 
         positive_eg = None
         negative_eg = None
 
-        #CHANGED: now not needed, two spaces are different
+        # CHANGED: now not needed, two spaces are different
         for i in range(len(ranking)):
-        # i.e., not starting from zero to exclude the embed itself
+            # i.e., not starting from zero to exclude the embed itself
 
-        #for i in range(1,len(ranking)):
+            # for i in range(1,len(ranking)):
+
+            if positive_eg is not None:
+                break
 
             key, val = ranking[i]
 
@@ -526,14 +544,21 @@ def generate_KNN_triplets(train, device, KNet=False):
             top_class = key.split("_")[0]
 
             if top_class == anchor_class and positive_eg is None:
-
                 positive_eg = top_match
 
+        for j in range(1, len(ranking_neg)):
 
-            elif top_class != anchor_class and negative_eg is None:
+            if negative_eg is not None:
+                break
 
+            key, val = ranking_neg[j]
+
+            top_match = kmi_dict[key]  # embed_space[key]
+
+            top_class = key.split("_")[0]
+
+            if top_class != anchor_class and negative_eg is None:
                 negative_eg = top_match
-
 
         """
         #print("And Least similar example")
@@ -545,23 +570,23 @@ def generate_KNN_triplets(train, device, KNet=False):
         #print(key)
         #print(val)
         """
-
-
         triplet_data.append(torch.stack([img, positive_eg, negative_eg]))
-        #print(torch.stack([img, positive_eg, negative_eg]).shape)
+        # print(torch.stack([img, positive_eg, negative_eg]).shape)
 
+        # print(class_list)
+        # import sys
+        # sys.exit(0)
         if KNet:
 
-            temp = torch.zeros(n)#(len(KNOWN))
-            n = class_dict[anchor_class]
-            temp[n] = 1 #Make a one-hot encoding of it
-
+            temp = torch.zeros(n)  # (len(KNOWN))
+            j = class_list.index(anchor_class)
+            temp[j] = 1  # Make a one-hot encoding of it
 
             labels.append(temp)
 
         else:
 
-            labels.append([1,0])
+            labels.append([1, 0])
 
     if KNet:
 
@@ -571,6 +596,7 @@ def generate_KNN_triplets(train, device, KNet=False):
     else:
 
         return torch.stack(triplet_data), torch.tensor(labels)
+
 
 
 def group_by_class(data, labels, classes=10, Hans =HANS):   #ids=None
@@ -592,7 +618,6 @@ def group_by_class(data, labels, classes=10, Hans =HANS):   #ids=None
         
         
     """
-
     # For each digit in the data
     for i in range(classes):
         # Check location of data labeled as current digit

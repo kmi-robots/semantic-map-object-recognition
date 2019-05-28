@@ -20,8 +20,8 @@ do_learn = True #False
 feature_extraction = False
 keep_embeddings = True
 
-KNET = False
-NNET = True
+KNET = True
+NNET = False #True
 imprinting = False
 two_branch=False
 
@@ -38,7 +38,7 @@ segmentation_threshold = 0.01
 N = 25 #20 #10 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/paper/embeddings_absL1moved.dat'
-K = 5 #
+K = 1 #
 
 path_to_bags = './data/KMi_collection/test/tagged_KMi.json' #'robot_collected.npy'
 
@@ -154,10 +154,10 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
         elif KNET and not imprinting:
 
-            model = KNet(feature_extraction=feature_extraction).to(device)
+            model = KNet(feature_extraction=feature_extraction, num_classes=N).to(device)
 
         elif imprinting:
-            model = ImprintedKNet(feature_extraction=feature_extraction).to(device)
+            model = ImprintedKNet(feature_extraction=feature_extraction, num_classes=N).to(device)
 
 
         else:
@@ -227,7 +227,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
 
         #Imprint weight of the model classifier first
         if imprinting:
-            imprint(model, device, train_loader)
+            imprint(model, device, train_loader, num_classes=N)
 
         for epoch in range(num_epochs):
 

@@ -1,7 +1,7 @@
 import torch
 targets=[]
 
-def imprint(model, device, data_loader):
+def imprint(model, device, data_loader, num_classes=10):
 
     model.eval()
 
@@ -25,8 +25,8 @@ def imprint(model, device, data_loader):
     #Supported for 10 classes here
     target_stack = torch.LongTensor(targets)
 
-    new_weight = torch.zeros(10, 128)
-    for i in range(10):
+    new_weight = torch.zeros(num_classes, 128)
+    for i in range(num_classes):
 
         tmp = output_stack[target_stack == i].mean(0) #Take the average example if more than one is present
         new_weight[i] = tmp / tmp.norm(p=2) #L2 normalize again

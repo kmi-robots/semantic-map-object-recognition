@@ -16,7 +16,7 @@ from test import test
 from imprint import imprint
 
 #These parameters can be tweaked---------------------------------------------------------#
-do_learn = True #False
+do_learn = False
 feature_extraction = False
 keep_embeddings = True
 

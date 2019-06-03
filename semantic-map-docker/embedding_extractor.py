@@ -11,7 +11,6 @@ from data_loaders import img_preproc
 from siamese_models import ResSiamese
 
 
-
 def extract_embeddings(model, path_to_state, path_to_data, device, outp, transforms=None):
 
     model.load_state_dict(torch.load(path_to_state))

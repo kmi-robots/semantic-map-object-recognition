@@ -22,8 +22,8 @@ keep_embeddings = True
 
 KNET = True
 NNET = False #True
-imprinting = False
-two_branch=False
+imprinting = True
+two_branch = False
 
 save_frequency = 2
 batch_size = 16

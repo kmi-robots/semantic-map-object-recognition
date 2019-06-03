@@ -5,7 +5,7 @@ re-train/fine-tuning
 
 """
 import torch
-from embedding_extractor import base_embedding
+import embedding_extractor as emb_ext
 import test
 import os
 from sklearn.metrics import classification_report, accuracy_score
@@ -75,7 +75,7 @@ def run_baseline(device, transforms,  K, N, n_support, KNOWN, path_to_embeds):
                 for file in files:
 
                     filename = str(file.split('/')[-1])
-                    support_embeds[classname+'_'+filename] = base_embedding(os.path.join(root, file), device, transforms=transforms)
+                    support_embeds[classname+'_'+filename] = emb_ext.base_embedding(os.path.join(root, file), device, transforms=transforms)
 
     print(len(support_embeds.keys()))
 
@@ -122,7 +122,7 @@ def run_baseline(device, transforms,  K, N, n_support, KNOWN, path_to_embeds):
                     print("Looking at file %s \n" % file)
                     outr.write("Looking at file %s \n" % file)
 
-                    qembedding = base_embedding(os.path.join(root, file), device, transforms=transforms)
+                    qembedding = emb_ext.base_embedding(os.path.join(root, file), device, transforms=transforms)
 
                     ranking = test.compute_similarity(qembedding, support_embeds)
 

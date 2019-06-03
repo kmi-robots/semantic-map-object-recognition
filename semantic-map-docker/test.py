@@ -1,15 +1,21 @@
 import torch
-from embedding_extractor import path_embedding, array_embedding, base_embedding
+import embedding_extractor as emb_ext
+#from embedding_extractor import path_embedding, array_embedding, base_embedding
 import os
 from segment import segment
 import numpy as np
 from PIL import Image
 import cv2
+import json
 from collections import Counter, OrderedDict
+import requests
+import pandas
+import time
+
 from data_loaders import BGRtoRGB
 from sklearn.metrics import classification_report, accuracy_score
 from baseline_KNN import run_baseline
-import json
+
 
 #Set of labels to retain from segmentation
 keepers= ['person','chair','potted plant']
@@ -68,7 +74,7 @@ def extract_base_embeddings(img_path, transforms, device, path_to_output):
 
                 filename = str(file.split('/')[-1])
 
-                emb_space[classname+'_'+filename] = base_embedding(os.path.join(root, file), device, transforms)
+                emb_space[classname+'_'+filename] = emb_ext.base_embedding(os.path.join(root, file), device, transforms)
 
 
     with open(path_to_output,mode='wb') as outj:
@@ -90,6 +96,8 @@ def KNN(input_e, all_embs, K, logfile):
 
         print("With unique ID %s \n" % keyr)
         logfile.write("With unique ID %s \n" % keyr)
+
+        print("Score: %f" % val)
 
         return label
 
@@ -116,6 +124,7 @@ def KNN(input_e, all_embs, K, logfile):
         win_label, win_score = max(votes.items(), key=lambda x: x[1])
         win_id = ids[win_label]
 
+
         if win_score > 1.0:
 
             print("The most similar object by majority voting is %s \n" % win_label)
@@ -130,9 +139,143 @@ def KNN(input_e, all_embs, K, logfile):
 
         return win_label
 
+def compute_sem_sim(wemb1, wemb2):
+
+    """
+    Returns semantic similarity between two word embeddings
+    based on Numberbatch 17.06 mini
+    """
+
+    dotprod = (wemb1*wemb2).sum()
+    sq_wemb1 = wemb1.pow(2).sum()
+    sq_wemb2 = wemb2.pow(2).sum()
+
+    return (pow(sq_wemb1, 0.5)* pow(sq_wemb1, 0.5))/dotprod
+
+def formatlabel(label):
+
+
+    if '-' in label:
+
+        label = label.replace('-', '_')
+
+    return label   #[:-1]  # remove plurals
+
+
+def query_conceptnet(class_set, path_to_dict):
+
+    """
+    This dictionary of all possible score combinations is
+    pre-computed only on the first time running the script
+    """
+
+    #numberbatch_vecs = pandas.read_hdf(path_to_dict.split("KMi_conceptrel.json")[0]+'mini.h5')
+    base = '/c/en/'
+
+    score_dict = {}
+
+    for term in class_set:
+
+        print(term)
+
+        #all other classes but itself
+
+        term_dict ={}
+
+        #emb1 = numberbatch_vecs.loc[base + term]
+
+        for term2 in [c for c in class_set if c != term]: #Skip identity case
+
+            try:
+
+                node = requests.get('http://api.conceptnet.io/relatedness?node1='+\
+                                base+term+'&node2='+base+term2).json()
+
+
+            except:
+
+                time.sleep(60)
+
+                try:
+                    node = requests.get('http://api.conceptnet.io/relatedness?node1=' + \
+                                    base + term + '&node2=' + base + term2).json()
+
+                except:
+
+                    print(requests.get('http://api.conceptnet.io/relatedness?node1=' + \
+                                        base + term + '&node2=' + base + term2))
+
+
+            print(node['value'])
+            term_dict[term2] = node['value']
+
+            """
+            #Using the local embeds per se does not handle OOV
+            emb2 = numberbatch_vecs.loc[base + term2]
+
+            term_dict[term2] = compute_sem_sim(emb1,emb2)
+            """
+
+        #Relatedness scores for that term, in ascending order
+        term_dict = sorted(term_dict.items(), key=lambda kv: kv[1])#, reverse=True)
+        score_dict[term] = OrderedDict(term_dict)
+
+    with open(path_to_dict, 'w') as jf:
+
+        json.dump(score_dict, jf)
+
+    return score_dict
+
+
+def correct_by_relatedness(term_list, score_dict):
+
+    corrected_list=term_list.copy()
+    #For each object in that scene
+    for term in term_list:
+
+        qterm = formatlabel(term)
+
+        keys,scores = zip(*score_dict[qterm].items())
+
+        avg1 = sum(scores)/len(scores)
+
+        for term2 in term_list:
+
+            qterm2 = formatlabel(term2)
+
+            if qterm2 == qterm:
+                continue  #Skip identity case
+
+            relatedness = score_dict[qterm][qterm2]
+
+            if relatedness < 0:       #Assuming it is a mis-classification
+
+                keys2, scores2 = zip(*score_dict[qterm2].items())
+                avg2 = sum(scores2) / len(scores2)
+                #Which one of the two makes more sense in the scene on average?
+
+                if avg2> avg1:
+
+                    #Then term 2 could be correct and term 1 could be corrected
+                    corrected_list[term_list.index(term)] = keys2[-1] #[0]
+                    #replaced by the most related term to term2
+
+                elif avg1> avg2:
+
+                    #The other way around
+                    corrected_list[term_list.index(term2)] = keys[-1] #[0]
+
+                else:
+
+                    #The two "make equal sense", we do not expect this to be rare
+                    print("Objects "+term+"and"+term2+"could make equal sense in the scene!")
+
+
+    return corrected_list
+
+
 
 def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K, N, sthresh= 1.0):
-
 
 
     #baseline KNN?
@@ -147,32 +290,51 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
     if data_type == 'json':
 
-        path_to_space = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/embeddings_KNET_1prod.dat') #os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
+        path_to_space = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/embeddings_imprKNET_1prod.dat') #os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
 
-        path_to_state = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/checkpoint_KNET_1prod.pt')
+        path_to_state = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/checkpoint_imprKNET_1prod.pt')
+
+        #path_to_basespace = os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
 
         tgt_path = os.path.join(path_to_bags.split('test')[0], 'train')
         out_imgs = os.path.join(path_to_bags.split('test')[0], 'output_predictions')
+
+        path_to_concepts = os.path.join(path_to_bags.split('KMi_collection')[0],'numberbatch/KMi_conceptrel.json')
 
         if not os.path.isdir(out_imgs):
 
             os.mkdir(out_imgs)
 
-        if not os.path.isfile(path_to_space):
+        """
+        if not os.path.isfile(path_to_basespace):
 
             print("Creating embedding space")
 
             #Extract embeddings for reference images also taken in natural environment
-            embedding_space = extract_base_embeddings(tgt_path, trans, device, path_to_space)
+            base_embedding_space = extract_base_embeddings(tgt_path, trans, device, path_to_space)
 
         else:
 
             print("Loading cached embedding space")
-            embedding_space = torch.load(path_to_space) #, map_location={'cuda:0': 'cpu'})
+            base_embedding_space = torch.load(path_to_space, map_location={'cuda:0': 'cpu'})
+        """
+        embedding_space = torch.load(path_to_space, map_location={'cuda:0': 'cpu'})
 
         #For drawing the predictions
         all_classes = list(set([key.split('_')[0] for key in embedding_space.keys()]))
+        qall_classes = [formatlabel(c) for c in all_classes]
         COLORS = np.random.uniform(0, 255, size=(len(all_classes), 3))
+
+        if not os.path.isfile(path_to_concepts):
+
+            print("Creating dictionary of relatedness between classes...")
+            relat_dict = query_conceptnet(qall_classes, path_to_concepts)
+
+        else:
+
+            print("Loading cached dictionary of relatedness between classes...")
+            with open(path_to_concepts, 'r') as jf:
+                relat_dict = json.load(jf)
 
         y_true = []
         y_pred = []
@@ -198,6 +360,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 outr.write("Analyzing frame %s" % data_point["filename"])
 
                 bboxes = data_point["regions"]
+                frame_objs = []
 
                 #For each bounding box
                 for region in bboxes:
@@ -214,18 +377,20 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                     obj = obj[y:y+h,x:x+w]
 
-                    input_emb = array_embedding(model, path_to_state, obj,  device, transforms=trans)
-                    """
-                    cv2.imwrite('./temp.png', obj)
-                    input_emb = base_embedding('./temp.png', device, trans)
-                    """
-                    gt_label = region["region_attributes"]["class"]
+                    input_emb = emb_ext.array_embedding(model, path_to_state, obj,  device, transforms=trans)
 
                     """
-                    Visualize current object
-                    
+                    cv2.imwrite('./temp.png', obj)
+                    basein_emb = emb_ext.base_embedding('./temp.png', device, trans)
+                    """
+
+                    gt_label = region["region_attributes"]["class"]
+
+
+                    #Visualize current object
+                    """
                     cv2.imshow('union', obj)
-                    cv2.waitKey(2000)
+                    cv2.waitKey(5000)
                     cv2.destroyAllWindows()
                     """
 
@@ -233,8 +398,18 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     y_true.append(gt_label)
 
                     # Find (K)NN from input embedding
-                    prediction= KNN(input_emb, embedding_space, K, outr)
-                    y_pred.append(prediction)
+                    """
+                    print("%%%%%%%The baseline NN predicted %%%%%%%%%%%%%%%%%%%%%")
+                    baseline_pred = KNN(basein_emb, base_embedding_space, K, outr)
+                    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+                    """
+
+                    #print("%%%%%%%The trained model predicted %%%%%%%%%%%%%%%%%%%%%")
+                    prediction = KNN(input_emb, embedding_space, K, outr)
+                    #print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+
+                    frame_objs.append(prediction)
+                    #y_pred.append(prediction)
 
                     #draw prediction
                     color = COLORS[all_classes.index(prediction)]
@@ -245,7 +420,18 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         cv2.putText(out_img, prediction, (x - 10, y +h + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
                 print("%EOF---------------------------------------------------------------------% \n")
-                cv2.imwrite(os.path.join(out_imgs, data_point["filename"]), out_img)
+
+                cv2.imshow('union', out_img)
+                cv2.waitKey(5000)
+                cv2.destroyAllWindows()
+
+                #Testing if term relatedness can help correcting the predictions
+                new_preds = correct_by_relatedness(frame_objs, relat_dict)
+                print(new_preds)
+                y_pred.extend(new_preds)
+
+                #cv2.imwrite(os.path.join(out_imgs, data_point["filename"]), out_img)
+
         #Check no. of instances per class
         #print(cardinalities)
 
@@ -322,7 +508,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         print(segm_label)
                     #Pre-process as usual validation/test images to extract embedding
 
-                    qembedding = array_embedding(model, model_checkpoint, obj, \
+                    qembedding = emb_ext.array_embedding(model, model_checkpoint, obj, \
                                                  device, transforms=trans)
                     """
                     if yolo_label in keepers:
@@ -405,7 +591,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     filename = str(file.split('/')[-1])
 
                     #Update embedding space by mapping support set set as well
-                    train_embeds[classname+'_'+filename] = path_embedding(model, model_checkpoint, os.path.join(root, file), \
+                    train_embeds[classname+'_'+filename] = emb_ext.path_embedding(model, model_checkpoint, os.path.join(root, file), \
                                         device, transforms=trans)
 
         #Then make predictions for all test examples (Known + Novel)
@@ -436,7 +622,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     print("Looking at file %s \n" % file)
                     outr.write("Looking at file %s \n" % file)
 
-                    qembedding = path_embedding(model, model_checkpoint, os.path.join(root, file), \
+                    qembedding = emb_ext.path_embedding(model, model_checkpoint, os.path.join(root, file), \
                                                  device, transforms=trans)
 
                     ranking = compute_similarity(qembedding, train_embeds)

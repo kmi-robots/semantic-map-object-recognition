@@ -99,7 +99,7 @@ def KNN(input_e, all_embs, K, logfile):
 
         print("Score: %f" % val)
 
-        return label
+        return label, val
 
     else:
         print("The %i most similar objects to the provided image are: \n")
@@ -110,9 +110,10 @@ def KNN(input_e, all_embs, K, logfile):
 
         # Majority voting with discounts by distance from top position
         for k, (key, val) in enumerate(ranking[:K]):
+
             label = key.split("_")[0]  # [:-1]
 
-            votes[label] += 1 / (k + 1)
+            votes[label] += val/ (k + 1)    #nomin used to be 1
 
             ids[label] = key
 
@@ -137,7 +138,7 @@ def KNN(input_e, all_embs, K, logfile):
             print("Not sure about how to classify this object")
             logfile.write("Not sure about how to classify this object")
 
-        return win_label
+        return win_label, win_score
 
 def compute_sem_sim(wemb1, wemb2):
 
@@ -325,6 +326,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
         qall_classes = [formatlabel(c) for c in all_classes]
         COLORS = np.random.uniform(0, 255, size=(len(all_classes), 3))
 
+        """
         if not os.path.isfile(path_to_concepts):
 
             print("Creating dictionary of relatedness between classes...")
@@ -335,7 +337,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
             print("Loading cached dictionary of relatedness between classes...")
             with open(path_to_concepts, 'r') as jf:
                 relat_dict = json.load(jf)
-
+        """
         y_true = []
         y_pred = []
 
@@ -345,7 +347,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         with open('pt_results/ranking_log.txt', 'a') as outr:
 
-            for data_point in img_collection.values():
+            for data_point in reversed(img_collection.values()):
 
                 img = cv2.imread(os.path.join(base_path, data_point["filename"]))
 
@@ -405,32 +407,34 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     """
 
                     #print("%%%%%%%The trained model predicted %%%%%%%%%%%%%%%%%%%%%")
-                    prediction = KNN(input_emb, embedding_space, K, outr)
+                    prediction, conf = KNN(input_emb, embedding_space, K, outr)
                     #print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
-                    frame_objs.append(prediction)
-                    #y_pred.append(prediction)
+                    #frame_objs.append(prediction)
+                    y_pred.append(prediction)
 
                     #draw prediction
                     color = COLORS[all_classes.index(prediction)]
                     cv2.rectangle(out_img, (x, y), (x+w, y+h), color, 2)
                     if y-10 >0:
-                        cv2.putText(out_img, prediction, (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                        cv2.putText(out_img, prediction+"  "+str(round(conf,2)), (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                     else:
-                        cv2.putText(out_img, prediction, (x - 10, y +h + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                        cv2.putText(out_img, prediction+"  "+str(round(conf,2)), (x - 10, y +h + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
                 print("%EOF---------------------------------------------------------------------% \n")
 
+                """
                 cv2.imshow('union', out_img)
                 cv2.waitKey(5000)
                 cv2.destroyAllWindows()
+                """
 
                 #Testing if term relatedness can help correcting the predictions
-                new_preds = correct_by_relatedness(frame_objs, relat_dict)
-                print(new_preds)
-                y_pred.extend(new_preds)
+                #new_preds = correct_by_relatedness(frame_objs, relat_dict)
+                #print(new_preds)
+                #y_pred.extend(new_preds)
 
-                #cv2.imwrite(os.path.join(out_imgs, data_point["filename"]), out_img)
+                cv2.imwrite(os.path.join(out_imgs, data_point["filename"]), out_img)
 
         #Check no. of instances per class
         #print(cardinalities)

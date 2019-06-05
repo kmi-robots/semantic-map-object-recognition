@@ -1,6 +1,5 @@
 import torch
-import embedding_extractor as emb_ext
-#from embedding_extractor import path_embedding, array_embedding, base_embedding
+from embedding_extractor import path_embedding, array_embedding, base_embedding
 import os
 from segment import segment
 import numpy as np
@@ -74,7 +73,7 @@ def extract_base_embeddings(img_path, transforms, device, path_to_output):
 
                 filename = str(file.split('/')[-1])
 
-                emb_space[classname+'_'+filename] = emb_ext.base_embedding(os.path.join(root, file), device, transforms)
+                emb_space[classname+'_'+filename] = base_embedding(os.path.join(root, file), device, transforms)
 
 
     with open(path_to_output,mode='wb') as outj:
@@ -99,7 +98,14 @@ def KNN(input_e, all_embs, K, logfile):
 
         print("Score: %f" % val)
 
-        return label, val
+        #For a proxy of confidence, we look at the top 5 in that ranking
+        confs = Counter()
+
+        for key, v in ranking[:5].items():
+
+
+
+        return label, conf
 
     else:
         print("The %i most similar objects to the provided image are: \n")
@@ -276,6 +282,67 @@ def correct_by_relatedness(term_list, score_dict):
 
 
 
+def extract_spatial(obj_list, embedding_space, K, outr):
+
+
+    #Sort by descending confidence
+    obj_list.sort(key=lambda kv: kv[1], reverse=True)
+
+    #Reference object in the scene, the one KNN is most confident about
+    anchor_label, anchor_conf, anchor_coords = obj_list[0]
+
+    x_a = anchor_coords[0]
+    y_a = anchor_coords[1]
+    w_a = anchor_coords[2]
+    h_a = anchor_coords[3]
+
+
+    corr_preds = []
+
+    #Are any other objects are nearby?
+    for label, score, bbox in obj_list[1:]:
+
+        x_b = bbox[0]
+        y_b = bbox[1]
+
+        #Spatial ref is relative to anchor object
+        spatial_rel = check_spatial(x_a, x_b, y_a, y_b, w_a, h_a)
+
+        if spatial_rel is not None:
+
+            #Verify on supporting knowledge if found relation makes sense
+
+            continue
+            #if it does not, re-check if in the predicate obj ranking something else
+            # did make more sense
+
+
+
+    return corr_preds
+
+
+def check_spatial(x1, x2, y1, y2, w1, h1, lowto=10, hito=50):
+
+    if (x2 <= x1+w1+hito or x2 <= x1 - hito) and (y2 <= y1+h1+lowto or y2>= y1 - lowto):
+
+        return "near"
+
+    elif y2 < y1 - hito:
+
+        return "under"
+
+    elif y2 > y1 + h1+ hito:
+
+        return "on"
+
+    else:
+
+        return None
+
+
+
+
+
 def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K, N, sthresh= 1.0):
 
 
@@ -379,11 +446,12 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                     obj = obj[y:y+h,x:x+w]
 
-                    input_emb = emb_ext.array_embedding(model, path_to_state, obj,  device, transforms=trans)
+                    input_emb = array_embedding(model, path_to_state, obj, device, transforms=trans)
+
 
                     """
                     cv2.imwrite('./temp.png', obj)
-                    basein_emb = emb_ext.base_embedding('./temp.png', device, trans)
+                    basein_emb = base_embedding('./temp.png', device, trans)
                     """
 
                     gt_label = region["region_attributes"]["class"]
@@ -410,12 +478,14 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     prediction, conf = KNN(input_emb, embedding_space, K, outr)
                     #print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
-                    #frame_objs.append(prediction)
-                    y_pred.append(prediction)
+                    frame_objs.append((prediction,conf, (x,y,w,h)))
+                    #y_pred.append(prediction)
 
                     #draw prediction
                     color = COLORS[all_classes.index(prediction)]
                     cv2.rectangle(out_img, (x, y), (x+w, y+h), color, 2)
+
+
                     if y-10 >0:
                         cv2.putText(out_img, prediction+"  "+str(round(conf,2)), (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                     else:
@@ -429,10 +499,19 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 cv2.destroyAllWindows()
                 """
 
-                #Testing if term relatedness can help correcting the predictions
-                #new_preds = correct_by_relatedness(frame_objs, relat_dict)
-                #print(new_preds)
-                #y_pred.extend(new_preds)
+                new_preds = extract_spatial(frame_objs, embedding_space, K, outr)
+
+                if new_preds is not None:
+
+                    #No change to predictions
+                    print("Going with vision-based predictions only")
+                    new_preds = zip(*frame_objs)[0]
+
+                # Testing if term relatedness can help correcting the predictions
+                # new_preds = correct_by_relatedness(frame_objs, relat_dict)
+                # print(new_preds)
+
+                y_pred.extend(new_preds)
 
                 cv2.imwrite(os.path.join(out_imgs, data_point["filename"]), out_img)
 
@@ -512,7 +591,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         print(segm_label)
                     #Pre-process as usual validation/test images to extract embedding
 
-                    qembedding = emb_ext.array_embedding(model, model_checkpoint, obj, \
+                    qembedding = array_embedding(model, model_checkpoint, obj, \
                                                  device, transforms=trans)
                     """
                     if yolo_label in keepers:
@@ -595,7 +674,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     filename = str(file.split('/')[-1])
 
                     #Update embedding space by mapping support set set as well
-                    train_embeds[classname+'_'+filename] = emb_ext.path_embedding(model, model_checkpoint, os.path.join(root, file), \
+                    train_embeds[classname+'_'+filename] = path_embedding(model, model_checkpoint, os.path.join(root, file), \
                                         device, transforms=trans)
 
         #Then make predictions for all test examples (Known + Novel)
@@ -626,7 +705,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     print("Looking at file %s \n" % file)
                     outr.write("Looking at file %s \n" % file)
 
-                    qembedding = emb_ext.path_embedding(model, model_checkpoint, os.path.join(root, file), \
+                    qembedding = path_embedding(model, model_checkpoint, os.path.join(root, file), \
                                                  device, transforms=trans)
 
                     ranking = compute_similarity(qembedding, train_embeds)

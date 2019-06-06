@@ -10,6 +10,8 @@ from collections import Counter, OrderedDict
 import requests
 import pandas
 import time
+from nltk.corpus import wordnet
+from pattern.en import singularize, pluralize
 
 from data_loaders import BGRtoRGB
 from sklearn.metrics import classification_report, accuracy_score
@@ -101,11 +103,14 @@ def KNN(input_e, all_embs, K, logfile):
         #For a proxy of confidence, we look at the top 5 in that ranking
         confs = Counter()
 
-        for key, v in ranking[:5].items():
+        for key, v in ranking[:5]:
+
+            l = key.split("_")[0]
+            #We sum the similarity scores obtained for that label
+            confs[l] += val
 
 
-
-        return label, conf
+        return label,confs[label], confs
 
     else:
         print("The %i most similar objects to the provided image are: \n")
@@ -161,13 +166,44 @@ def compute_sem_sim(wemb1, wemb2):
 
 def formatlabel(label):
 
+    if label == "power-cables":
+
+        label = "power-cords"
+
+    elif label == "desktop-pcs":
+
+        label = "computers"
+
+    # make singular
+    label = singularize(label)
 
     if '-' in label:
 
         label = label.replace('-', '_')
 
-    return label   #[:-1]  # remove plurals
+        wn_label = label.replace('-', '')
+    else:
 
+        wn_label = label
+
+
+    return label, get_synset(wn_label)   #[:-1]  # remove plurals
+
+
+def get_synset(class_label):
+
+    """
+    Returns the wordnet synset for a given term, if any is found
+    """
+
+    syns = wordnet.synsets(class_label)
+
+    if syns:
+
+        return syns[0]
+    else:
+
+        return None
 
 def query_conceptnet(class_set, path_to_dict):
 
@@ -234,112 +270,204 @@ def query_conceptnet(class_set, path_to_dict):
     return score_dict
 
 
-def correct_by_relatedness(term_list, score_dict):
+def call_cp_api(word1, word2):
 
-    corrected_list=term_list.copy()
-    #For each object in that scene
-    for term in term_list:
+    try:
 
-        qterm = formatlabel(term)
+        outcome = requests.get('http://api.conceptnet.io/relatedness?node1=/c/en/' + \
+                     word1 + '&node2=/c/en/' + word2).json()
 
-        keys,scores = zip(*score_dict[qterm].items())
+        return outcome['value']
 
-        avg1 = sum(scores)/len(scores)
+    except:
 
-        for term2 in term_list:
+        time.sleep(60)
 
-            qterm2 = formatlabel(term2)
+        outcome = requests.get('http://api.conceptnet.io/relatedness?node1=/c/en/' + \
+                               word1 + '&node2=/c/en/' + word2).json()
 
-            if qterm2 == qterm:
-                continue  #Skip identity case
+        return outcome['value']
 
-            relatedness = score_dict[qterm][qterm2]
 
-            if relatedness < 0:       #Assuming it is a mis-classification
 
-                keys2, scores2 = zip(*score_dict[qterm2].items())
-                avg2 = sum(scores2) / len(scores2)
-                #Which one of the two makes more sense in the scene on average?
+def conceptnet_relatedness(subject, candidates, object):
 
-                if avg2> avg1:
 
-                    #Then term 2 could be correct and term 1 could be corrected
-                    corrected_list[term_list.index(term)] = keys2[-1] #[0]
-                    #replaced by the most related term to term2
+    base_score = call_cp_api(subject, object)
 
-                elif avg1> avg2:
+    pred_subject = subject
 
-                    #The other way around
-                    corrected_list[term_list.index(term2)] = keys[-1] #[0]
+    #print(base_score)
+    #Is there any other label in the ranking making more sense?
+
+    for o_class, confidence in candidates.items():
+
+        f_class,_ = formatlabel(o_class)
+        if f_class == subject:
+
+            continue #Skip the object itself
+
+        score = call_cp_api(f_class, object)
+
+        if score > base_score:
+
+            base_score = score
+            pred_subject = o_class
+
+    print("CONCEPTNET: Within the ranking, the most likely subject is %s" % pred_subject)
+    if singularize(pred_subject) == pred_subject:
+
+        #Re-format back for evaluation
+        pred_subject = pluralize(pred_subject)
+
+    if pred_subject == "power-cords":
+
+        pred_subject  = "power-cables"
+
+    elif pred_subject  == "computers":
+
+        pred_subject  = "desktop-pcs"
+
+    return pred_subject.replace('_', '-'), base_score
+
+
+
+def extract_spatial(weak_idx, obj_list):
+
+    preds,confs, coords, rankings = zip(*obj_list)
+
+    weak_pred, weak_synset = formatlabel(preds[weak_idx])
+
+    #weak_conf = confs[weak_idx]
+    x_a= coords[weak_idx][0]
+    y_a = coords[weak_idx][1]
+    w_a = coords[weak_idx][2]
+    h_a = coords[weak_idx][3]
+    weak_rank = rankings[weak_idx]
+
+    new_ranking = Counter()
+
+
+    #rel_graph["subject"] = weak_pred
+    #rel_graph["synset"] = weak_synset
+
+    #Are any other objects are nearby?
+    for label, score, bbox, ranking in [obj_list[i] for i in range(len(obj_list)) if i!= weak_idx]:
+
+        #Add threshold: only link with object we are reasonably confident about
+        if score >= 2.50:
+
+            x_b = bbox[0]
+            y_b = bbox[1]
+            w_b = bbox[2]
+            h_b = bbox[3]
+
+            #Spatial ref is relative to anchor object
+            spatial_rel = check_spatial(x_a, x_b, y_a, y_b, w_a, h_a, w_b, h_b)
+
+            if spatial_rel is not None:
+
+
+                #Check if any of the two objects (or both) are on the floor
+                floor_out1 = check_horizontal(y_a, h_a)
+
+                if floor_out1:
+
+                    print(weak_pred+"( "+weak_synset.name()+" ) "+floor_out1)
+
+                floor_out2 = check_horizontal(y_b, h_b)
+
+                if floor_out2:
+
+                    print(sem_obj + "( " + obj_syn.name() + " ) " + floor_out2)
+
+                #Verify on supporting knowledge if found relation makes sense
+
+                sem_obj, obj_syn = formatlabel(label)
+
+                if weak_synset and obj_syn:
+
+                    print(weak_pred+"( "+weak_synset.name()+" ) "+spatial_rel+" "+sem_obj+"( "+obj_syn.name()+" ) \n")
 
                 else:
 
-                    #The two "make equal sense", we do not expect this to be rare
-                    print("Objects "+term+"and"+term2+"could make equal sense in the scene!")
+                    print(weak_pred+" "+spatial_rel+" "+sem_obj+"\n")
+
+                #Does this relation make sense?
+                #1) In conceptnet?
+                cp_pred, cp_score = conceptnet_relatedness(weak_pred, weak_rank, sem_obj)
+                new_ranking[cp_pred] += cp_score
+
+                #if it does not, re-check if in the predicate obj ranking something else
+                # did make more sense
+
+    return new_ranking
 
 
-    return corrected_list
+def check_horizontal(y, h, img_res= (1280,720)):
 
+    bar_y = y + h/2
+    thresh = img_res[1]/3
 
+    if bar_y >= thresh and bar_y <= img_res[1]:
 
-def extract_spatial(obj_list, embedding_space, K, outr):
-
-
-    #Sort by descending confidence
-    obj_list.sort(key=lambda kv: kv[1], reverse=True)
-
-    #Reference object in the scene, the one KNN is most confident about
-    anchor_label, anchor_conf, anchor_coords = obj_list[0]
-
-    x_a = anchor_coords[0]
-    y_a = anchor_coords[1]
-    w_a = anchor_coords[2]
-    h_a = anchor_coords[3]
-
-
-    corr_preds = []
-
-    #Are any other objects are nearby?
-    for label, score, bbox in obj_list[1:]:
-
-        x_b = bbox[0]
-        y_b = bbox[1]
-
-        #Spatial ref is relative to anchor object
-        spatial_rel = check_spatial(x_a, x_b, y_a, y_b, w_a, h_a)
-
-        if spatial_rel is not None:
-
-            #Verify on supporting knowledge if found relation makes sense
-
-            continue
-            #if it does not, re-check if in the predicate obj ranking something else
-            # did make more sense
-
-
-
-    return corr_preds
-
-
-def check_spatial(x1, x2, y1, y2, w1, h1, lowto=10, hito=50):
-
-    if (x2 <= x1+w1+hito or x2 <= x1 - hito) and (y2 <= y1+h1+lowto or y2>= y1 - lowto):
-
-        return "near"
-
-    elif y2 < y1 - hito:
-
-        return "under"
-
-    elif y2 > y1 + h1+ hito:
-
-        return "on"
+        return "on "+ get_synset("floor").name()
 
     else:
 
         return None
 
 
+def check_spatial(x1, x2, y1, y2, w1, h1, w2, h2):
+
+    #CHANGED: make horizontal bbox expansion relative to each bbox size as opposed to absolute px value
+    lowto = 10
+    hito = w1
+
+    bar_x2 = x2 + w2/2
+    bar_y2 = y2 + h2/2
+
+
+    if bar_y2 > y1 + h1 +lowto and bar_x2 >= x1 - 2*hito and bar_x2 <= x1 + w1- 2*hito:
+
+        return "on "
+
+    elif bar_y2 < y1 - lowto and bar_x2 >= x1 - 2*hito and bar_x2 <= x1 + w1- 2*hito:
+
+        return "under"
+
+    elif bar_x2 <= x1+w1+hito and bar_x2 >= x1 - hito and bar_y2 <= y1+h1+lowto and bar_y2>= y1 - lowto:
+
+        return "near"
+
+    else:
+
+        return None
+
+
+def show_leastconf(scene_objs):
+
+    if len(scene_objs) <= 1:
+
+        print("Only one object found in this scene...skipping contextual reasoning")
+        return None
+
+    preds,confs, coords, rankings = zip(*scene_objs)
+
+    if min(confs) < 2.8:  #less than 56%
+
+        i = confs.index(min(confs))
+
+        print("Weakest prediction was \n")
+        print(preds[i])
+        print("With associated ranking scores \n")
+        print(rankings[i])
+
+        return i
+
+    else:
+
+        return None
 
 
 
@@ -390,7 +518,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         #For drawing the predictions
         all_classes = list(set([key.split('_')[0] for key in embedding_space.keys()]))
-        qall_classes = [formatlabel(c) for c in all_classes]
+
         COLORS = np.random.uniform(0, 255, size=(len(all_classes), 3))
 
         """
@@ -404,6 +532,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
             print("Loading cached dictionary of relatedness between classes...")
             with open(path_to_concepts, 'r') as jf:
                 relat_dict = json.load(jf)
+
         """
         y_true = []
         y_pred = []
@@ -411,6 +540,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
         cardinalities = Counter()
 
         base_path, img_collection = load_jsondata(path_to_bags)
+
+        #data = list(reversed(img_collection.values()))[:15]
 
         with open('pt_results/ranking_log.txt', 'a') as outr:
 
@@ -431,6 +562,12 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 bboxes = data_point["regions"]
                 frame_objs = []
 
+                if not bboxes:
+
+                    print("NOT annotated")
+
+                    continue
+
                 #For each bounding box
                 for region in bboxes:
 
@@ -445,7 +582,6 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     h = box_data["height"]
 
                     obj = obj[y:y+h,x:x+w]
-
                     input_emb = array_embedding(model, path_to_state, obj, device, transforms=trans)
 
 
@@ -475,10 +611,10 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     """
 
                     #print("%%%%%%%The trained model predicted %%%%%%%%%%%%%%%%%%%%%")
-                    prediction, conf = KNN(input_emb, embedding_space, K, outr)
+                    prediction, conf, rank_confs= KNN(input_emb, embedding_space, K, outr)
                     #print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
-                    frame_objs.append((prediction,conf, (x,y,w,h)))
+                    frame_objs.append((prediction, conf, (x,y,w,h), rank_confs))
                     #y_pred.append(prediction)
 
                     #draw prediction
@@ -493,30 +629,57 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                 print("%EOF---------------------------------------------------------------------% \n")
 
+
                 """
                 cv2.imshow('union', out_img)
                 cv2.waitKey(5000)
                 cv2.destroyAllWindows()
                 """
 
-                new_preds = extract_spatial(frame_objs, embedding_space, K, outr)
+                weak_idx = show_leastconf(frame_objs)
 
-                if new_preds is not None:
 
-                    #No change to predictions
-                    print("Going with vision-based predictions only")
-                    new_preds = zip(*frame_objs)[0]
+                if weak_idx is not None:
 
-                # Testing if term relatedness can help correcting the predictions
-                # new_preds = correct_by_relatedness(frame_objs, relat_dict)
-                # print(new_preds)
+                    new_preds = extract_spatial(weak_idx, frame_objs)
 
-                y_pred.extend(new_preds)
 
-                cv2.imwrite(os.path.join(out_imgs, data_point["filename"]), out_img)
+                    if new_preds:
+
+                        wlabel, wscore = max(new_preds.items(), key=lambda x: x[1])
+
+                        if wlabel == "power-cords":
+
+                            wlabel = "power-cables"
+
+                        elif wlabel == "computers":
+
+                            wlabel = "desktop-pcs"
+
+                        print("Based on all nearby objects this is a %s" %wlabel)
+                        print("With confidence %f" % wscore)
+
+                        print(sorted(new_preds.items(), key=lambda x: x[1], reverse=True))
+
+                        if '_' in wlabel:
+
+                            continue
+
+                        #change it
+                        _,_, coords, _= frame_objs[weak_idx]
+                        frame_objs[weak_idx]= (wlabel.replace('_','-'), wscore, coords, new_preds)
+
+
+                corr_preds, _ , _, _= zip(*frame_objs)
+                y_pred.extend(corr_preds)
+
+                #print("Off you go")
+
+                #cv2.imwrite(os.path.join(out_imgs, data_point["filename"]), out_img)
 
         #Check no. of instances per class
         #print(cardinalities)
+        print(len(y_pred)==len(y_true))
 
         #Evaluation
         print("Class-wise test results \n")

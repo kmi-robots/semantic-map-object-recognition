@@ -72,10 +72,8 @@ def filter_relations(base, path_to_json, aliases={}):
 
             core = node["predicate"].lower()
 
-
             sub = node["subject"]["synsets"]
             obj = node["object"]["synsets"]
-
 
 
             if len(sub) > 1 or len(obj)>1 or  core == '' or core==' ':
@@ -123,21 +121,23 @@ def filter_relations(base, path_to_json, aliases={}):
 
     efficient_dict={}
 
-    if core in aliases.keys():
+    for core, node in filtered_dict.items():
 
-        alters = aliases[core]
+        if core in aliases.keys():
 
-        efficient_dict[core] = {}
+            alters = aliases[core]
 
-        efficient_dict[core]["aliases"] = alters
+            efficient_dict[core] = {}
 
-        efficient_dict[core]["relations"] = filtered_dict[core]["relations"]
+            efficient_dict[core]["aliases"] = alters
 
-        for al in alters:
+            efficient_dict[core]["relations"] = filtered_dict[core]["relations"]
 
-            if al in filtered_dict.keys():
+            for al in alters:
 
-                efficient_dict[core]["relations"] = efficient_dict[core]["relations"]+ filtered_dict[al]["relations"]
+                if al in filtered_dict.keys():
+
+                    efficient_dict[core]["relations"] = efficient_dict[core]["relations"]+ filtered_dict[al]["relations"]
 
 
     print(len(filtered_dict['on']["relations"]))

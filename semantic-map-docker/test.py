@@ -113,8 +113,8 @@ def KNN(input_e, all_embs, K, logfile):
         return label,confs[label], confs
 
     else:
-        print("The %i most similar objects to the provided image are: \n")
-        logfile.write("The %i most similar objects to the provided image are: \n" % K)
+        #print("The %i most similar objects to the provided image are: \n")
+        #logfile.write("The %i most similar objects to the provided image are: \n" % K)
 
         votes = Counter()
         ids = {}
@@ -124,19 +124,19 @@ def KNN(input_e, all_embs, K, logfile):
 
             label = key.split("_")[0]  # [:-1]
 
-            votes[label] += val/ (k + 1)    #nomin used to be 1
+            votes[label] += val/(k + 1)    #nomin used to be 1
 
             ids[label] = key
 
-            print(label + ": " + str(val) + "\n")
-            logfile.write(label + ": " + str(val) + "\n")
-            print("With unique ID %s \n" % key)
-            logfile.write("With unique ID %s \n" % key)
+            #print(label + ": " + str(val) + "\n")
+            #logfile.write(label + ": " + str(val) + "\n")
+            #print("With unique ID %s \n" % key)
+            #logfile.write("With unique ID %s \n" % key)
 
         win_label, win_score = max(votes.items(), key=lambda x: x[1])
+
+        """
         win_id = ids[win_label]
-
-
         if win_score > 1.0:
 
             print("The most similar object by majority voting is %s \n" % win_label)
@@ -148,8 +148,10 @@ def KNN(input_e, all_embs, K, logfile):
 
             print("Not sure about how to classify this object")
             logfile.write("Not sure about how to classify this object")
+            
+        """
 
-        return win_label, win_score
+        return win_label, win_score, votes
 
 def compute_sem_sim(wemb1, wemb2):
 
@@ -331,8 +333,7 @@ def conceptnet_relatedness(subject, candidates, object):
     return pred_subject.replace('_', '-'), base_score
 
 
-
-def extract_spatial(weak_idx, obj_list):
+def extract_spatial(weak_idx, obj_list, VG_base=None):
 
     preds,confs, coords, rankings = zip(*obj_list)
 
@@ -347,6 +348,11 @@ def extract_spatial(weak_idx, obj_list):
 
     new_ranking = Counter()
 
+    # Check if any of the two objects (or both) are on the floor
+    floor_out1 = check_horizontal(y_a, h_a)
+
+    if floor_out1:
+        print(weak_pred + "( " + weak_synset.name() + " ) " + floor_out1)
 
     #rel_graph["subject"] = weak_pred
     #rel_graph["synset"] = weak_synset
@@ -355,7 +361,7 @@ def extract_spatial(weak_idx, obj_list):
     for label, score, bbox, ranking in [obj_list[i] for i in range(len(obj_list)) if i!= weak_idx]:
 
         #Add threshold: only link with object we are reasonably confident about
-        if score >= 2.50:
+        if score >= 1.14: #2.50: more than 50% confident about the other object
 
             x_b = bbox[0]
             y_b = bbox[1]
@@ -367,13 +373,8 @@ def extract_spatial(weak_idx, obj_list):
 
             if spatial_rel is not None:
 
+                sem_obj, obj_syn = formatlabel(label)
 
-                #Check if any of the two objects (or both) are on the floor
-                floor_out1 = check_horizontal(y_a, h_a)
-
-                if floor_out1:
-
-                    print(weak_pred+"( "+weak_synset.name()+" ) "+floor_out1)
 
                 floor_out2 = check_horizontal(y_b, h_b)
 
@@ -382,8 +383,6 @@ def extract_spatial(weak_idx, obj_list):
                     print(sem_obj + "( " + obj_syn.name() + " ) " + floor_out2)
 
                 #Verify on supporting knowledge if found relation makes sense
-
-                sem_obj, obj_syn = formatlabel(label)
 
                 if weak_synset and obj_syn:
 
@@ -407,7 +406,7 @@ def extract_spatial(weak_idx, obj_list):
 def check_horizontal(y, h, img_res= (1280,720)):
 
     bar_y = y + h/2
-    thresh = img_res[1]/3
+    thresh = img_res[1] - img_res[1]/4
 
     if bar_y >= thresh and bar_y <= img_res[1]:
 
@@ -428,11 +427,11 @@ def check_spatial(x1, x2, y1, y2, w1, h1, w2, h2):
     bar_y2 = y2 + h2/2
 
 
-    if bar_y2 > y1 + h1 +lowto and bar_x2 >= x1 - 2*hito and bar_x2 <= x1 + w1- 2*hito:
+    if bar_y2 > y1 + h1 and bar_x2 >= x1 - hito and bar_x2 <= x1 + w1 + hito:
 
-        return "on "
+        return "on"
 
-    elif bar_y2 < y1 - lowto and bar_x2 >= x1 - 2*hito and bar_x2 <= x1 + w1- 2*hito:
+    elif bar_y2 < y1 and bar_x2 >= x1 - hito and bar_x2 <= x1 + w1 + hito:
 
         return "under"
 
@@ -445,16 +444,71 @@ def check_spatial(x1, x2, y1, y2, w1, h1, w2, h2):
         return None
 
 
+
+FLOOR = get_synset("floor").name()
+
+def correct_floating(o_y, o_h, weak_idx, frame_objs, VG_base):
+
+    floor_rel = check_horizontal(o_y, o_h)
+
+    label, score, coords, ranking = frame_objs[weak_idx]
+
+    qlabel, synset = formatlabel(label)
+
+    VG_onrel = VG_base["relations"]
+
+    try:
+
+        on_floor = VG_onrel[str((synset.name(), FLOOR))]
+
+        if not floor_rel:
+
+            print(qlabel+" could be floating when it shouldn't ")
+            #needs to be corrected: potentially floating object
+            for l, s in ranking.most_common():
+
+                qlab, syn = formatlabel(l)
+
+                # Which is the top score alternative object not usually on the floor?
+
+                try:
+
+                    floor = VG_onrel[str((syn.name(), FLOOR))]
+
+
+                except KeyError:
+
+                    #Replace
+                    frame_objs[weak_idx] = (l,s, coords, ranking)
+
+                    print("Replaced with " + qlab + " instead")
+
+                    break
+
+
+        else:
+
+            print(qlabel+" makes sense on the floor ")
+
+
+    except KeyError:
+
+        #Found on floor when it should not
+        #Discarded for now
+        pass
+
+
+    return frame_objs
+
+
+
+
 def show_leastconf(scene_objs):
 
-    if len(scene_objs) <= 1:
-
-        print("Only one object found in this scene...skipping contextual reasoning")
-        return None
 
     preds,confs, coords, rankings = zip(*scene_objs)
 
-    if min(confs) < 2.8:  #less than 56%
+    if min(confs) < 1.14: #2.5:  #less than 50%
 
         i = confs.index(min(confs))
 
@@ -468,6 +522,8 @@ def show_leastconf(scene_objs):
     else:
 
         return None
+
+
 
 
 
@@ -496,10 +552,21 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
         out_imgs = os.path.join(path_to_bags.split('test')[0], 'output_predictions')
 
         path_to_concepts = os.path.join(path_to_bags.split('KMi_collection')[0],'numberbatch/KMi_conceptrel.json')
+        path_to_VG = os.path.join(path_to_bags.split('KMi_collection')[0],'visual_genome/filtered_spatial.json')
+
 
         if not os.path.isdir(out_imgs):
 
             os.mkdir(out_imgs)
+
+        if os.path.isfile(path_to_VG):
+
+            start = time.time()
+            print("Loading Visual Genome spatial relations...")
+            with open(path_to_VG, 'r') as jin:
+                VG_data = json.load(jin)
+
+            print("Took %f seconds " % (time.time()-start))
 
         """
         if not os.path.isfile(path_to_basespace):
@@ -541,11 +608,11 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         base_path, img_collection = load_jsondata(path_to_bags)
 
-        #data = list(reversed(img_collection.values()))[:15]
+        data = list(reversed(img_collection.values()))
 
         with open('pt_results/ranking_log.txt', 'a') as outr:
 
-            for data_point in reversed(img_collection.values()):
+            for data_point in data: #reversed(img_collection.values()):
 
                 img = cv2.imread(os.path.join(base_path, data_point["filename"]))
 
@@ -611,8 +678,9 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     """
 
                     #print("%%%%%%%The trained model predicted %%%%%%%%%%%%%%%%%%%%%")
-                    prediction, conf, rank_confs= KNN(input_emb, embedding_space, K, outr)
+                    prediction, conf, rank_confs = KNN(input_emb, embedding_space, K, outr)
                     #print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+
 
                     frame_objs.append((prediction, conf, (x,y,w,h), rank_confs))
                     #y_pred.append(prediction)
@@ -630,19 +698,31 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 print("%EOF---------------------------------------------------------------------% \n")
 
 
-                """
                 cv2.imshow('union', out_img)
                 cv2.waitKey(5000)
                 cv2.destroyAllWindows()
-                """
 
+                """Correcting least confident predictions by querying external knowledge"""
                 weak_idx = show_leastconf(frame_objs)
 
 
                 if weak_idx is not None:
 
-                    new_preds = extract_spatial(weak_idx, frame_objs)
+                    _, _, coords, _ = frame_objs[weak_idx]
 
+                    if VG_data:
+
+                        #Pre-correction based on a subset of relations in Visual Genome
+                        o_y = coords[1]
+                        o_h = coords[3]
+
+                        frame_objs = correct_floating(o_y, o_h, weak_idx, frame_objs, VG_data['on'])
+
+                    if len(frame_objs) <= 1:
+                        print("Only one object found in this scene...skipping contextual reasoning")
+                        continue
+
+                    new_preds = extract_spatial(weak_idx, frame_objs, VG_base=VG_data)
 
                     if new_preds:
 
@@ -661,12 +741,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                         print(sorted(new_preds.items(), key=lambda x: x[1], reverse=True))
 
-                        if '_' in wlabel:
-
-                            continue
-
                         #change it
-                        _,_, coords, _= frame_objs[weak_idx]
+
                         frame_objs[weak_idx]= (wlabel.replace('_','-'), wscore, coords, new_preds)
 
 
@@ -687,7 +763,6 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
         print(accuracy_score(y_true, y_pred))
 
         return None
-
 
 
     if data_type == 'pickled':

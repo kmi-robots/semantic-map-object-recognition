@@ -435,10 +435,10 @@ TABLE = wordnet.synsets("table")[1].name()
 
 def check_horizontal(y, h, img_res= (1280,720)):
 
-    bar_y = y + h/2
-    thresh = img_res[1] - img_res[1]/4
+    bar_y = y + h #/2  #Replace bar_y with actual lower y
+    thresh = img_res[1] - img_res[1]/3
 
-    if bar_y >= thresh and bar_y <= img_res[1]:
+    if bar_y > thresh and bar_y <= img_res[1]:
 
         return "on "+ FLOOR
 
@@ -482,41 +482,42 @@ def replace(ranking, coords, VG_onrel, frame_objs, weak_idx, replaced = False):
         qlab, syn = formatlabel(l)
 
         # Which is the top score alternative object not usually on the floor?
-
-        try:
-
-            floor = VG_onrel[str((syn.name(), FLOOR))]
-
+        if syn:
             try:
-                table = VG_onrel[str((syn.name(), TABLE))]
 
-                if table >= floor:
-                    # Replace
-                    frame_objs[weak_idx] = (l, s, coords, ranking)
+                floor = VG_onrel[str((syn.name(), FLOOR))]
 
-                    print("Replaced with " + qlab + " instead")
+                try:
+                    table = VG_onrel[str((syn.name(), TABLE))]
 
-                    replaced = True
+                    if table >= floor:
+                        # Replace
+                        frame_objs[weak_idx] = (l, s, coords, ranking)
 
-                    return frame_objs, replaced
+                        print("Replaced with " + qlab + " instead")
 
-            except:
+                        replaced = True
 
-                continue
+                        return frame_objs, replaced
 
+                except:
 
-        except KeyError:
-
-            # Replace
-            frame_objs[weak_idx] = (l, s, coords, ranking)
-
-            print("Replaced with " + qlab + " instead")
-
-            replaced = True
-
-            return frame_objs, replaced
+                    continue
 
 
+            except KeyError:
+
+                # Replace
+                frame_objs[weak_idx] = (l, s, coords, ranking)
+
+                print("Replaced with " + qlab + " instead")
+
+                replaced = True
+
+                return frame_objs, replaced
+
+
+    return frame_objs, replaced
 
 def proxy_floor(object, VG_base):
 
@@ -589,12 +590,13 @@ def correct_floating(o_y, o_h, weak_idx, frame_objs, VG_base, rflag=False):
 
             except KeyError:
 
-
                 if not floor_rel:
 
                     print(qlabel + " could be floating when it shouldn't ")
                     # needs to be corrected: potentially floating object
+
                     frame_objs, rflag = replace(ranking, coords, VG_onrel, frame_objs, weak_idx)
+
 
                 else:
 
@@ -807,11 +809,11 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                 print("%EOF---------------------------------------------------------------------% \n")
 
-                """
+
                 cv2.imshow('union', out_img)
                 cv2.waitKey(3000)
                 cv2.destroyAllWindows()
-                """
+
 
                 """Correcting least confident predictions by querying external knowledge"""
                 weak_idx = show_leastconf(frame_objs)
@@ -868,6 +870,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         else:
 
                             print("Rejecting suggested correction: replacement does not make sense w.r.t floor")
+
 
                 corr_preds, _ , _, _= zip(*frame_objs)
                 y_pred.extend(corr_preds)

@@ -166,8 +166,13 @@ def compute_sem_sim(wemb1, wemb2):
 
     return (pow(sq_wemb1, 0.5)* pow(sq_wemb1, 0.5))/dotprod
 
-def formatlabel(label):
+def map(label):
 
+    """
+    Wordnet friendly format
+    for specific objects
+    TO-DO: make it less ugly/hardcoded
+    """
     if label == "power-cables":
 
         label = "power-cords"
@@ -175,6 +180,46 @@ def formatlabel(label):
     elif label == "desktop-pcs":
 
         label = "computers"
+
+    elif label == 'monitors':
+
+        label = 'computer_monitors'
+
+    elif label == "mugs":
+
+        label = "cups"
+
+
+    return label
+
+
+def reverse_map(label):
+
+    """
+    Reverses the above for consistency on eval
+    """
+
+    if label == "power_cords":
+
+        label= "power-cables"
+
+    elif label == "computers":
+
+        label= "desktop-pcs"
+
+    elif label == "computer_monitors":
+
+        label= "monitors"
+
+    elif label == "cups":
+
+        label = 'mugs'
+
+    return label
+
+def formatlabel(label):
+
+    label = map(label)
 
     # make singular
     label = singularize(label)
@@ -322,13 +367,7 @@ def conceptnet_relatedness(subject, candidates, object):
         #Re-format back for evaluation
         pred_subject = pluralize(pred_subject)
 
-    if pred_subject == "power-cords":
-
-        pred_subject  = "power-cables"
-
-    elif pred_subject  == "computers":
-
-        pred_subject  = "desktop-pcs"
+    pred_subject = reverse_map(pred_subject)
 
     return pred_subject.replace('_', '-'), base_score
 
@@ -347,12 +386,6 @@ def extract_spatial(weak_idx, obj_list, VG_base=None):
     weak_rank = rankings[weak_idx]
 
     new_ranking = Counter()
-
-    # Check if any of the two objects (or both) are on the floor
-    floor_out1 = check_horizontal(y_a, h_a)
-
-    if floor_out1:
-        print(weak_pred + "( " + weak_synset.name() + " ) " + floor_out1)
 
     #rel_graph["subject"] = weak_pred
     #rel_graph["synset"] = weak_synset
@@ -375,13 +408,6 @@ def extract_spatial(weak_idx, obj_list, VG_base=None):
 
                 sem_obj, obj_syn = formatlabel(label)
 
-
-                floor_out2 = check_horizontal(y_b, h_b)
-
-                if floor_out2:
-
-                    print(sem_obj + "( " + obj_syn.name() + " ) " + floor_out2)
-
                 #Verify on supporting knowledge if found relation makes sense
 
                 if weak_synset and obj_syn:
@@ -391,6 +417,7 @@ def extract_spatial(weak_idx, obj_list, VG_base=None):
                 else:
 
                     print(weak_pred+" "+spatial_rel+" "+sem_obj+"\n")
+
 
                 #Does this relation make sense?
                 #1) In conceptnet?
@@ -402,6 +429,9 @@ def extract_spatial(weak_idx, obj_list, VG_base=None):
 
     return new_ranking
 
+FLOOR = get_synset("floor").name()
+TABLE = wordnet.synsets("table")[1].name()
+
 
 def check_horizontal(y, h, img_res= (1280,720)):
 
@@ -410,7 +440,7 @@ def check_horizontal(y, h, img_res= (1280,720)):
 
     if bar_y >= thresh and bar_y <= img_res[1]:
 
-        return "on "+ get_synset("floor").name()
+        return "on "+ FLOOR
 
     else:
 
@@ -445,9 +475,85 @@ def check_spatial(x1, x2, y1, y2, w1, h1, w2, h2):
 
 
 
-FLOOR = get_synset("floor").name()
+def replace(ranking, coords, VG_onrel, frame_objs, weak_idx, replaced = False):
 
-def correct_floating(o_y, o_h, weak_idx, frame_objs, VG_base):
+    for l, s in ranking.most_common():
+
+        qlab, syn = formatlabel(l)
+
+        # Which is the top score alternative object not usually on the floor?
+
+        try:
+
+            floor = VG_onrel[str((syn.name(), FLOOR))]
+
+            try:
+                table = VG_onrel[str((syn.name(), TABLE))]
+
+                if table >= floor:
+                    # Replace
+                    frame_objs[weak_idx] = (l, s, coords, ranking)
+
+                    print("Replaced with " + qlab + " instead")
+
+                    replaced = True
+
+                    return frame_objs, replaced
+
+            except:
+
+                continue
+
+
+        except KeyError:
+
+            # Replace
+            frame_objs[weak_idx] = (l, s, coords, ranking)
+
+            print("Replaced with " + qlab + " instead")
+
+            replaced = True
+
+            return frame_objs, replaced
+
+
+
+def proxy_floor(object, VG_base):
+
+    objl, objsyn = formatlabel(object)
+    VG_onrel = VG_base["relations"]
+
+    if objsyn:
+
+        try:
+
+            on_floor = VG_onrel[str((objsyn.name(), FLOOR))]
+
+            try:
+
+                on_table = VG_onrel[str((objsyn.name(), TABLE))]
+
+                if (on_floor > on_table +80):
+
+                    return "on "+ FLOOR
+
+                else:
+
+                    return "both"
+
+            except KeyError:
+
+                return "on "+ FLOOR
+
+        except KeyError:
+
+            return None
+
+    else:
+
+        return 'no synset'
+
+def correct_floating(o_y, o_h, weak_idx, frame_objs, VG_base, rflag=False):
 
     floor_rel = check_horizontal(o_y, o_h)
 
@@ -457,48 +563,52 @@ def correct_floating(o_y, o_h, weak_idx, frame_objs, VG_base):
 
     VG_onrel = VG_base["relations"]
 
-    try:
+    if synset:
 
-        on_floor = VG_onrel[str((synset.name(), FLOOR))]
+        #not applicable to Health and Safety objects or other OOV
 
-        if not floor_rel:
+        try:
 
-            print(qlabel+" could be floating when it shouldn't ")
-            #needs to be corrected: potentially floating object
-            for l, s in ranking.most_common():
+            on_floor = VG_onrel[str((synset.name(), FLOOR))]
 
-                qlab, syn = formatlabel(l)
+            try:
 
-                # Which is the top score alternative object not usually on the floor?
+                on_table = VG_onrel[str((synset.name(), TABLE))]
 
-                try:
+                if (on_floor > on_table) and not floor_rel:
 
-                    floor = VG_onrel[str((syn.name(), FLOOR))]
+                    frame_objs, rflag = replace(ranking, coords, VG_onrel, frame_objs, weak_idx)
 
+                elif floor_rel:
 
-                except KeyError:
+                    print(qlabel + " makes sense on the floor")
 
-                    #Replace
-                    frame_objs[weak_idx] = (l,s, coords, ranking)
+                else:
 
-                    print("Replaced with " + qlab + " instead")
+                    print(qlabel + " makes sense also above the floor ")
 
-                    break
+            except KeyError:
 
 
-        else:
+                if not floor_rel:
 
-            print(qlabel+" makes sense on the floor ")
+                    print(qlabel + " could be floating when it shouldn't ")
+                    # needs to be corrected: potentially floating object
+                    frame_objs, rflag = replace(ranking, coords, VG_onrel, frame_objs, weak_idx)
+
+                else:
+
+                    print(qlabel + " makes sense on the floor ")
 
 
-    except KeyError:
+        except KeyError:
 
-        #Found on floor when it should not
-        #Discarded for now
-        pass
+            #Does not have on floor rels in VG
+            print("Not doing anything ")
+            pass
 
 
-    return frame_objs
+    return frame_objs, rflag
 
 
 
@@ -608,7 +718,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         base_path, img_collection = load_jsondata(path_to_bags)
 
-        data = list(reversed(img_collection.values()))
+        data = list(reversed(img_collection.values()))#[:15]
 
         with open('pt_results/ranking_log.txt', 'a') as outr:
 
@@ -697,10 +807,11 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                 print("%EOF---------------------------------------------------------------------% \n")
 
-
+                """
                 cv2.imshow('union', out_img)
-                cv2.waitKey(5000)
+                cv2.waitKey(3000)
                 cv2.destroyAllWindows()
+                """
 
                 """Correcting least confident predictions by querying external knowledge"""
                 weak_idx = show_leastconf(frame_objs)
@@ -708,7 +819,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                 if weak_idx is not None:
 
-                    _, _, coords, _ = frame_objs[weak_idx]
+                    orig_label, _, coords, _ = frame_objs[weak_idx]
 
                     if VG_data:
 
@@ -716,10 +827,20 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         o_y = coords[1]
                         o_h = coords[3]
 
-                        frame_objs = correct_floating(o_y, o_h, weak_idx, frame_objs, VG_data['on'])
+                        frame_objs, corrected_flag = correct_floating(o_y, o_h, weak_idx, frame_objs, VG_data['on'])
+
+                        if corrected_flag:
+
+                            #Skip further reasoning
+                            corr_preds, _, _, _ = zip(*frame_objs)
+                            y_pred.extend(corr_preds)
+                            continue
 
                     if len(frame_objs) <= 1:
+
                         print("Only one object found in this scene...skipping contextual reasoning")
+                        corr_preds, _, _, _ = zip(*frame_objs)
+                        y_pred.extend(corr_preds)
                         continue
 
                     new_preds = extract_spatial(weak_idx, frame_objs, VG_base=VG_data)
@@ -728,23 +849,25 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                         wlabel, wscore = max(new_preds.items(), key=lambda x: x[1])
 
-                        if wlabel == "power-cords":
-
-                            wlabel = "power-cables"
-
-                        elif wlabel == "computers":
-
-                            wlabel = "desktop-pcs"
+                        wlabel = reverse_map(wlabel)
 
                         print("Based on all nearby objects this is a %s" %wlabel)
                         print("With confidence %f" % wscore)
 
                         print(sorted(new_preds.items(), key=lambda x: x[1], reverse=True))
 
-                        #change it
+                        # is the rel VG-validated w.r.t. floor?
+                        orig_floor = proxy_floor(orig_label, VG_data['on'])
+                        corrected_floor_out =proxy_floor(wlabel, VG_data['on'])
 
-                        frame_objs[weak_idx]= (wlabel.replace('_','-'), wscore, coords, new_preds)
+                        #ONLY if so (or if originally OOV) change it
+                        if orig_floor=='no synset' or orig_floor == corrected_floor_out:
 
+                            print("Accepting proposed correction")
+                            frame_objs[weak_idx]= (wlabel.replace('_','-'), wscore, coords, new_preds)
+                        else:
+
+                            print("Rejecting suggested correction: replacement does not make sense w.r.t floor")
 
                 corr_preds, _ , _, _= zip(*frame_objs)
                 y_pred.extend(corr_preds)

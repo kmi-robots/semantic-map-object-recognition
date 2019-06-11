@@ -655,9 +655,9 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
     if data_type == 'json':
 
-        path_to_space = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/embeddings_imprKNET_1prod_DA_onlyrob.dat') #os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
+        path_to_space = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/embeddings_imprKNET_DA_static.dat') #embeddings_imprKNET_1prod #os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
 
-        path_to_state = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/checkpoint_imprKNET_1prod_DA_onlyrob.pt')
+        path_to_state = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/checkpoint_imprKNET_1prod.pt') #checkpoint_imprKNET_1prod
 
         #path_to_basespace = os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
 

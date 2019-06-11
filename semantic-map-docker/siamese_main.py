@@ -37,11 +37,11 @@ segmentation_threshold = 0.01
 
 N = 25 #20 #10 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
-path_to_train_embeds = './pt_results/kmish25/embeddings_absL1moved.dat'
+path_to_train_embeds = './pt_results/kmish25/embeddings.dat'
 K = 1 #
 
 path_to_bags = './data/KMi_collection/test/tagged_KMi.json' #'robot_collected.npy'
-
+train_imgs = './data/KMi_collection/train'
 STN = False #Whether to use Spatial Transformer module on input or not
 
 if STN:
@@ -286,7 +286,7 @@ def main(input_type, NCC=False, MNIST=True, ResNet=True):
     if keep_embeddings:
 
         #Warning: available for custom set only, no MNIST
-        extract_embeddings(model, model_checkpoint, path_to_train_data, \
+        extract_embeddings(model, model_checkpoint, path_to_train_data, train_imgs, \
                         device, path_to_train_embeds, transforms=base_trans)
 
 

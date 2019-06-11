@@ -9,21 +9,25 @@ inspired by paper by Qi et al. (CVPR 2018)
 import torch
 from data_loaders import img_preproc
 from siamese_models import ResSiamese
+import torchvision
 
-
-def extract_embeddings(model, path_to_state, path_to_data, device, outp, transforms=None):
+def extract_embeddings(model, path_to_state, path_to_data, train_img_folder, device, outp, transforms=None):
 
     model.load_state_dict(torch.load(path_to_state))
     model.eval()
-    data = torch.load(path_to_data)
+    #data = torch.load(path_to_data)
+    data = torchvision.datasets.ImageFolder(train_img_folder, \
+                                            transform=transforms)
 
     embeddings = {}
 
-    for img_id, img in data.items():
+    for i in range(len(data)):
+    #for img_id, img in data.items():
 
         #Applying same normalization as on a training forward pass
         #img[0,:] = #transforms(img[0,:])
-
+        img_id = data.classes[data[i][1]]
+        img =  data[i][0]
         img = img.view(1, img.shape[0], img.shape[1], img.shape[2]).to(device)
         #img = img.float().to(device)
 

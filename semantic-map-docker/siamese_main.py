@@ -28,17 +28,17 @@ two_branch = False
 save_frequency = 2
 batch_size = 16
 lr = 0.0001
-num_epochs = 1000
+num_epochs = 5000
 weight_decay = 0.00001
-patience = 20
+patience = 100
 metric_avg = 'binary'
 momentum = 0.9
 segmentation_threshold = 0.01
 
 N = 25 #20 #10 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
-path_to_train_embeds = './pt_results/paper/embeddings_absL1moved.dat'
-K = 5 #
+path_to_train_embeds = './pt_results/kmish25/embeddings_absL1moved.dat'
+K = 1 #
 
 path_to_bags = './data/KMi_collection/test/tagged_KMi.json' #'robot_collected.npy'
 
@@ -51,8 +51,8 @@ if STN:
 
 
 #Hardcoded variables -------------------------------------------------------------------------#
-model_checkpoint = 'pt_results/paper/checkpoint_absL1moved.pt' #hardcoded in pytorchtools.py
-path_to_train_data ='./data/processed/training.dat' #hardcoded in data_loaders.py ln. 205
+model_checkpoint = 'pt_results/kmish25/checkpoint.pt' #hardcoded in pytorchtools.py
+path_to_train_data ='./data/processed/kmi_training.dat' #hardcoded in data_loaders.py ln. 205
 #--- Simpler not to change -----------------------------------------------------------------------#
 
 

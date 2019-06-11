@@ -430,7 +430,8 @@ def extract_spatial(weak_idx, obj_list, VG_base=None):
     return new_ranking
 
 FLOOR = get_synset("floor").name()
-TABLE = wordnet.synsets("table")[1].name()
+TABLE = wordnet.synsets("table")[1].name() #table.n.01 is a data table
+                                            # While the piece of furniture is table.n.02
 
 
 def check_horizontal(y, h, img_res= (1280,720)):
@@ -654,9 +655,9 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
     if data_type == 'json':
 
-        path_to_space = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/embeddings_imprKNET_1prod.dat') #os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
+        path_to_space = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/embeddings_imprKNET_1prod_DA_onlyrob.dat') #os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
 
-        path_to_state = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/checkpoint_imprKNET_1prod.pt')
+        path_to_state = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/checkpoint_imprKNET_1prod_DA_onlyrob.pt')
 
         #path_to_basespace = os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
 
@@ -809,13 +810,16 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                 print("%EOF---------------------------------------------------------------------% \n")
 
-
+                """
                 cv2.imshow('union', out_img)
                 cv2.waitKey(3000)
                 cv2.destroyAllWindows()
-
+                """
 
                 """Correcting least confident predictions by querying external knowledge"""
+
+                """
+
                 weak_idx = show_leastconf(frame_objs)
 
 
@@ -871,6 +875,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                             print("Rejecting suggested correction: replacement does not make sense w.r.t floor")
 
+                """
 
                 corr_preds, _ , _, _= zip(*frame_objs)
                 y_pred.extend(corr_preds)

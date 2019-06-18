@@ -38,7 +38,7 @@ segmentation_threshold = 0.01
 N = 25 #20 #10 #No of object classes
 path_to_query_data = './data/shapenet20/test/' #fire-extinguishers/9. fire-extinguisher.jpg
 path_to_train_embeds = './pt_results/kmish25/embeddings.dat'
-K = 1 #
+K = 5 #
 
 path_to_bags = './data/KMi_collection/test/tagged_KMi.json' #'robot_collected.npy'
 train_imgs = './data/KMi_collection/train'

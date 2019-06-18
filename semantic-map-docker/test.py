@@ -339,7 +339,6 @@ def call_cp_api(word1, word2):
 
 def conceptnet_relatedness(subject, candidates, object):
 
-
     base_score = call_cp_api(subject, object)
 
     pred_subject = subject
@@ -350,6 +349,8 @@ def conceptnet_relatedness(subject, candidates, object):
     for o_class, confidence in candidates.items():
 
         f_class,_ = formatlabel(o_class)
+
+
         if f_class == subject:
 
             continue #Skip the object itself
@@ -422,10 +423,45 @@ def extract_spatial(weak_idx, obj_list, VG_base=None):
                 #Does this relation make sense?
                 #1) In conceptnet?
                 cp_pred, cp_score = conceptnet_relatedness(weak_pred, weak_rank, sem_obj)
-                new_ranking[cp_pred] += cp_score
 
-                #if it does not, re-check if in the predicate obj ranking something else
-                # did make more sense
+                #Changed: no first filter by max
+
+
+                # print(base_score)
+                # Is there any other label in the ranking making more sense?
+
+                """
+                for o_class, confidence in weak_rank.items():
+
+                    f_class, _ = formatlabel(o_class)
+
+                    \"""
+                    if f_class == weak_pred:
+                        
+                        continue  # Skip the object itself
+
+                    \"""
+
+                    cp_score = call_cp_api(f_class, sem_obj)
+
+                    \"""  
+                       if score > base_score:
+                           base_score = score
+                           pred_subject = o_class
+    
+                    \"""
+
+                    if singularize(o_class) == o_class:
+                        # Re-format back for evaluation
+                        o_class = pluralize(o_class)
+
+                    o_class = reverse_map(o_class)
+
+                    o_class.replace('_', '-')
+
+                    new_ranking[o_class] += cp_score
+                """
+                new_ranking[cp_pred] += cp_score
 
     return new_ranking
 
@@ -655,9 +691,9 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
     if data_type == 'json':
 
-        path_to_space = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/embeddings_imprKNET_DA_static.dat') #embeddings_imprKNET_1prod #os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
+        path_to_space = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/embeddings_imprKNET_1prod.dat') #embeddings_imprKNET_1prod_DA_static #os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
 
-        path_to_state = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/checkpoint_imprKNET_1prod.pt') #checkpoint_imprKNET_1prod
+        path_to_state = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/checkpoint_imprKNET_1prod.pt') #checkpoint_imprKNET_1prod_DA_static
 
         #path_to_basespace = os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
 
@@ -696,10 +732,39 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
         """
         embedding_space = torch.load(path_to_space, map_location={'cuda:0': 'cpu'})
 
+
         #For drawing the predictions
         all_classes = list(set([key.split('_')[0] for key in embedding_space.keys()]))
 
-        COLORS = np.random.uniform(0, 255, size=(len(all_classes), 3))
+        all_classes = sorted(all_classes)
+
+        #COLORS = np.random.uniform(0, 255, size=(len(all_classes), 3))
+
+        COLORS = np.array([[163.31371052,235.75001096,173.22384575],
+        [151.6368637,217.59388868,130.82987703],
+        [ 33.99849247, 179.37005031, 186.55786095],
+         [ 54.47094873,216.78078522,102.20650892],
+         [239.86921015,68.64402419,37.35948248],
+         [ 53.58455146, 104.78778503, 223.27147806],
+         [117.99938254,  48.09320066, 212.16903079],
+         [119.25180278,  70.6795374,  173.82471607],
+         [103.67997533, 201.48422398,  47.44635728],
+         [166.14586614, 159.99297476, 170.61201228],
+         [170.02208377,  18.76317937, 209.46473505],
+         [174.93365881, 242.33769609,  16.3047098 ],
+         [152.46858818, 233.09738312,  62.65848537],
+         [ 12.34211539, 106.5460935,  223.09065401],
+         [220.17633592,  86.48845562, 118.65710514],
+         [205.04779228,   9.20120057,  46.52243284],
+         [ 50.63576749, 254.25349035,  85.63898922],
+         [238.99203299, 248.82345225, 160.52651844],
+         [103.04312937,  88.27634213,  16.42072218],
+         [118.09649737, 226.8564084,  216.49043955],
+         [190.20674995,  58.71882192, 218.94218281],
+         [121.30594907,  93.65007588,  56.79428592],
+         [ 14.84487486, 106.97685428,  13.5482787 ],
+         [ 34.49397346,   1.91811303, 185.8199095 ],
+         [121.21482005, 253.43982179,  25.77457187]])
 
         """
         if not os.path.isfile(path_to_concepts):
@@ -721,7 +786,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         base_path, img_collection = load_jsondata(path_to_bags)
 
-        data = list(reversed(img_collection.values()))#[:15]
+        data = list(reversed(img_collection.values()))
 
         with open('pt_results/ranking_log.txt', 'a') as outr:
 
@@ -734,6 +799,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                 # create copy to draw predictions on
                 out_img = img.copy()
+                out_VG = img.copy()
+                out_CP = img.copy()
 
                 print("%-----------------------------------------------------------------------% \n")
                 print("Analyzing frame %s" % data_point["filename"])
@@ -812,13 +879,13 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                 """
                 cv2.imshow('union', out_img)
-                cv2.waitKey(3000)
+                cv2.waitKey(5000)
                 cv2.destroyAllWindows()
+
                 """
 
                 """Correcting least confident predictions by querying external knowledge"""
 
-                """
 
                 weak_idx = show_leastconf(frame_objs)
 
@@ -826,6 +893,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 if weak_idx is not None:
 
                     orig_label, _, coords, _ = frame_objs[weak_idx]
+
 
                     if VG_data:
 
@@ -840,19 +908,40 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                             #Skip further reasoning
                             corr_preds, _, _, _ = zip(*frame_objs)
                             y_pred.extend(corr_preds)
+                            """
+                            #And show corrected image 
+                            for lb,cf,(x,y,w,h), rank in frame_objs:
+
+                                color = COLORS[all_classes.index(lb)]
+                                cv2.rectangle(out_VG, (x, y), (x + w, y + h), color, 2)
+
+                                if y - 10 > 0:
+                                    cv2.putText(out_VG, lb, (x - 10, y - 10),
+                                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                                else:
+                                    cv2.putText(out_VG, lb, (x - 10, y + h + 10),
+                                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+                            cv2.imwrite(os.path.join(out_imgs, 'Kground_ImprintedKNET', data_point["filename"]), out_VG)
+                            """
                             continue
+
 
                     if len(frame_objs) <= 1:
 
                         print("Only one object found in this scene...skipping contextual reasoning")
                         corr_preds, _, _, _ = zip(*frame_objs)
                         y_pred.extend(corr_preds)
+
+                        #cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
+
                         continue
 
                     new_preds = extract_spatial(weak_idx, frame_objs, VG_base=VG_data)
 
                     if new_preds:
 
+                        #Take the max w.r.t. semantic relatedness
                         wlabel, wscore = max(new_preds.items(), key=lambda x: x[1])
 
                         wlabel = reverse_map(wlabel)
@@ -866,6 +955,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         orig_floor = proxy_floor(orig_label, VG_data['on'])
                         corrected_floor_out =proxy_floor(wlabel, VG_data['on'])
 
+                        
                         #ONLY if so (or if originally OOV) change it
                         if orig_floor=='no synset' or orig_floor == corrected_floor_out:
 
@@ -875,14 +965,45 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                             print("Rejecting suggested correction: replacement does not make sense w.r.t floor")
 
-                """
 
+                        """
+                        for lb, cf, (x, y, w, h), rank in frame_objs:
+
+                            color = COLORS[all_classes.index(lb)]
+                            cv2.rectangle(out_VG, (x, y), (x + w, y + h), color, 2)
+
+                            if y - 10 > 0:
+                                cv2.putText(out_VG, lb, (x - 10, y - 10),
+                                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                            else:
+                                cv2.putText(out_VG, lb, (x - 10, y + h + 10),
+                                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+                        cv2.imwrite(os.path.join(out_imgs, 'Kground_ImprintedKNET', data_point["filename"]), out_VG)
+                        """
                 corr_preds, _ , _, _= zip(*frame_objs)
                 y_pred.extend(corr_preds)
 
                 #print("Off you go")
+                # And show corrected image
+                """
+                for lb, cf, (x, y, w, h), rank in frame_objs:
 
-                #cv2.imwrite(os.path.join(out_imgs, data_point["filename"]), out_img)
+                    color = COLORS[all_classes.index(lb)]
+                    cv2.rectangle(out_CP, (x, y), (x + w, y + h), color, 2)
+
+                    if y - 10 > 0:
+                        cv2.putText(out_CP, lb, (x - 10, y - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                    else:
+                        cv2.putText(out_CP, lb, (x - 10, y + h + 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                    
+
+                cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET_ConceptRel', data_point["filename"]), out_CP)
+                """
+
+                #cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
 
         #Check no. of instances per class
         #print(cardinalities)
@@ -893,6 +1014,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
         print(classification_report(y_true, y_pred))  # , target_names=all_classes))
         print(accuracy_score(y_true, y_pred))
 
+        #print(COLORS)
         return None
 
 

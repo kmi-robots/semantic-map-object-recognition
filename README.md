@@ -38,7 +38,7 @@ WORK IN PROGRESS
 
 ## Code map
 
-If you are interested in further customising this code, here are more details on the content of this branch. Some of the files are included for completeness, but <s>striked out</s>, to indicate they are not needed for reproducing the experiments described above. Please bear with us as we gradually Marie Kondo-nise this content!! 
+If you are interested in further customising this code, here are more details on the content of this branch. Some of the files are included for completeness, but <s>striked out</s>, to indicate they are not needed for reproducing the experiments described above. Please bear with us as we gradually Marie Kondo-nise this content!! :angel:
 
 * the `dockerfile` creates a docker image for the environment all needed dependencies 
 used to run our latest experiments,The dockerfile extends the [Deepo docker image for deep learning](https://hub.docker.com/r/ufoym/deepo/) for Python3, and already handles the installation of all dependecies 
@@ -73,8 +73,15 @@ The GPU version, i.e., using C++ for CUDA parallel programming (`ncc_cuda.cpp`, 
 
 * `utils` contains some handy scripts used mainly for data parsing from/to different formats. More specifically:
 
-    -
+    - `VG_relations.py` was used to extract a subset of spatial relationships for the experiments introduced above.
 
-* For more details on the content of the `data` folder please refer to the "Data sets" Section.   
+    - `bag_converter.py` is a Python 2.6 script to read images directly from the ROSbag format and save them locally in pickle format. Optionally, sequences of images can
+      be temporally sampled, based on the default timestamps available from the ROSbag.
+
+    - <s> ImageNet_attrinit.py </s>  was started to include ImageNet attributes but not used in favour of Visual Genome, which already includes those attributes
+    - <s> base_DA.py </s>  is a static alternative to data augmentation run on data loading in pytorch, also out of scope of the above experiments.
+
+
+* For more details on the content of the `data` folder please refer to the [Data sets]("#data-sets") Section.   
 
 

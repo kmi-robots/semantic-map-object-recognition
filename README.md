@@ -34,7 +34,14 @@ The `siamese_main.py` file is the one to be launched and expects different param
 
 
 ## Data sets
-WORK IN PROGRESS
+
+Some released data are available under `semantic-map-docker/data`. The relevant sets documented here are:
+
+*  *ShapeNet + Google (SNG) sets* are saved under `shapenet10`, `shapenet20` and `shapenet25` respectively, depending on the number of object classes examined.
+*  `KMi_collection` is for the reference images collected in KMi, but excludes the test image set as that one records sensitive information 
+*  ` yolo` contains all files for using the pre-trained YOLO version embedded in OpenCV. These files are referenced by the `segment.py` methods 
+
+
 
 ## Code map
 
@@ -70,6 +77,8 @@ used to run our latest experiments,The dockerfile extends the [Deepo docker imag
     - <s>ncc-extension</s> includes all the C++ code reproducing the NormXCorr custom layer described in [Submariam et al. (2016)](http://papers.nips.cc/paper/6367-deep-neural-networks-with-inexact-matching-for-person-re-identification.pdf) to speed up CPU computation. It can be manually installed by running `python setup.py install` within this folder.
 The GPU version, i.e., using C++ for CUDA parallel programming (`ncc_cuda.cpp`, `ncc_cuda.cu` and `setup_cuda.py`) is still incomplete. 
 
+    - <s>data_preparation.py</s> was an older script for data preparation 
+
 
 * `utils` contains some handy scripts used mainly for data parsing from/to different formats. More specifically:
 
@@ -78,7 +87,7 @@ The GPU version, i.e., using C++ for CUDA parallel programming (`ncc_cuda.cpp`, 
     - `bag_converter.py` is a Python 2.6 script to read images directly from the ROSbag format and save them locally in pickle format. Optionally, sequences of images can
       be temporally sampled, based on the default timestamps available from the ROSbag.
 
-    - <s> ImageNet_attrinit.py </s>  was started to include ImageNet attributes but not used in favour of Visual Genome, which already includes those attributes
+    - <s> ImageNet_attrinit.py </s>  was started to include ImageNet attributes but was abandoned, in the end, in favour of Visual Genome, which already includes those attributes
     - <s> base_DA.py </s>  is a static alternative to data augmentation run on data loading in pytorch, also out of scope of the above experiments.
 
 

@@ -16,7 +16,7 @@ and our own three novel versions of Image Matching pipeline:
 
 All the experimented NeuralNet-based architectures were implemented in Pytorch.
 
-![framework-pic]( "Kground Imprinted K-net")
+![framework-pic](https://github.com/kmi-robots/semantic-map-object-recognition/blob/master/assets/2019_framework_simpler.jpg "Kground Imprinted K-net")
 
 
 We recommend to let Docker handle all the dependency installations, please refer to the dockerfile for a list of pre-requisites. 

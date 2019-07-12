@@ -3,7 +3,7 @@ import torch
 
 
 
-def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= visdom.Visdom(), precrec=False, rocauc=False):
+def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session=visdom.Visdom(), precrec=False, rocauc=False):
 
     """
     Method to plot Loss v epoch and Accuracy v epoch
@@ -111,7 +111,7 @@ def gen_plots(epoch_losses, epoch_accs, epochs, MNIST, NCC, current_session= vis
              )
 
 
-def bar_plot(class_wise_data,  current_session= visdom.Visdom()):
+def bar_plot(class_wise_data,  current_session=visdom.Visdom()):
 
     class_serie, data_serie = list(class_wise_data)
 

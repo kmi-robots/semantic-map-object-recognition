@@ -675,8 +675,7 @@ def show_leastconf(scene_objs):
 
 
 
-
-def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K, N, sthresh= 1.0):
+def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K, N):
 
 
     #baseline KNN?
@@ -692,7 +691,6 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
     if data_type == 'json':
 
         path_to_space = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/embeddings_imprKNET_1prod.dat') #embeddings_imprKNET_1prod_DA_static #os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
-
         path_to_state = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/checkpoint_imprKNET_1prod.pt') #checkpoint_imprKNET_1prod_DA_static
 
         #path_to_basespace = os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
@@ -738,33 +736,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         all_classes = sorted(all_classes)
 
-        #COLORS = np.random.uniform(0, 255, size=(len(all_classes), 3))
-
-        COLORS = np.array([[163.31371052,235.75001096,173.22384575],
-        [151.6368637,217.59388868,130.82987703],
-        [ 33.99849247, 179.37005031, 186.55786095],
-         [ 54.47094873,216.78078522,102.20650892],
-         [239.86921015,68.64402419,37.35948248],
-         [ 53.58455146, 104.78778503, 223.27147806],
-         [117.99938254,  48.09320066, 212.16903079],
-         [119.25180278,  70.6795374,  173.82471607],
-         [103.67997533, 201.48422398,  47.44635728],
-         [166.14586614, 159.99297476, 170.61201228],
-         [170.02208377,  18.76317937, 209.46473505],
-         [174.93365881, 242.33769609,  16.3047098 ],
-         [152.46858818, 233.09738312,  62.65848537],
-         [ 12.34211539, 106.5460935,  223.09065401],
-         [220.17633592,  86.48845562, 118.65710514],
-         [205.04779228,   9.20120057,  46.52243284],
-         [ 50.63576749, 254.25349035,  85.63898922],
-         [238.99203299, 248.82345225, 160.52651844],
-         [103.04312937,  88.27634213,  16.42072218],
-         [118.09649737, 226.8564084,  216.49043955],
-         [190.20674995,  58.71882192, 218.94218281],
-         [121.30594907,  93.65007588,  56.79428592],
-         [ 14.84487486, 106.97685428,  13.5482787 ],
-         [ 34.49397346,   1.91811303, 185.8199095 ],
-         [121.21482005, 253.43982179,  25.77457187]])
+        COLORS = np.random.uniform(0, 255, size=(len(all_classes), 3))
 
         """
         if not os.path.isfile(path_to_concepts):

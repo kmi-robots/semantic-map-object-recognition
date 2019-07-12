@@ -29,9 +29,20 @@ successfully installed.
 The `siamese_main.py` file is the one to be launched and expects different parameters:
 
 ```
+python siamese_main.py [-h] it stage
+
+positional arguments:
+
+it 	input image type: either 'reference' if training and testing on ShapeNet+Google images only 
+	or 'pickled' if robot-collected RGB images saved as pickle 
+        or 'json' if the latter have been also annotated
+
+stage   one between 'train' and 'test'
 
 ```
 
+Please note that only the [VIA Json annotation](http://www.robots.ox.ac.uk/~vgg/software/via/) format is currently supported. 
+Also, automatic re-sizing for any number of classes is currently not supported, we currently support only N=10,15 and 25 (See also the [Data set Section](#data-sets))
 
 ## Data sets
 

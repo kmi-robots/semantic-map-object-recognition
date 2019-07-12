@@ -293,7 +293,7 @@ if __name__ == '__main__':
                         help='Defaults to False in all our reported trials. '
                              'Change to True if performing only transfer learning with feature ext. without fine-tuning, on all branches')
 
-    parser.add_argument('--transfer', type=bool, default=True,
+    parser.add_argument('--store_emb', type=bool, default=True,
                         help='Defaults to True. '
                              'Set to false if do not wish to store the training embedddings locally')
 

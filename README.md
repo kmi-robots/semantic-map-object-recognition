@@ -1,7 +1,7 @@
 # Improving Object Recognition for Mobile Robots by Leveraging Common-sense Knowledge Bases 
 
-In case you did not land here from [our main website](https://robots.kmi.open.ac.uk) already, be sure to check it out to see how 
-all these lines of code fit in our broader ideas! 
+In case you did not land here from [our main website](https://kmi-robots.github.io/HanS.open.ac.uk/) already, be sure to check it out to see how 
+these lines of code fit in our broader ideas! 
 
 This repository contains all the code implemented for our latest experiments on few-shot object recognition for Mobile Robots, 
 where we compare a baseline Nearest Neighbour approach to Image Matching,
@@ -24,21 +24,83 @@ We recommend to let Docker handle all the dependency installations, please refer
 ## Getting Started
 
 Here is a brief guide to our command-line interface to run/replicate the different configurations introduced above, once all dependencies have been
-successfully installed. 
+successfully installed. Please bear with us as we gradually Marie Kondo-nise this content!! :angel:
+
+
+If not launching from Docker, after cloning this repo make sure to type:
+
+```
+cd semantic-map-docker
+```
+
 
 The `siamese_main.py` file is the one to be launched and expects different parameters:
 
 ```
-python siamese_main.py [-h] it stage
+usage: siamese_main.py [-h] [--resnet RESNET] [--plots PLOTS]
+                       [--transfer TRANSFER] [--store_emb STORE_EMB]
+                       [--noimprint NOIMPRINT] [--twobranch TWOBRANCH]
+                       [--model {knet, nnet}] [--N {10,15,25}] [--K K]
+                       [--batch BATCH] [--lr LR] [--epochs EPOCHS]
+                       [--wdecay WDECAY] [--patience PATIENCE]
+                       [--momentum MOMENTUM] [--avg AVG] [--stn STN]
+                       [--mnist MNIST] [--ncc NCC] [--query QUERY]
+                       {reference,pickled,json} {train,test} path_to_train
+                       path_to_test emb
 
 positional arguments:
+  {reference,pickled,json}
+                        Input type at test time: can be one between reference,
+                        pickled or json (if environment data have been tagged)
+  {train,test}          one between train or test
+  path_to_train         path to training data in anchor branch, i.e., taken
+                        from the environment. Assumes shapenet for product is
+                        available in the local branch
+  path_to_test          path to test data, in one of the three formats listed
+                        above
+  emb                   path where to store/retrieve the output embeddings
 
-it 	input image type: either 'reference' if training and testing on ShapeNet+Google images only 
-	or 'pickled' if robot-collected RGB images saved as pickle 
-        or 'json' if the latter have been also annotated
-
-stage   one between 'train' and 'test'
-
+optional arguments:
+  -h, --help            show this help message and exit
+  --resnet RESNET       makes ResNet the building block of the CNN, True by
+                        default
+  --plots PLOTS         Optionally produces plot to check and val loss
+  --transfer TRANSFER   Defaults to False in all our reported trials. Change
+                        to True if performing only transfer learning with
+                        feature ext. without fine-tuning, on all branches
+  --store_emb STORE_EMB
+                        Defaults to True. Set to false if do not wish to store
+                        the training embedddings locally
+  --noimprint NOIMPRINT
+                        Defaults to False. Set to through if running without
+                        weight imprinting
+  --twobranch TWOBRANCH
+                        Defaults to False in all our reported trials. Can be
+                        set to True to test a Siamese with weights learned
+                        independently on each branch
+  --model {knet, nnet}  set to pick one between K-net or N-net, None by
+                        default
+  --N {10,15,25}        Number of object classes. Should be one between
+                        10,15,25. Defaults to 25
+  --K K                 Number of neighbours to consider for ranking at test
+                        time (KNN). Defaults to 5
+  --batch BATCH         Batch size. Defaults to 16
+  --lr LR               Learning rate. Defaults to 0.0001
+  --epochs EPOCHS       Number of training epochs. Defaults to 5000
+  --wdecay WDECAY       Weight decay. Defaults to 0.00001
+  --patience PATIENCE   Number of subsequent epochs of no improvement before
+                        early stop. Defaults to 100
+  --momentum MOMENTUM   momentum for SGD training. Defaults to 0.9
+  --avg AVG             metric average type for training monitoring and plots.
+                        Please refer to the sklearn docs for all allowed
+                        values.
+  --stn STN             Defaults to False in all our reported trials. Can be
+                        set to True to add a Spatial Transformer Net before
+                        the ResNet module
+  --mnist MNIST         whether to test on the MNIST benchmark dataset
+  --ncc NCC             whether to test with the NormXCorr architecture
+  --query QUERY         Path to data used with support on test time in prior
+                        trials
 ```
 
 Please note that only the [VIA Json annotation](http://www.robots.ox.ac.uk/~vgg/software/via/) format is currently supported. 

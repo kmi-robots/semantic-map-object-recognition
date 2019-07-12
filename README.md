@@ -33,26 +33,28 @@ If not launching from Docker, after cloning this repo make sure to type:
 cd semantic-map-docker
 ```
 
-
-The `siamese_main.py` file is the one to be launched and expects different parameters:
+The `siamese_main.py` file is the one to be launched and expects different arguments, as listed below.
+*By default*, if none of the optional arguments is modified, it will use the Kground Imprinted K-net pipeline.
 
 ```
 usage: siamese_main.py [-h] [--resnet RESNET] [--plots PLOTS]
                        [--transfer TRANSFER] [--store_emb STORE_EMB]
                        [--noimprint NOIMPRINT] [--twobranch TWOBRANCH]
-                       [--model {knet, nnet}] [--N {10,15,25}] [--K K]
+                       [--model {knet, nnet,None}] [--N {10,15,25}] [--K K]
                        [--batch BATCH] [--lr LR] [--epochs EPOCHS]
                        [--wdecay WDECAY] [--patience PATIENCE]
                        [--momentum MOMENTUM] [--avg AVG] [--stn STN]
                        [--mnist MNIST] [--ncc NCC] [--query QUERY]
-                       {reference,pickled,json} {train,test} path_to_train
-                       path_to_test emb
+                       {reference,pickled,json} {train,test,baseline}
+                       path_to_train path_to_test emb
 
 positional arguments:
   {reference,pickled,json}
                         Input type at test time: can be one between reference,
                         pickled or json (if environment data have been tagged)
-  {train,test}          one between train or test
+  {train,test,baseline}
+                        One between train, test or baseline (i.e., run
+                        baseline NN at test time)
   path_to_train         path to training data in anchor branch, i.e., taken
                         from the environment. Assumes shapenet for product is
                         available in the local branch
@@ -78,8 +80,9 @@ optional arguments:
                         Defaults to False in all our reported trials. Can be
                         set to True to test a Siamese with weights learned
                         independently on each branch
-  --model {knet, nnet}  set to pick one between K-net or N-net, None by
-                        default
+  --model {knet, nnet,None}
+                        set to pick one between K-net or N-net or None. K-net
+                        is used by default
   --N {10,15,25}        Number of object classes. Should be one between
                         10,15,25. Defaults to 25
   --K K                 Number of neighbours to consider for ranking at test
@@ -100,7 +103,6 @@ optional arguments:
   --mnist MNIST         whether to test on the MNIST benchmark dataset
   --ncc NCC             whether to test with the NormXCorr architecture
   --query QUERY         Path to data used with support on test time in prior
-                        trials
 ```
 
 Please note that only the [VIA Json annotation](http://www.robots.ox.ac.uk/~vgg/software/via/) format is currently supported. 

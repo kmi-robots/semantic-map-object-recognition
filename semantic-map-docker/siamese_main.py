@@ -245,7 +245,7 @@ def main(args):
 
 
         class_wise_res = test(model, model_checkpoint, input_type, path_to_query_data, path_to_bags,\
-                              device, base_trans, path_to_train_embeds, args.K, args.N)
+                              device, base_trans, path_to_train_embeds, args.K, args.N, args.stage)
 
         #Test plot grouped by class
         if class_wise_res is not None:
@@ -270,8 +270,8 @@ if __name__ == '__main__':
     #positional
     parser.add_argument('it', choices=['reference', 'pickled', 'json'],
                         help='Input type at test time: can be one between reference, pickled or json (if environment data have been tagged)')
-    parser.add_argument('stage',choices=['train','test'],
-                        help='one between train or test')
+    parser.add_argument('stage',choices=['train','test', 'baseline'],
+                        help='One between train, test or baseline (i.e., run baseline NN at test time)')
 
     parser.add_argument('path_to_train',
                         help='path to training data in anchor branch, i.e., taken from the environment. '
@@ -308,8 +308,8 @@ if __name__ == '__main__':
 
     #optional values to tweak params
 
-    parser.add_argument('--model', choices=['knet, nnet'], default=None,
-                        help='set to pick one between K-net or N-net, None by default')
+    parser.add_argument('--model', choices=['knet, nnet', None], default='knet',
+                        help='set to pick one between K-net or N-net or None. K-net is used by default')
 
     parser.add_argument('--N', type=int, choices=[10,15,25], default=25,
                         help='Number of object classes. Should be one between 10,15,25. Defaults to 25')

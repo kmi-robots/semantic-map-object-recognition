@@ -17,14 +17,16 @@ from data_loaders import BGRtoRGB
 from sklearn.metrics import classification_report, accuracy_score
 from baseline_KNN import run_baseline
 
-
+"""
 #Set of labels to retain from segmentation
 keepers= ['person','chair','potted plant']
+"""
 KNOWN = ['chairs', 'bottles', 'papers', 'books', 'desks', 'boxes', 'windows', 'exit-signs', 'coat-racks', 'radiators']
 NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'power-cables', 'monitors', 'people', 'plants', 'bins', 'doors' ]
 
 n_support = 10
-baseline = False  #Run KNN baseline or not?
+
+
 
 
 def compute_similarity(qembedding, train_embeds):
@@ -674,9 +676,9 @@ def show_leastconf(scene_objs):
 
 
 
+def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K, N, stage):
 
-def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K, N):
-
+    baseline = True if args.stage =='baseline' else False
 
     #baseline KNN?
     if baseline:

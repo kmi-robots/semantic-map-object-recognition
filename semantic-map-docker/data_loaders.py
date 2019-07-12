@@ -75,7 +75,6 @@ class BalancedTriplets(torch.utils.data.Dataset):
             self.valref_file = 'kmi25_val.pt'
 
 
-
         if not os.path.isdir(os.path.join(self.root, self.processed_folder)):
             os.mkdir(os.path.join(self.root, self.processed_folder))
 

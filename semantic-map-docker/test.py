@@ -28,7 +28,6 @@ n_support = 10
 
 
 
-
 def compute_similarity(qembedding, train_embeds):
     # Similarity matching against indexed data
 
@@ -86,11 +85,12 @@ def extract_base_embeddings(img_path, transforms, device, path_to_output):
 
     return emb_space
 
-def KNN(input_e, all_embs, K, logfile):
+def KNN(input_e, all_embs, K, logfile, voting):
 
     ranking = compute_similarity(input_e, all_embs)
 
     if K == 1:
+
         keyr, val = ranking[0]
         label = keyr.split("_")[0]
 
@@ -126,7 +126,13 @@ def KNN(input_e, all_embs, K, logfile):
 
             label = key.split("_")[0]  # [:-1]
 
-            votes[label] += val/(k + 1)    #nomin used to be 1
+            if voting =='discounted':
+
+                votes[label] += val/(k + 1)
+
+            else:
+                #Just picking the class that gets the majority of votes
+                votes[label] += 1 #/ (k + 1)
 
             ids[label] = key
 
@@ -676,7 +682,12 @@ def show_leastconf(scene_objs):
 
 
 
-def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, K, N, stage):
+def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device, trans, path_to_train_embeds, args):
+
+    K =args.K
+    N =args.N
+    sem = args.sem
+    voting = args.Kvoting
 
     baseline = True if args.stage =='baseline' else False
 
@@ -691,6 +702,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
     # for each query image
 
     if data_type == 'json':
+
+
 
         path_to_space = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/embeddings_imprKNET_1prod.dat') #embeddings_imprKNET_1prod_DA_static #os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
         path_to_state = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/checkpoint_imprKNET_1prod.pt') #checkpoint_imprKNET_1prod_DA_static
@@ -827,12 +840,12 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     # Find (K)NN from input embedding
                     """
                     print("%%%%%%%The baseline NN predicted %%%%%%%%%%%%%%%%%%%%%")
-                    baseline_pred = KNN(basein_emb, base_embedding_space, K, outr)
+                    baseline_pred = KNN(basein_emb, base_embedding_space, K, outr, voting)
                     print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
                     """
 
                     #print("%%%%%%%The trained model predicted %%%%%%%%%%%%%%%%%%%%%")
-                    prediction, conf, rank_confs = KNN(input_emb, embedding_space, K, outr)
+                    prediction, conf, rank_confs = KNN(input_emb, embedding_space, K, outr, voting)
                     #print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
 
@@ -864,12 +877,12 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 weak_idx = show_leastconf(frame_objs)
 
 
-                if weak_idx is not None:
+                if weak_idx is not None and sem is not None: #Only if semantic modules are to be included
 
                     orig_label, _, coords, _ = frame_objs[weak_idx]
 
 
-                    if VG_data:
+                    if VG_data and sem=='full':
 
                         #Pre-correction based on a subset of relations in Visual Genome
                         o_y = coords[1]
@@ -925,19 +938,20 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                         print(sorted(new_preds.items(), key=lambda x: x[1], reverse=True))
 
-                        # is the rel VG-validated w.r.t. floor?
-                        orig_floor = proxy_floor(orig_label, VG_data['on'])
-                        corrected_floor_out =proxy_floor(wlabel, VG_data['on'])
+                        if sem == 'full':
+                            # is the rel VG-validated w.r.t. floor?
+                            orig_floor = proxy_floor(orig_label, VG_data['on'])
+                            corrected_floor_out =proxy_floor(wlabel, VG_data['on'])
 
-                        
-                        #ONLY if so (or if originally OOV) change it
-                        if orig_floor=='no synset' or orig_floor == corrected_floor_out:
 
-                            print("Accepting proposed correction")
-                            frame_objs[weak_idx]= (wlabel.replace('_','-'), wscore, coords, new_preds)
-                        else:
+                            #ONLY if so (or if originally OOV) change it
+                            if orig_floor=='no synset' or orig_floor == corrected_floor_out:
 
-                            print("Rejecting suggested correction: replacement does not make sense w.r.t floor")
+                                print("Accepting proposed correction")
+                                frame_objs[weak_idx]= (wlabel.replace('_','-'), wscore, coords, new_preds)
+                            else:
+
+                                print("Rejecting suggested correction: replacement does not make sense w.r.t floor")
 
 
                         """
@@ -981,7 +995,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         #Check no. of instances per class
         #print(cardinalities)
-        print(len(y_pred)==len(y_true))
+        #print(len(y_pred)==len(y_true))
 
         #Evaluation
         print("Class-wise test results \n")
@@ -1088,7 +1102,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                     #Go ahead and classify by similarity
 
-                    win_label = KNN(qembedding, train_embeds, K, outr)
+                    win_label = KNN(qembedding, train_embeds, K, outr, voting)
 
 
                 print("%EOF---------------------------------------------------------------------% \n")

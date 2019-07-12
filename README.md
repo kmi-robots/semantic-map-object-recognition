@@ -8,11 +8,11 @@ where we compare a baseline Nearest Neighbour approach to Image Matching,
 with the K-net architecture described in [Zeng et al. (2018)](https://arxiv.org/pdf/1710.01330.pdf)  
 and our own three novel versions of Image Matching pipeline:
 
-- *Imprinted K-net* exploits a combination of K-net with weight imprinting, a techniques originally introduced on a standard CNN architecture by [Qi et al. (2018)](http://openaccess.thecvf.com/content_cvpr_2018/papers/Qi_Low-Shot_Learning_With_CVPR_2018_paper.pdf)
+- **Imprinted K-net** exploits a combination of K-net with weight imprinting, a techniques originally introduced on a standard CNN architecture by [Qi et al. (2018)](http://openaccess.thecvf.com/content_cvpr_2018/papers/Qi_Low-Shot_Learning_With_CVPR_2018_paper.pdf)
 
-- *Imprinted K-net + ConceptRel* introduces common-sense concept relatedness from [ConceptNet Numberbatch](https://github.com/commonsense/conceptnet-numberbatch) at test time
+- **Imprinted K-net + ConceptRel** introduces common-sense concept relatedness from [ConceptNet Numberbatch](https://github.com/commonsense/conceptnet-numberbatch) at test time
 
-- *Kground Imprinted K-net* was found to be the top-performing solution among our trials. Extended from the prior one, it also relies on spatial relationships between objects derived from [Visual Genome](https://visualgenome.org/) - through the link provided by [WordNet's](https://wordnet.princeton.edu/) synsets- for additional validation (see also Figure below). 
+- **Kground Imprinted K-net** was found to be the top-performing solution among our trials. Extended from the prior one, it also relies on spatial relationships between objects derived from [Visual Genome](https://visualgenome.org/) - through the link provided by [WordNet's](https://wordnet.princeton.edu/) synsets- for additional validation (see also Figure below). 
 
 All the experimented NeuralNet-based architectures were implemented in Pytorch.
 
@@ -20,6 +20,7 @@ All the experimented NeuralNet-based architectures were implemented in Pytorch.
 
 
 We recommend to let Docker handle all the dependency installations, please refer to the dockerfile for a list of pre-requisites. 
+
 
 ## Getting Started
 
@@ -34,21 +35,25 @@ cd semantic-map-docker
 ```
 
 The `siamese_main.py` file is the one to be launched and expects different arguments, as listed below.
-*By default*, if none of the optional arguments is modified, it will use the Kground Imprinted K-net pipeline.
+**By default**, if none of the optional arguments is modified and by running `python siamese_main.py json {train,test,baseline}
+                       path_to_train path_to_test emb`, it will use the Kground Imprinted K-net pipeline on annotated bounding boxes, 
+i.e., without any YOLO segmentation applied upfront.
 
 ```
-usage: siamese_main.py [-h] [--resnet RESNET] [--plots PLOTS]
+usage: siamese_main.py [-h] [--resnet RESNET] [--sem {concept-only,full,None}]
                        [--transfer TRANSFER] [--store_emb STORE_EMB]
                        [--noimprint NOIMPRINT] [--twobranch TWOBRANCH]
-                       [--model {knet, nnet,None}] [--N {10,15,25}] [--K K]
-                       [--batch BATCH] [--lr LR] [--epochs EPOCHS]
-                       [--wdecay WDECAY] [--patience PATIENCE]
-                       [--momentum MOMENTUM] [--avg AVG] [--stn STN]
-                       [--mnist MNIST] [--ncc NCC] [--query QUERY]
+                       [--plots PLOTS] [--model {knet, nnet,None}]
+                       [--N {10,20,25}] [--K K]
+                       [--Kvoting {majority,discounted}] [--batch BATCH]
+                       [--lr LR] [--epochs EPOCHS] [--wdecay WDECAY]
+                       [--patience PATIENCE] [--momentum MOMENTUM] [--avg AVG]
+                       [--stn STN] [--mnist MNIST] [--ncc NCC] [--query QUERY]
                        {reference,pickled,json} {train,test,baseline}
                        path_to_train path_to_test emb
 
 positional arguments:
+
   {reference,pickled,json}
                         Input type at test time: can be one between reference,
                         pickled or json (if environment data have been tagged)
@@ -63,16 +68,21 @@ positional arguments:
   emb                   path where to store/retrieve the output embeddings
 
 optional arguments:
+
   -h, --help            show this help message and exit
   --resnet RESNET       makes ResNet the building block of the CNN, True by
                         default
-  --plots PLOTS         Optionally produces plot to check and val loss
-  --transfer TRANSFER   Defaults to False in all our reported trials. Change
-                        to True if performing only transfer learning with
-                        feature ext. without fine-tuning, on all branches
+  --sem {concept-only,full,None}
+                        whether to add the semantic modules at inference time.
+                        It includes both ConceptNet and Visual Genome by
+                        defaultSet to concept-only to discard Visual Genome or
+                        None to test without any semantics
+  --transfer TRANSFER   Defaults to False in all our reported trials. Changeto
+                        True if performing only transfer learning without
+                        fine-tuning
   --store_emb STORE_EMB
-                        Defaults to True. Set to false if do not wish to store
-                        the training embedddings locally
+                        Defaults to True. Set to false if do not wish to
+                        storethe training embedddings locally
   --noimprint NOIMPRINT
                         Defaults to False. Set to through if running without
                         weight imprinting
@@ -80,13 +90,17 @@ optional arguments:
                         Defaults to False in all our reported trials. Can be
                         set to True to test a Siamese with weights learned
                         independently on each branch
+  --plots PLOTS         Optionally produces plot to check and val loss
   --model {knet, nnet,None}
                         set to pick one between K-net or N-net or None. K-net
                         is used by default
-  --N {10,15,25}        Number of object classes. Should be one between
-                        10,15,25. Defaults to 25
+  --N {10,20,25}        Number of object classes. Should be one between
+                        10,20,25. Defaults to 25
   --K K                 Number of neighbours to consider for ranking at test
                         time (KNN). Defaults to 5
+  --Kvoting {majority,discounted}
+                        How votes are computed for K>1. Defaults to discounted
+                        majority voting.
   --batch BATCH         Batch size. Defaults to 16
   --lr LR               Learning rate. Defaults to 0.0001
   --epochs EPOCHS       Number of training epochs. Defaults to 5000
@@ -103,19 +117,59 @@ optional arguments:
   --mnist MNIST         whether to test on the MNIST benchmark dataset
   --ncc NCC             whether to test with the NormXCorr architecture
   --query QUERY         Path to data used with support on test time in prior
+                        trials
 ```
 
-Please note that only the [VIA Json annotation](http://www.robots.ox.ac.uk/~vgg/software/via/) format is currently supported. 
-Also, automatic re-sizing for any number of classes is currently not supported, we currently support only N=10,15 and 25 (See also the [Data set Section](#data-sets))
+Please note that automatic re-sizing for any number of classes is currently not supported, we currently support only N=10,15 and 25 (See also the [Data set Section](#data-sets))
+
+## Sample command combinations
+
+Commands to replicate pipelines under evaluation in the latest experiments.
+
+For running the Kground imprinted K-net just type:
+
+```
+python siamese_main.py json {train,test} path_to_train path_to_test emb
+
+```
+
+For the Imprinted K-net + ConceptRel:
+
+```
+
+python siamese_main.py json {train,test} path_to_train path_to_test emb --sem concept-only
+```
+
+For the Imprintent K-net without semantics
+
+```
+
+python siamese_main.py json {train,test} path_to_train path_to_test emb --sem None
+
+```
+
+For our own implementation of K-net from the paper by [Zeng et al. (2018)](https://arxiv.org/pdf/1710.01330.pdf):
+
+```
+python siamese_main.py json {train,test} path_to_train path_to_test emb --noimprint True --sem None --K 1 
+
+```
+
+For a baseline nearest neighibour match at test time:
+
+
+```
+python siamese_main.py {reference, pickled, json} baseline path_to_train path_to_test emb 
+```
+
 
 ## Data sets
 
 Some released data are available under `semantic-map-docker/data`. The relevant sets documented here are:
 
-*  *ShapeNet + Google (SNG) sets* are saved under `shapenet10`, `shapenet20` and `shapenet25` respectively, depending on the number of object classes examined.
+*  the **ShapeNet + Google (SNG) sets** are saved under `shapenet10`, `shapenet20` and `shapenet25` respectively, depending on the number of object classes examined.
 *  `KMi_collection` is for the reference images collected in KMi, but excludes the test image set as that one records sensitive information 
 *  ` yolo` contains all files for using the pre-trained YOLO version embedded in OpenCV. These files are referenced by the `segment.py` methods 
-
 
 
 ## Code map

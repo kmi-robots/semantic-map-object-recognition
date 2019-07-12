@@ -31,6 +31,7 @@ def main(args):
 
     """
 
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     input_type = args.it
     path_to_bags = args.path_to_test
@@ -245,10 +246,10 @@ def main(args):
 
 
         class_wise_res = test(model, model_checkpoint, input_type, path_to_query_data, path_to_bags,\
-                              device, base_trans, path_to_train_embeds, args.K, args.N, args.stage)
+                              device, base_trans, path_to_train_embeds, args)
 
         #Test plot grouped by class
-        if class_wise_res is not None:
+        if class_wise_res is not None and args.plots:
             #Evaluation only available for data held out from ground truth
             #When evaluating on robot-collected data, rankings are logged anyways
             bar_plot(class_wise_res)
@@ -286,16 +287,20 @@ if __name__ == '__main__':
     # optional boolean flags
     parser.add_argument('--resnet', default=True,
                         help='makes ResNet the building block of the CNN, True by default')
-    parser.add_argument('--plots', type= bool,default=False,
-                        help='Optionally produces plot to check and val loss')
+
+    parser.add_argument('--sem', choices=['concept-only', 'full', None], default='full',
+                        help='whether to add the semantic modules at inference time. It includes both ConceptNet and Visual Genome by default'
+                             'Set to concept-only to discard Visual Genome or None to test without any semantics')
 
     parser.add_argument('--transfer', type=bool, default=False,
-                        help='Defaults to False in all our reported trials. '
-                             'Change to True if performing only transfer learning with feature ext. without fine-tuning, on all branches')
+                        help='Defaults to False in all our reported trials. Change'
+                        'to True if performing only transfer learning without fine-tuning'
+                        )
 
     parser.add_argument('--store_emb', type=bool, default=True,
-                        help='Defaults to True. '
-                             'Set to false if do not wish to store the training embedddings locally')
+                        help='Defaults to True. Set to false if do not wish to store'
+                             'the training embedddings locally'
+                        )
 
     parser.add_argument('--noimprint', type=bool, default=False,
                         help='Defaults to False. '
@@ -305,17 +310,23 @@ if __name__ == '__main__':
                         help='Defaults to False in all our reported trials. '
                              'Can be set to True to test a Siamese with weights learned independently on each branch')
 
+    parser.add_argument('--plots', type=bool, default=False,
+                        help='Optionally produces plot to check and val loss'
+                    )
 
     #optional values to tweak params
 
     parser.add_argument('--model', choices=['knet, nnet', None], default='knet',
                         help='set to pick one between K-net or N-net or None. K-net is used by default')
 
-    parser.add_argument('--N', type=int, choices=[10,15,25], default=25,
-                        help='Number of object classes. Should be one between 10,15,25. Defaults to 25')
+    parser.add_argument('--N', type=int, choices=[10,20,25], default=25,
+                        help='Number of object classes. Should be one between 10,20,25. Defaults to 25')
 
     parser.add_argument('--K', type=int, default=5,
                         help='Number of neighbours to consider for ranking at test time (KNN). Defaults to 5')
+
+    parser.add_argument('--Kvoting', choices=['majority','discounted'], default='discounted',
+                        help='How votes are computed for K>1. Defaults to discounted majority voting.')
 
     parser.add_argument('--batch', type=int, default=16,
                         help='Batch size. Defaults to 16')
@@ -356,8 +367,6 @@ if __name__ == '__main__':
                         help='Path to data used with support on test time in prior trials')
 
 
-    args = parser.parse_args()
 
-
-    main(args, ResNet=True)
+    main(parser.parse_args())
 

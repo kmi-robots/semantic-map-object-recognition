@@ -1,6 +1,6 @@
 # Improving Object Recognition for Mobile Robots by Leveraging Common-sense Knowledge Bases 
 
-In case you did not land here from [our main website](https://kmi-robots.github.io/HanS.open.ac.uk/) already, be sure to check it out to see how 
+In case you did not land here from [our main website](https://robots.kmi.open.ac.uk) already, be sure to check it out to see how 
 these lines of code fit in our broader ideas! 
 
 This repository contains all the code implemented for our latest experiments on few-shot object recognition for Mobile Robots, 

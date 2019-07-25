@@ -184,8 +184,6 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
     if data_type == 'json':
 
-
-
         path_to_space = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/embeddings_imprKNET_1prod.dat') #embeddings_imprKNET_1prod_DA_static #os.path.join(path_to_bags.split('test')[0], 'KMi_ref_embeds.dat')
         path_to_state = os.path.join(path_to_bags.split('KMi_collection')[0], 'kmish25/checkpoint_imprKNET_1prod.pt') #checkpoint_imprKNET_1prod_DA_static
 
@@ -254,7 +252,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         base_path, img_collection = load_jsondata(path_to_bags)
 
-        data = list(reversed(img_collection.values()))
+        data = list(reversed(img_collection.values())) #[20:]
 
         with open('pt_results/ranking_log.txt', 'a') as outr:
 
@@ -274,29 +272,59 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 print("Analyzing frame %s" % data_point["filename"])
                 outr.write("Analyzing frame %s" % data_point["filename"])
 
-                bboxes = data_point["regions"]
-                frame_objs = []
+                frame_objs=[]
 
-                if not bboxes:
+                if args.bboxes=='true':
 
-                    print("NOT annotated")
+                    bboxes = data_point["regions"]
+                    frame_objs = []
 
-                    continue
+                    if not bboxes:
+
+                        print("NOT annotated")
+
+                        break
+
+                else:
+
+                    cv2.imwrite('temp.jpg', img)
+                    predicted_boxes = segment('temp.jpg', img, YOLO=False, w_saliency=False)
+
+                    bboxes, yolo_labels = zip(*predicted_boxes)
+
 
                 #For each bounding box
-                for region in bboxes:
+                for idx, region in enumerate(bboxes):
 
                     #create a copy, crop it to region and store ground truth label
 
                     obj = img.copy()
+                    segm_label = ''
 
-                    box_data = region["shape_attributes"]
-                    x = box_data["x"]
-                    y = box_data["y"]
-                    w = box_data["width"]
-                    h = box_data["height"]
+                    if args.bboxes =='true':
 
-                    obj = obj[y:y+h,x:x+w]
+                        box_data = region["shape_attributes"]
+                        x = box_data["x"]
+                        y = box_data["y"]
+                        w = box_data["width"]
+                        h = box_data["height"]
+
+                    else:
+
+
+                        segm_label = yolo_labels[idx]
+
+                        x = region[0]
+                        w = region[2] - x
+                        y = region[1]
+                        h = region[3] - y
+
+
+
+
+
+                    obj = obj[y:y + h, x:x + w]
+
                     input_emb = array_embedding(model, path_to_state, obj, device, transforms=trans)
 
 
@@ -304,9 +332,12 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     cv2.imwrite('./temp.png', obj)
                     basein_emb = base_embedding('./temp.png', device, trans)
                     """
+                    try:
+                        gt_label = region["region_attributes"]["class"]
 
-                    gt_label = region["region_attributes"]["class"]
-
+                    except:
+                        #not annotated yet
+                        gt_label = 'N/A'
 
                     #Visualize current object
                     """
@@ -339,18 +370,18 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
 
                     if y-10 >0:
-                        cv2.putText(out_img, prediction+"  "+str(round(conf,2)), (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                        cv2.putText(out_img, prediction+"  "+segm_label+str(round(conf,2)), (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                     else:
-                        cv2.putText(out_img, prediction+"  "+str(round(conf,2)), (x - 10, y +h + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                        cv2.putText(out_img, prediction+"  "+segm_label+str(round(conf,2)), (x - 10, y +h + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
                 print("%EOF---------------------------------------------------------------------% \n")
 
-                """
+
                 cv2.imshow('union', out_img)
-                cv2.waitKey(5000)
+                cv2.waitKey(10000)
                 cv2.destroyAllWindows()
 
-                """
+
 
                 """Correcting least confident predictions by querying external knowledge"""
 

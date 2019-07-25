@@ -2,7 +2,13 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="617a581a-9181-4313-98a8-b4bcfa829686" name="Default Changelist" comment="Adding base model and train on MNIST">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/semantic-map-docker/segment.py" beforeDir="false" afterPath="$PROJECT_DIR$/semantic-map-docker/segment.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/semantic-map-docker/siamese_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/semantic-map-docker/siamese_main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/semantic-map-docker/siamese_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/semantic-map-docker/siamese_models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/semantic-map-docker/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/semantic-map-docker/test.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -12,7 +18,7 @@
   </component>
   <component name="CoverageDataManager">
     <SUITE FILE_PATH="coverage/semantic_map_object_recognition$ImageNet_attrinit.coverage" NAME="ImageNet_attrinit Coverage Results" MODIFIED="1559575182535" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/semantic-map-docker" />
-    <SUITE FILE_PATH="coverage/semantic_map_object_recognition$siamese_main_py.coverage" NAME="siamese_main.py Coverage Results" MODIFIED="1562942044562" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/semantic-map-docker" />
+    <SUITE FILE_PATH="coverage/semantic_map_object_recognition$siamese_main_py.coverage" NAME="siamese_main.py Coverage Results" MODIFIED="1564073925931" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/semantic-map-docker" />
     <SUITE FILE_PATH="coverage/semantic_map_object_recognition$bag_converter.coverage" NAME="bag_converter Coverage Results" MODIFIED="1558522221821" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/semantic_map_object_recognition$siamese_pytorch_opt.coverage" NAME="siamese_pytorch_opt Coverage Results" MODIFIED="1549994900591" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/semantic_map_object_recognition$segment.coverage" NAME="segment Coverage Results" MODIFIED="1554309345596" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/semantic-map-docker" />
@@ -40,8 +46,44 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/semantic-map-docker/siamese_main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="152">
-              <caret line="10" selection-start-line="10" selection-end-line="10" />
+            <state relative-caret-position="5926">
+              <caret line="332" column="66" selection-start-line="332" selection-start-column="58" selection-end-line="332" selection-end-column="66" />
+              <folding>
+                <element signature="e#0#12#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/README.md">
+          <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
+            <state split_layout="SPLIT">
+              <first_editor relative-caret-position="76">
+                <caret line="4" column="52" selection-start-line="4" selection-start-column="52" selection-end-line="4" selection-end-column="52" />
+              </first_editor>
+              <second_editor />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/semantic-map-docker/test.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="266">
+              <caret line="254" column="56" selection-start-line="254" selection-start-column="56" selection-end-line="254" selection-end-column="56" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/semantic-map-docker/siamese_models.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="181">
+              <caret line="651" column="3" selection-start-line="651" selection-start-column="3" selection-end-line="651" selection-end-column="3" />
+              <folding>
+                <element signature="e#0#12#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -49,20 +91,20 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/.gitignore">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="114">
-              <caret line="6" column="17" lean-forward="true" selection-start-line="6" selection-start-column="17" selection-end-line="6" selection-end-column="17" />
+            <state>
+              <caret column="28" selection-start-column="28" selection-end-column="28" />
             </state>
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/README.md">
-          <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
-            <state split_layout="SPLIT">
-              <first_editor>
-                <caret column="25" selection-start-column="25" selection-end-column="25" />
-              </first_editor>
-              <second_editor />
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/semantic-map-docker/segment.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="78">
+              <caret line="358" selection-start-line="358" selection-end-line="358" />
+              <folding>
+                <element signature="e#210#220#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -78,10 +120,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>classname</find>
-      <find>path_to_train_data</find>
-      <find>train_imgs</find>
-      <find>embedding_extractor</find>
       <find>out_imgs</find>
       <find>data</find>
       <find>COLORs</find>
@@ -108,6 +146,10 @@
       <find>baseline</find>
       <find>KNN</find>
       <find>transfer</find>
+      <find>import ncc</find>
+      <find>segment</find>
+      <find>yolo_</find>
+      <find>discount</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -147,9 +189,7 @@
         <option value="$PROJECT_DIR$/semantic-map-docker/ncc-extension/setup.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/train.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/validate.py" />
-        <option value="$PROJECT_DIR$/semantic-map-docker/segment.py" />
         <option value="$PROJECT_DIR$/utils/bag_converter.py" />
-        <option value="$PROJECT_DIR$/semantic-map-docker/siamese_models.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/imprint.py" />
         <option value="$PROJECT_DIR$/utils/ImageNet_attrinit.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/baseline_KNN.py" />
@@ -160,11 +200,13 @@
         <option value="$PROJECT_DIR$/semantic-map-docker/embedding_extractor.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/plot_results.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/data_loaders.py" />
-        <option value="$PROJECT_DIR$/semantic-map-docker/siamese_main.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/common_sense.py" />
-        <option value="$PROJECT_DIR$/semantic-map-docker/test.py" />
-        <option value="$PROJECT_DIR$/.gitignore" />
         <option value="$PROJECT_DIR$/README.md" />
+        <option value="$PROJECT_DIR$/semantic-map-docker/siamese_main.py" />
+        <option value="$PROJECT_DIR$/.gitignore" />
+        <option value="$PROJECT_DIR$/semantic-map-docker/siamese_models.py" />
+        <option value="$PROJECT_DIR$/semantic-map-docker/segment.py" />
+        <option value="$PROJECT_DIR$/semantic-map-docker/test.py" />
       </list>
     </option>
   </component>
@@ -391,7 +433,7 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/semantic-map-docker/siamese_main.py" />
-      <option name="PARAMETERS" value="json test ./data/KMi_collection/train ./data/KMi_collection/test/tagged_KMi.json ./pt_results/kmish25/embeddings.dat" />
+      <option name="PARAMETERS" value="json test ./data/KMi_collection/train ./data/KMi_collection/test/tagged_KMi.json ./pt_results/kmish25/embeddings.dat --bboxes segmented" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -589,12 +631,12 @@
       <workItem from="1560680387839" duration="1196000" />
       <workItem from="1562771974250" duration="596000" />
       <workItem from="1562922408777" duration="12981000" />
-      <workItem from="1564060000327" duration="3339000" />
+      <workItem from="1564060000327" duration="14047000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="736730000" />
+    <option name="totallyTimeSpent" value="747438000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -617,14 +659,14 @@
       <window_info anchor="bottom" id="Message" order="2" />
       <window_info anchor="bottom" id="Find" order="3" weight="0.32972974" />
       <window_info anchor="bottom" id="Run" order="4" weight="0.9664865" />
-      <window_info active="true" anchor="bottom" id="Debug" order="5" sideWeight="0.4964029" visible="true" weight="0.35783783" />
+      <window_info active="true" anchor="bottom" id="Debug" order="5" sideWeight="0.4964029" visible="true" weight="0.44216216" />
       <window_info anchor="bottom" id="Cvs" order="6" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="7" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="8" weight="0.32864866" />
       <window_info anchor="bottom" id="Version Control" order="9" weight="0.32864866" />
       <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.50359714" side_tool="true" weight="0.40864864" />
       <window_info anchor="bottom" id="Messages" order="11" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="12" sideWeight="0.7216381" visible="true" weight="0.25945947" />
+      <window_info anchor="bottom" id="Terminal" order="12" sideWeight="0.7216381" weight="0.25945947" />
       <window_info anchor="bottom" id="Python Console" order="13" sideWeight="0.4991699" weight="0.42054054" />
       <window_info anchor="right" id="Database" order="0" sideWeight="0.47040972" weight="0.32484782" />
       <window_info anchor="right" id="SciView" order="1" />
@@ -673,9 +715,14 @@
           <option name="timeStamp" value="43" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/semantic-map-docker/siamese_main.py</url>
-          <line>10</line>
-          <option name="timeStamp" value="45" />
+          <url>file://$PROJECT_DIR$/semantic-map-docker/segment.py</url>
+          <line>350</line>
+          <option name="timeStamp" value="56" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/semantic-map-docker/test.py</url>
+          <line>388</line>
+          <option name="timeStamp" value="57" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -835,16 +882,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/semantic-map-docker/siamese_models.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="4389">
-          <caret line="240" selection-start-line="240" selection-end-line="240" />
-          <folding>
-            <element signature="e#0#12#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/semantic-map-docker/imprint.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="418">
@@ -873,13 +910,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1026">
           <caret line="57" selection-start-line="57" selection-end-line="57" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/.local/lib/python3.6/site-packages/torch/nn/modules/module.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="12882">
-          <caret line="685" selection-start-line="685" selection-end-line="685" />
         </state>
       </provider>
     </entry>
@@ -916,16 +946,6 @@
           <caret line="38" column="41" selection-start-line="38" selection-start-column="41" selection-end-line="38" selection-end-column="41" />
           <folding>
             <element signature="e#89#107#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/semantic-map-docker/segment.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="6232">
-          <caret line="330" column="88" selection-start-line="328" selection-start-column="8" selection-end-line="330" selection-end-column="88" />
-          <folding>
-            <element signature="e#210#220#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -1000,10 +1020,34 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/semantic-map-docker/test.py">
+    <entry file="file://$PROJECT_DIR$/README.md">
+      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
+        <state split_layout="SPLIT">
+          <first_editor relative-caret-position="76">
+            <caret line="4" column="52" selection-start-line="4" selection-start-column="52" selection-end-line="4" selection-end-column="52" />
+          </first_editor>
+          <second_editor />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.local/lib/python3.6/site-packages/torch/nn/modules/module.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-2261">
-          <caret line="46" column="52" lean-forward="true" selection-start-line="46" selection-start-column="52" selection-end-line="46" selection-end-column="52" />
+        <state relative-caret-position="154">
+          <caret line="685" selection-start-line="685" selection-end-line="685" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.gitignore">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret column="28" selection-start-column="28" selection-end-column="28" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/semantic-map-docker/siamese_models.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="181">
+          <caret line="651" column="3" selection-start-line="651" selection-start-column="3" selection-end-line="651" selection-end-column="3" />
           <folding>
             <element signature="e#0#12#0" expanded="true" />
           </folding>
@@ -1012,25 +1056,28 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/semantic-map-docker/siamese_main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="152">
-          <caret line="10" selection-start-line="10" selection-end-line="10" />
+        <state relative-caret-position="5926">
+          <caret line="332" column="66" selection-start-line="332" selection-start-column="58" selection-end-line="332" selection-end-column="66" />
+          <folding>
+            <element signature="e#0#12#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/.gitignore">
+    <entry file="file://$PROJECT_DIR$/semantic-map-docker/segment.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="114">
-          <caret line="6" column="17" lean-forward="true" selection-start-line="6" selection-start-column="17" selection-end-line="6" selection-end-column="17" />
+        <state relative-caret-position="78">
+          <caret line="358" selection-start-line="358" selection-end-line="358" />
+          <folding>
+            <element signature="e#210#220#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/README.md">
-      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
-        <state split_layout="SPLIT">
-          <first_editor>
-            <caret column="25" selection-start-column="25" selection-end-column="25" />
-          </first_editor>
-          <second_editor />
+    <entry file="file://$PROJECT_DIR$/semantic-map-docker/test.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="266">
+          <caret line="254" column="56" selection-start-line="254" selection-start-column="56" selection-end-line="254" selection-end-column="56" />
         </state>
       </provider>
     </entry>

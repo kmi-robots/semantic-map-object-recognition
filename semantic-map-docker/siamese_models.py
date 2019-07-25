@@ -4,9 +4,6 @@ import torch.nn.functional as F
 from collections import OrderedDict
 import torchvision.models as models
 
-
-
-
 from rpooling import GeM, L2N
 
 
@@ -597,7 +594,7 @@ class ResTwoBranch(nn.Module):
 
 
 
-
+"""
 
 #Reproducing NormXCorr model by Submariam et al. (NIPS 2016)
 from torch.autograd import Function
@@ -652,7 +649,7 @@ class normxcorr(Function):
 
         return grad_input1, grad_input2
 
-
+"""
 
 # The whole feed-forward architecture
 class NCCNet(nn.Module):

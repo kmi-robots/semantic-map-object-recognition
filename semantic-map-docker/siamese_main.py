@@ -314,6 +314,11 @@ if __name__ == '__main__':
                         help='Optionally produces plot to check and val loss'
                     )
 
+    parser.add_argument('--bboxes', choices=['true', 'segmented'], default='true',
+                        help='Can be set to decide which bounding boxes to use: maually-annotated/ ground truth,'
+                             'or produced via segmentation'
+                        )
+
     #optional values to tweak params
 
     parser.add_argument('--model', choices=['knet, nnet', None], default='knet',

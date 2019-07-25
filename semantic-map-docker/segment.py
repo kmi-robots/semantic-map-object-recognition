@@ -8,11 +8,9 @@ https://github.com/meenavyas/Misc/blob/master/ObjectDetectionUsingYolo/ObjectDet
 
 import cv2
 import numpy as np
-import math
-
-
-w_saliency = True
-static= True
+import torchvision
+from torchvision import transforms as T
+from PIL import Image
 
 # 'path to yolo config file'
 CONFIG='./data/yolo/yolov3.cfg'
@@ -33,6 +31,8 @@ scale = 0.00392 # 1/255.  factor
 conf_threshold = 0.01 #0.5
 nms_threshold = 0.1 #0.4
 overlapThresh = 0.1
+low=2000
+high = 30000
 
 # generate different colors for different classes
 COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
@@ -218,7 +218,47 @@ def run_YOLO(blob, net, mu=None, w=None, h=None):
     return boxes, confidences, indices, class_ids
 
 
-def segment(temp_path, img):
+def run_FRCNN(img_path, threshold=0.0):
+
+    #Faster RCNN
+
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+    model.eval()
+
+    COCO_INSTANCE_CATEGORY_NAMES = [
+        '__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+        'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'N/A', 'stop sign',
+        'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
+        'elephant', 'bear', 'zebra', 'giraffe', 'N/A', 'backpack', 'umbrella', 'N/A', 'N/A',
+        'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
+        'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+        'bottle', 'N/A', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
+        'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza',
+        'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'N/A', 'dining table',
+        'N/A', 'N/A', 'toilet', 'N/A', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone',
+        'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'N/A', 'book',
+        'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
+    ]
+
+
+    img = Image.open(img_path)  # Load the image
+    transform = T.Compose([T.ToTensor()])  # Defing PyTorch Transform
+
+    img = transform(img)  # Apply the transform to the image
+    pred = model([img])  # Pass the image to the model
+    pred_class = [COCO_INSTANCE_CATEGORY_NAMES[i] for i in
+                      list(pred[0]['labels'].numpy())]  # Get the Prediction Score
+    pred_boxes = [[(i[0], i[1]), (i[2], i[3])] for i in list(pred[0]['boxes'].detach().numpy())]  # Bounding boxes
+    pred_score = list(pred[0]['scores'].detach().numpy())
+    pred_t = [pred_score.index(x) for x in pred_score if x > threshold][-1]  # Get list of index with score greater than threshold.
+    pred_boxes = pred_boxes[:pred_t + 1]
+    pred_class = pred_class[:pred_t + 1]
+
+    return pred_boxes, pred_class
+
+
+
+def segment(temp_path, img, YOLO=True, w_saliency=True, static=False):
 
     Width = img.shape[1]
     Height = img.shape[0]
@@ -249,73 +289,106 @@ def segment(temp_path, img):
 
             #draw_bounding_box(output, -1, None, startX, startY, endX, endY)
 
-    #Visualise binarised saliency regions
-    #cv2.imshow('Saliency',bin)
-    #cv2.waitKey(5000)
-    #cv2.destroyAllWindows()
+
+    if YOLO:
+        #Visualise binarised saliency regions
+        #cv2.imshow('Saliency',bin)
+        #cv2.waitKey(5000)
+        #cv2.destroyAllWindows()
 
 
-    #Visualise bboxes for saliency regions only
-    #cv2.imshow('Saliency', img)
-    #cv2.waitKey(5000)
-    #cv2.destroyAllWindows()
+        #Visualise bboxes for saliency regions only
+        #cv2.imshow('Saliency', img)
+        #cv2.waitKey(5000)
+        #cv2.destroyAllWindows()
 
-    # set input blob for the network
+        # set input blob for the network
 
-    blob = cv2.dnn.blobFromImage(denoised, scale, (416, 416), (0, 0, 0), swapRB=True, crop=False)
+        blob = cv2.dnn.blobFromImage(denoised, scale, (416, 416), (0, 0, 0), swapRB=True, crop=False)
 
-    net.setInput(blob)
+        net.setInput(blob)
 
-    yolo_boxes, confidences, indices, class_ids = run_YOLO(blob, net, mu=conf_threshold, w=Width,h=Height)
+        yolo_boxes, confidences, indices, class_ids = run_YOLO(blob, net, mu=conf_threshold, w=Width,h=Height)
 
-    #yolo_map = np.zeros_like(saliency_map)
-    #predictions = []
-    all_boxes=[]
+        #yolo_map = np.zeros_like(saliency_map)
+        #predictions = []
+        all_boxes=[]
 
-    if len(list(indices))>0:
-    #if len(list(boxes))>0:
+        if len(list(indices))>0:
+        #if len(list(boxes))>0:
 
-        for i in indices.flatten():#for i,box in enumerate(boxes): #
+            for i in indices.flatten():#for i,box in enumerate(boxes): #
 
-            box = yolo_boxes[i]
-            x = round(box[0])
-            y = round(box[1])
-            w = round(box[2])
-            h = round(box[3])
+                box = yolo_boxes[i]
+                x = round(box[0])
+                y = round(box[1])
+                w = round(box[2])
+                h = round(box[3])
 
-            #assign conf value of box to all pixels in that box
-            #saliency_map[x:x+w,y:y+h] = confidences[i]*100
+                # in case negative coordinates are returned
+                if x < 0:
 
-            #draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
-            all_boxes.append(([x,y,x+w,y+h], str(classes[class_ids[i]])))
+                    x = 0
 
-            tmp = img.copy()
-            #predictions.append((tmp[y:y+h, x:x+w],str(classes[class_ids[i]])))
+                elif y < 0:
 
-    bin2 = cv2.threshold(saliency_map, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+                    y = 0
 
-    contours, hierarchy = cv2.findContours(bin2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                area = (int(x) + int(w) - int(x) + 1) * (int(y) + int(h) - int(y) + 1)
 
-    for cnt in contours:
 
-       area = round(cv2.contourArea(cnt))
-       x, y, w, h = cv2.boundingRect(cnt)
-       area = (int(x)+int(w) - int(x) + 1) * (int(y)+int(h) - int(y) + 1)
+                #assign conf value of box to all pixels in that box
+                #saliency_map[x:x+w,y:y+h] = confidences[i]*100
 
-       #Filtering the smallest ones
-       if area> 2000:
+                #draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
+                all_boxes.append(([x,y,x+w,y+h], str(classes[class_ids[i]])))
 
-            x, y, w, h = cv2.boundingRect(cnt)
-            #print(saliency_map.shape)
-            #print(temp.shape)
+                tmp = img.copy()
+                #predictions.append((tmp[y:y+h, x:x+w],str(classes[class_ids[i]])))
 
-            #Add also boxes from saliency
-            all_boxes.append(([x,y,x+w,y+h],classes[-1]))
-            #draw_bounding_box(temp, -1, None, x, y, x + w, y + h)
+    else:
+
+        fcnn_boxes, fcnn_labels = run_FRCNN(temp_path)
+        all_boxes = []
+
+        for coords, label in zip(fcnn_boxes, fcnn_labels):
+
+            x, x2 = coords[0]
+            y, y2 = coords[1]
+
+
+            all_boxes.append(([int(x), int(y), int(x2), int(y2)], str(label)))
+
+
+    if w_saliency:
+
+        bin2 = cv2.threshold(saliency_map, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+
+        contours, hierarchy = cv2.findContours(bin2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        for cnt in contours:
+
+           area = round(cv2.contourArea(cnt))
+           x, y, w, h = cv2.boundingRect(cnt)
+           area = (int(x)+int(w) - int(x) + 1) * (int(y)+int(h) - int(y) + 1)
+
+
+           #Filtering the smallest ones
+           if area> 5*low and area <high:
+
+                x, y, w, h = cv2.boundingRect(cnt)
+                #print(saliency_map.shape)
+                #print(temp.shape)
+
+
+                #Add also boxes from saliency
+                all_boxes.append(([x,y,x+w,y+h],classes[-1]))
+                #draw_bounding_box(temp, -1, None, x, y, x + w, y + h)
 
     #print(np.asarray(all_boxes).shape)
     filtered_boxes = checkRectangles(all_boxes, overlapThresh)
     #print(len(filtered_boxes))
+
 
     """
     for box,l in filtered_boxes:
@@ -347,8 +420,10 @@ def segment(temp_path, img):
 
     """
     # Visualise saliency+yoloconf regions
-    cv2.imshow('Saliency', img)
-    cv2.waitKey(1000)
-    cv2.destroyAllWindows()
-    return filtered_boxes
+    #cv2.imshow('Saliency', img)
+    #cv2.waitKey(1000)
+    #cv2.destroyAllWindows()
+
+
+    return all_boxes #filtered_boxes
 

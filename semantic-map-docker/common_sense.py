@@ -87,6 +87,7 @@ def formatlabel(label):
 
 
 def get_synset(class_label):
+
     """
     Returns the wordnet synset for a given term, if any is found
     """
@@ -485,6 +486,7 @@ def correct_floating(o_y, o_h, weak_idx, frame_objs, VG_base, rflag=False):
 
 
 def show_leastconf(scene_objs):
+
     preds, confs, coords, rankings = zip(*scene_objs)
 
     if min(confs) < 1.14:  # 2.5:  #less than 50%

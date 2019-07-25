@@ -10,7 +10,7 @@ from collections import Counter, OrderedDict
 import time
 
 
-from common_sense import show_leastconf, correct_floating, extract_spatial, proxy_floor
+from common_sense import show_leastconf, correct_floating, extract_spatial, proxy_floor, reverse_map
 
 from data_loaders import BGRtoRGB
 from sklearn.metrics import classification_report, accuracy_score

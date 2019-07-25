@@ -196,6 +196,8 @@ used to run our latest experiments,The dockerfile extends the [Deepo docker imag
 
     - `embedding_extractor.py` is used to extract embeddings from the pre-trained architectures used and return the embedding space needed to classify objects at test time. Different methods indicate that either a different model or a different format for the input image was utilised on extraction. 
 
+    - `common_sense.py` groups all methods/heuristics used to propose and validate corrections based on external common-sense knowledge. 
+    
     -  `plot_results.py` generates plots of the type "Metric vs Epoch" in Visdom (i.e., also available from browser when launched on remote server). Metrics currently implemented:
    loss, accuracy, precision, and recall. 
 

@@ -218,7 +218,7 @@ def run_YOLO(blob, net, mu=None, w=None, h=None):
     return boxes, confidences, indices, class_ids
 
 
-def run_FRCNN(img_path, threshold=0.0):
+def run_FRCNN(img_path, threshold=0.2):
 
     #Faster RCNN
 
@@ -353,11 +353,11 @@ def segment(temp_path, img, YOLO=True, w_saliency=True, static=False):
 
         for coords, label in zip(fcnn_boxes, fcnn_labels):
 
-            x, x2 = coords[0]
-            y, y2 = coords[1]
+            x, y = coords[0]
+            x2, y2 = coords[1]
 
 
-            all_boxes.append(([int(x), int(y), int(x2), int(y2)], str(label)))
+            all_boxes.append(([int(round(x)), int(round(y)), int(round(x2)), int(round(y2))], str(label)))
 
 
     if w_saliency:
@@ -385,45 +385,12 @@ def segment(temp_path, img, YOLO=True, w_saliency=True, static=False):
                 all_boxes.append(([x,y,x+w,y+h],classes[-1]))
                 #draw_bounding_box(temp, -1, None, x, y, x + w, y + h)
 
-    #print(np.asarray(all_boxes).shape)
-    filtered_boxes = checkRectangles(all_boxes, overlapThresh)
-    #print(len(filtered_boxes))
+        #print(np.asarray(all_boxes).shape)
+
+        #Removing overlapping boxes
+        all_boxes = checkRectangles(all_boxes, overlapThresh)
 
 
-    """
-    for box,l in filtered_boxes:
 
-        x = box[0]
-        y = box[1]
-        x2 = box[2]
-        y2 = box[3]
-
-
-        color = COLORS[classes.index(l)]
-        cv2.rectangle(temp2, (x, y), (x2, y2), color, 2)
-        cv2.putText(temp2, l, (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-
-    # Visualise saliency+yoloconf regions
-    #cv2.imshow('Saliency', temp2)
-    #cv2.waitKey(5000)
-    #cv2.destroyAllWindows()
-
-
-    cv2.imshow('union', temp)
-    cv2.waitKey(6000)
-    cv2.destroyAllWindows()
-
-    cv2.imshow('union',temp2)
-    cv2.waitKey(6000)
-    cv2.destroyAllWindows()
-
-    """
-    # Visualise saliency+yoloconf regions
-    #cv2.imshow('Saliency', img)
-    #cv2.waitKey(1000)
-    #cv2.destroyAllWindows()
-
-
-    return all_boxes #filtered_boxes
+    return all_boxes
 

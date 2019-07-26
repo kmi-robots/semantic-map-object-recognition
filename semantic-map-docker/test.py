@@ -222,8 +222,8 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
             print("Loading cached embedding space")
             base_embedding_space = torch.load(path_to_space, map_location={'cuda:0': 'cpu'})
         """
+        
         embedding_space = torch.load(path_to_space, map_location={'cuda:0': 'cpu'})
-
 
         #For drawing the predictions
         all_classes = list(set([key.split('_')[0] for key in embedding_space.keys()]))
@@ -252,7 +252,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         base_path, img_collection = load_jsondata(path_to_bags)
 
-        data = list(reversed(img_collection.values())) #[20:]
+        data = list(reversed(img_collection.values()))[1:]
 
         with open('pt_results/ranking_log.txt', 'a') as outr:
 
@@ -287,8 +287,9 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
                 else:
 
+
                     cv2.imwrite('temp.jpg', img)
-                    predicted_boxes = segment('temp.jpg', img, YOLO=False, w_saliency=False)
+                    predicted_boxes = segment('temp.jpg', img, YOLO=True, w_saliency=False)
 
                     bboxes, yolo_labels = zip(*predicted_boxes)
 
@@ -301,13 +302,13 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     obj = img.copy()
                     segm_label = ''
 
-                    if args.bboxes =='true':
+                    if args.bboxes == 'true':
 
                         box_data = region["shape_attributes"]
                         x = box_data["x"]
                         y = box_data["y"]
-                        w = box_data["width"]
-                        h = box_data["height"]
+                        x2 = x + box_data["width"]
+                        y2 = y + box_data["height"]
 
                     else:
 
@@ -315,15 +316,12 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         segm_label = yolo_labels[idx]
 
                         x = region[0]
-                        w = region[2] - x
+                        x2 = region[2]
                         y = region[1]
-                        h = region[3] - y
+                        y2 = region[3]
 
 
-
-
-
-                    obj = obj[y:y + h, x:x + w]
+                    obj = obj[y:y2, x:x2]
 
                     input_emb = array_embedding(model, path_to_state, obj, device, transforms=trans)
 
@@ -361,18 +359,18 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                     #print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
 
-                    frame_objs.append((prediction, conf, (x,y,w,h), rank_confs))
+                    frame_objs.append((prediction, conf, (x,y,x2,y2), rank_confs))
                     #y_pred.append(prediction)
 
                     #draw prediction
                     color = COLORS[all_classes.index(prediction)]
-                    cv2.rectangle(out_img, (x, y), (x+w, y+h), color, 2)
+                    cv2.rectangle(out_img, (x, y), (x2, y2), color, 2)
 
 
                     if y-10 >0:
                         cv2.putText(out_img, prediction+"  "+segm_label+str(round(conf,2)), (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                     else:
-                        cv2.putText(out_img, prediction+"  "+segm_label+str(round(conf,2)), (x - 10, y +h + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                        cv2.putText(out_img, prediction+"  "+segm_label+str(round(conf,2)), (x - 10, y2 + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
                 print("%EOF---------------------------------------------------------------------% \n")
 

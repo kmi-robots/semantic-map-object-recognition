@@ -1,7 +1,7 @@
 import torch
 from embedding_extractor import path_embedding, array_embedding, base_embedding
 import os
-from segment import segment
+from segment import segment, display_mask
 import numpy as np
 from PIL import Image
 import cv2
@@ -252,7 +252,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
         base_path, img_collection = load_jsondata(path_to_bags)
 
-        data = list(reversed(img_collection.values()))[1:]
+        data = list(reversed(img_collection.values()))#[16:]
 
         with open('pt_results/ranking_log.txt', 'a') as outr:
 
@@ -284,12 +284,13 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         print("NOT annotated")
 
                         break
+                    predicted_masks = None
 
                 else:
 
 
                     cv2.imwrite('temp.jpg', img)
-                    predicted_boxes = segment('temp.jpg', img, YOLO=True, w_saliency=False)
+                    predicted_boxes, predicted_masks = segment('temp.jpg', img)
 
                     bboxes, yolo_labels = zip(*predicted_boxes)
 
@@ -371,6 +372,17 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                         cv2.putText(out_img, prediction+"  "+segm_label+str(round(conf,2)), (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                     else:
                         cv2.putText(out_img, prediction+"  "+segm_label+str(round(conf,2)), (x - 10, y2 + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+                    #draw semantic masks if any
+                    if predicted_masks is not None:
+
+                        #print(predicted_masks[idx])
+                        #print(predicted_masks[idx].shape)
+                        mask = predicted_masks[idx]
+
+                        out_img = display_mask(out_img, mask,color)
+
+
 
                 print("%EOF---------------------------------------------------------------------% \n")
 

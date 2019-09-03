@@ -27,11 +27,11 @@ classes = None
 with open(CLASSES, 'r') as f:
     classes = [line.strip() for line in f.readlines()] + ['N/A','saliency region']
 
-scale = 0.00392 # 1/255.  factor
-conf_threshold = 0.01 #0.5
-nms_threshold = 0.1 #0.4
-overlapThresh = 0.1
-low=2000
+scale = 0.00392         # 1/255.  factor
+conf_threshold = 0.01   #0.5
+nms_threshold = 0.1     #0.4
+overlapThresh = 0.4
+low = 2000
 high = 30000
 
 # generate different colors for different classes
@@ -102,6 +102,8 @@ def checkRectangles(rects, overlapThresh, tol=100):
             x_br_2 = coords2[2]
             y_br_2 = coords2[3]
 
+            pos2 = rects.index((coords2, label2))
+
             # If either rectangle 2 is included in rectangle 1
             if (x2 >= x1-tol) and (y2 >= y1-tol) and (x_br_2 <= x_br_1+tol) and (y_br_2 <= y_br_1+tol):
 
@@ -126,8 +128,18 @@ def checkRectangles(rects, overlapThresh, tol=100):
                 #Filter based on that
                 if iou >= overlapThresh:
 
-                    rectsCC.remove((coords2,label2)) #remove it from the rectangle list
-                    rects.remove((coords2,label2))
+                    try:
+
+                        # But keep candidate label in other box
+                        rectsCC[pos] = (coords1, rectsCC[pos][1] + " " + label2)
+
+                        rectsCC.remove((coords2,label2)) #remove it from the rectangle list
+                        rects.remove((coords2,label2))
+
+                    except ValueError:
+
+                        # could be duplicated, it was already removed
+                        continue
 
 
             # or the other way around
@@ -151,8 +163,18 @@ def checkRectangles(rects, overlapThresh, tol=100):
                 # Filter based on that
                 if iou >= overlapThresh:
 
-                    rectsCC.remove((coords1,label1))
-                    rects.remove((coords1,label1))
+                    try:
+                        rectsCC[pos2] = (coords2, rectsCC[pos2][1] + " " + label1)
+
+                        rectsCC.remove((coords1,label1))
+                        rects.remove((coords1,label1))
+
+
+
+                    except ValueError:
+
+                        #could be duplicated, it was already removed
+                        continue
 
 
     # returns the updated list after this check
@@ -182,7 +204,9 @@ def run_YOLO(blob, net, mu=None, w=None, h=None):
             scores = detection[5:]
 
             if np.count_nonzero(scores) > 0:
+
                 class_id = np.argmax(scores)
+
             else:
 
                 class_id = -2 #Cannot conclude on specific class, N/A
@@ -218,11 +242,14 @@ def run_YOLO(blob, net, mu=None, w=None, h=None):
     return boxes, confidences, indices, class_ids
 
 
-def run_FRCNN(img_path, threshold=0.2):
+def run_FRCNN(img_path, threshold=0.15, nms=nms_threshold):
 
-    #Faster RCNN
+    #confidence used to be 0.2
 
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+    #Mask RCNN
+    model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True, box_nms_thresh=0.0001)
+    # Faster RCNN
+    #model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True, box_nms_thresh=0.0001)
     model.eval()
 
     COCO_INSTANCE_CATEGORY_NAMES = [
@@ -244,21 +271,25 @@ def run_FRCNN(img_path, threshold=0.2):
     img = Image.open(img_path)  # Load the image
     transform = T.Compose([T.ToTensor()])  # Defing PyTorch Transform
 
-    img = transform(img)  # Apply the transform to the image
-    pred = model([img])  # Pass the image to the model
+    img = transform(img) # Apply the transform to the image
+
+    pred = model([img])  # Pass the image to the model)
+
     pred_class = [COCO_INSTANCE_CATEGORY_NAMES[i] for i in
                       list(pred[0]['labels'].numpy())]  # Get the Prediction Score
     pred_boxes = [[(i[0], i[1]), (i[2], i[3])] for i in list(pred[0]['boxes'].detach().numpy())]  # Bounding boxes
     pred_score = list(pred[0]['scores'].detach().numpy())
     pred_t = [pred_score.index(x) for x in pred_score if x > threshold][-1]  # Get list of index with score greater than threshold.
+    masks = (pred[0]['masks'] > 0.5).squeeze().detach().cpu().numpy()
     pred_boxes = pred_boxes[:pred_t + 1]
     pred_class = pred_class[:pred_t + 1]
+    masks = masks[:pred_t +1]
 
-    return pred_boxes, pred_class
+    return pred_boxes, pred_class, masks
 
 
 
-def segment(temp_path, img, YOLO=True, w_saliency=True, static=False):
+def segment(temp_path, img, YOLO=False, w_saliency=False, static=False, masks=None):
 
     Width = img.shape[1]
     Height = img.shape[0]
@@ -266,7 +297,6 @@ def segment(temp_path, img, YOLO=True, w_saliency=True, static=False):
     img = cv2.imread(temp_path)
 
     temp = img.copy()
-    temp2 = img.copy()
 
     # Denoise image
     denoised = cv2.fastNlMeansDenoisingColored(temp, None, 10, 10, 7, 15)
@@ -279,7 +309,7 @@ def segment(temp_path, img, YOLO=True, w_saliency=True, static=False):
 
     elif w_saliency and not static:
 
-        saliency_map = get_obj_saliency_map(img)
+        saliency_map = get_obj_saliency_map(denoised)
 
         for i in range(min(saliency_map.shape[0], 10)):
             # for each candidate salient region
@@ -343,12 +373,12 @@ def segment(temp_path, img, YOLO=True, w_saliency=True, static=False):
                 #draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
                 all_boxes.append(([x,y,x+w,y+h], str(classes[class_ids[i]])))
 
-                tmp = img.copy()
+                #tmp = img.copy()
                 #predictions.append((tmp[y:y+h, x:x+w],str(classes[class_ids[i]])))
 
     else:
 
-        fcnn_boxes, fcnn_labels = run_FRCNN(temp_path)
+        fcnn_boxes, fcnn_labels, masks = run_FRCNN(temp_path)
         all_boxes = []
 
         for coords, label in zip(fcnn_boxes, fcnn_labels):
@@ -356,8 +386,46 @@ def segment(temp_path, img, YOLO=True, w_saliency=True, static=False):
             x, y = coords[0]
             x2, y2 = coords[1]
 
+            #area = (int(x2) - int(x) + 1) * (int(y2) - int(y) + 1)
+
+            #if area > 5000:
 
             all_boxes.append(([int(round(x)), int(round(y)), int(round(x2)), int(round(y2))], str(label)))
+
+
+        """
+        blob = cv2.dnn.blobFromImage(denoised, scale, (416, 416), (0, 0, 0), swapRB=True, crop=False)
+
+        net.setInput(blob)
+
+        yolo_boxes, confidences, indices, class_ids = run_YOLO(blob, net, mu=conf_threshold, w=Width, h=Height)
+
+        
+        if len(list(indices)) > 0:
+            # if len(list(boxes))>0:
+
+            for i in indices.flatten():  # for i,box in enumerate(boxes): #
+
+                box = yolo_boxes[i]
+                x = round(box[0])
+                y = round(box[1])
+                w = round(box[2])
+                h = round(box[3])
+
+                # in case negative coordinates are returned
+                if x < 0:
+
+                    x = 0
+
+                elif y < 0:
+
+                    y = 0
+
+                area = (int(x) + int(w) - int(x) + 1) * (int(y) + int(h) - int(y) + 1)
+
+                if area > 3000 and area < 10000:
+                    all_boxes.append(([x, y, x + w, y + h], str(classes[class_ids[i]])))
+        """
 
 
     if w_saliency:
@@ -387,10 +455,22 @@ def segment(temp_path, img, YOLO=True, w_saliency=True, static=False):
 
         #print(np.asarray(all_boxes).shape)
 
-        #Removing overlapping boxes
-        all_boxes = checkRectangles(all_boxes, overlapThresh)
+    #Removing overlapping boxes
 
+    all_boxes = checkRectangles(all_boxes, overlapThresh)
 
+    return all_boxes, masks
 
-    return all_boxes
+def display_mask(img, mask, color, alpha=0.5):
+
+    #Called when Mask RCNN is used and the image is semantically segmented
+    #Not used when just bboxes are available
+    r = np.zeros_like(mask).astype('uint8')
+    g = np.zeros_like(mask).astype('uint8')
+    b = np.zeros_like(mask).astype('uint8')
+
+    r[mask==1], g[mask==1], b[mask==1] = color
+    coloured_mask = np.stack([r,g,b], axis=2)
+
+    return cv2.addWeighted(img, 1, coloured_mask, 0.3, 0)
 

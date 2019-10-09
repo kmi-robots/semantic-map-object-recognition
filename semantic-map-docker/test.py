@@ -11,7 +11,6 @@ import time
 
 
 from common_sense import show_leastconf, correct_floating, extract_spatial, proxy_floor, reverse_map
-
 from data_loaders import BGRtoRGB
 from sklearn.metrics import classification_report, accuracy_score
 from baseline_KNN import run_baseline
@@ -167,7 +166,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
 
     K =args.K
     N =args.N
-    sem = args.sem
+    sem = args.sem if args.sem !='none' else None
     voting = args.Kvoting
 
     baseline = True if args.stage =='baseline' else False
@@ -392,9 +391,7 @@ def test(model, model_checkpoint, data_type, path_to_test, path_to_bags, device,
                 cv2.destroyAllWindows()
 
 
-
                 """Correcting least confident predictions by querying external knowledge"""
-
 
                 weak_idx = show_leastconf(frame_objs)
 

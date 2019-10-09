@@ -3,6 +3,7 @@ from torch import optim
 from torchvision import transforms
 import os
 import argparse
+import rospy
 
 #custom classes and methods
 import data_loaders
@@ -13,6 +14,7 @@ from train import train
 from validate import validate
 from test import test
 from imprint import imprint
+from ROS_IO import ImageConverter
 
 #-----------------------------------------------------------------------------------------#
 
@@ -244,6 +246,19 @@ def main(args):
 
         #Test on held-out set
 
+        #TO-DO inference on input data from sensor in real-time
+        #currently pointing to annotated JSON through path_to_bags
+
+        #Init & start ROS node including a subscriber and a publisher
+
+        from cv_bridge.boost.cv_bridge_boost import getCvType
+
+        rospy.init_node('image_converter', anonymous=True)
+        io = ImageConverter()
+        io.start()
+
+        import sys
+        sys.exit(0)
 
         class_wise_res = test(model, model_checkpoint, input_type, path_to_query_data, path_to_bags,\
                               device, base_trans, path_to_train_embeds, args)
@@ -288,7 +303,7 @@ if __name__ == '__main__':
     parser.add_argument('--resnet', default=True,
                         help='makes ResNet the building block of the CNN, True by default')
 
-    parser.add_argument('--sem', choices=['concept-only', 'full', None], default='full',
+    parser.add_argument('--sem', choices=['concept-only', 'full', 'none'], default='full',
                         help='whether to add the semantic modules at inference time. It includes both ConceptNet and Visual Genome by default'
                              'Set to concept-only to discard Visual Genome or None to test without any semantics')
 
@@ -335,6 +350,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--batch', type=int, default=16,
                         help='Batch size. Defaults to 16')
+
 
     parser.add_argument('--lr', type=float, default=0.0001,
                         help='Learning rate. Defaults to 0.0001')

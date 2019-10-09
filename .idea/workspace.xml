@@ -2,8 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="617a581a-9181-4313-98a8-b4bcfa829686" name="Default Changelist" comment="Adding base model and train on MNIST">
+      <change afterPath="$PROJECT_DIR$/semantic-map-docker/ROS_IO.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/semantic-map-docker/segment.py" beforeDir="false" afterPath="$PROJECT_DIR$/semantic-map-docker/segment.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/semantic-map-docker/siamese_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/semantic-map-docker/siamese_main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/semantic-map-docker/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/semantic-map-docker/test.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -14,13 +15,14 @@
   </component>
   <component name="CoverageDataManager">
     <SUITE FILE_PATH="coverage/semantic_map_object_recognition$ImageNet_attrinit.coverage" NAME="ImageNet_attrinit Coverage Results" MODIFIED="1559575182535" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/semantic-map-docker" />
-    <SUITE FILE_PATH="coverage/semantic_map_object_recognition$siamese_main_py.coverage" NAME="siamese_main.py Coverage Results" MODIFIED="1567516205664" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/semantic-map-docker" />
+    <SUITE FILE_PATH="coverage/semantic_map_object_recognition$siamese_main_py.coverage" NAME="siamese_main.py Coverage Results" MODIFIED="1570640001032" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/semantic-map-docker" />
     <SUITE FILE_PATH="coverage/semantic_map_object_recognition$bag_converter.coverage" NAME="bag_converter Coverage Results" MODIFIED="1558522221821" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/semantic_map_object_recognition$siamese_pytorch_opt.coverage" NAME="siamese_pytorch_opt Coverage Results" MODIFIED="1549994900591" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/semantic_map_object_recognition$segment.coverage" NAME="segment Coverage Results" MODIFIED="1554309345596" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/semantic-map-docker" />
     <SUITE FILE_PATH="coverage/semantic_map_object_recognition$test_visualizedata.coverage" NAME="test_visualizedata Coverage Results" MODIFIED="1560272650491" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/semantic-map-docker" />
     <SUITE FILE_PATH="coverage/semantic_map_object_recognition$siamese_pytorch.coverage" NAME="siamese_pytorch Coverage Results" MODIFIED="1550241402246" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/semantic_map_object_recognition$VG_relations.coverage" NAME="VG_relations Coverage Results" MODIFIED="1559837036243" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/semantic-map-docker" />
+    <SUITE FILE_PATH="coverage/semantic_map_object_recognition$ROS_IO.coverage" NAME="ROS_IO Coverage Results" MODIFIED="1570632558956" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/semantic-map-docker" />
     <SUITE FILE_PATH="coverage/semantic_map_object_recognition$test.coverage" NAME="test Coverage Results" MODIFIED="1559575500040" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/semantic-map-docker" />
   </component>
   <component name="DatabaseView">
@@ -39,13 +41,25 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/semantic-map-docker/siamese_main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="152">
-              <caret line="41" column="40" selection-start-line="41" selection-start-column="40" selection-end-line="41" selection-end-column="40" />
+            <state relative-caret-position="232">
+              <caret line="260" column="18" lean-forward="true" selection-start-line="260" selection-start-column="18" selection-end-line="260" selection-end-column="18" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/semantic-map-docker/ROS_IO.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="489">
+              <caret line="38" column="38" selection-start-line="38" selection-start-column="38" selection-end-line="38" selection-end-column="38" />
+              <folding>
+                <element signature="e#96#108#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -54,8 +68,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/semantic-map-docker/test.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="342">
-              <caret line="391" selection-start-line="391" selection-end-line="391" />
+            <state relative-caret-position="193">
+              <caret line="390" column="39" selection-start-line="389" selection-start-column="16" selection-end-line="390" selection-end-column="39" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
               </folding>
@@ -63,11 +77,23 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/semantic-map-docker/common_sense.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="2489">
+              <caret line="136" selection-start-line="136" selection-end-line="136" />
+              <folding>
+                <element signature="e#1#32#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/semantic-map-docker/segment.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="246">
-              <caret line="471" column="4" selection-start-line="471" selection-start-column="4" selection-end-line="471" selection-end-column="4" />
+            <state relative-caret-position="5453">
+              <caret line="291" column="46" selection-start-line="291" selection-start-column="40" selection-end-line="291" selection-end-column="46" />
               <folding>
                 <element signature="e#210#220#0" expanded="true" />
               </folding>
@@ -86,19 +112,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>two_branch</find>
-      <find>save_frequency</find>
-      <find>metric_avg</find>
-      <find>json</find>
-      <find>segmentation_thresh</find>
-      <find>sthresh</find>
-      <find>STN</find>
-      <find>num_epochs</find>
-      <find>lr</find>
-      <find>epochs</find>
-      <find>keep_embeddings</find>
-      <find>knet</find>
-      <find>15</find>
       <find>baseline</find>
       <find>KNN</find>
       <find>transfer</find>
@@ -113,9 +126,22 @@
       <find>mask</find>
       <find>masks</find>
       <find>COLORS</find>
-      <find>segment</find>
-      <find>cpu</find>
       <find>display_m</find>
+      <find>show</find>
+      <find>csense</find>
+      <find>sem</find>
+      <find>cpu</find>
+      <find>True</find>
+      <find>extract</find>
+      <find>leastconf</find>
+      <find>bboxes</find>
+      <find>w_sali</find>
+      <find>path_to_query_data</find>
+      <find>query</find>
+      <find>segment</find>
+      <find>TO-DO</find>
+      <find>imshow</find>
+      <find>cv</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -168,19 +194,20 @@
         <option value="$PROJECT_DIR$/semantic-map-docker/data_loaders.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/common_sense.py" />
         <option value="$PROJECT_DIR$/README.md" />
-        <option value="$PROJECT_DIR$/semantic-map-docker/siamese_main.py" />
         <option value="$PROJECT_DIR$/.gitignore" />
         <option value="$PROJECT_DIR$/semantic-map-docker/siamese_models.py" />
-        <option value="$PROJECT_DIR$/semantic-map-docker/test.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/segment.py" />
+        <option value="$PROJECT_DIR$/semantic-map-docker/test.py" />
+        <option value="$PROJECT_DIR$/semantic-map-docker/ROS_IO.py" />
+        <option value="$PROJECT_DIR$/semantic-map-docker/siamese_main.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="365" />
-    <option name="y" value="119" />
-    <option name="width" value="917" />
-    <option name="height" value="789" />
+    <option name="x" value="67" />
+    <option name="y" value="25" />
+    <option name="width" value="1853" />
+    <option name="height" value="1055" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
@@ -222,6 +249,11 @@
               <item name="semantic-map-object-recognition" type="462c0819:PsiDirectoryNode" />
               <item name="semantic-map-docker" type="462c0819:PsiDirectoryNode" />
               <item name="ncc-extension" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="semantic-map-object-recognition" type="b2602c69:ProjectViewProjectNode" />
+              <item name="semantic-map-object-recognition" type="462c0819:PsiDirectoryNode" />
+              <item name="utils" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -268,6 +300,28 @@
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/utils/ImageNet_attrinit.py" />
       <option name="PARAMETERS" value="data/imagenet_attributes" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="ROS_IO" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="semantic-map-object-recognition" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/semantic-map-docker" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/semantic-map-docker/ROS_IO.py" />
+      <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="true" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -399,7 +453,7 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/semantic-map-docker/siamese_main.py" />
-      <option name="PARAMETERS" value="json test ./data/KMi_collection/train ./data/KMi_collection/test/tagged_KMi.json ./pt_results/kmish25/embeddings.dat --bboxes segmented" />
+      <option name="PARAMETERS" value="json test ./data/KMi_collection/train ./data/KMi_collection/test/tagged_KMi.json ./pt_results/kmish25/embeddings.dat --bboxes segmented --sem full" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -483,9 +537,11 @@
       <item itemvalue="Python.ImageNet_attrinit" />
       <item itemvalue="Python.VG_relations" />
       <item itemvalue="Python.test_visualizedata" />
+      <item itemvalue="Python.ROS_IO" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.ROS_IO" />
         <item itemvalue="Python.test_visualizedata" />
         <item itemvalue="Python.VG_relations" />
         <item itemvalue="Python.ImageNet_attrinit" />
@@ -599,12 +655,17 @@
       <workItem from="1564060000327" duration="14096000" />
       <workItem from="1564141211053" duration="13275000" />
       <workItem from="1564398395346" duration="2826000" />
-      <workItem from="1567507124071" duration="6172000" />
+      <workItem from="1567507124071" duration="11720000" />
+      <workItem from="1567593221266" duration="1145000" />
+      <workItem from="1568294309694" duration="3525000" />
+      <workItem from="1570547834496" duration="623000" />
+      <workItem from="1570611739279" duration="9323000" />
+      <workItem from="1570637391183" duration="2659000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="769760000" />
+    <option name="totallyTimeSpent" value="792583000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -619,7 +680,7 @@
     <frame x="67" y="25" width="1853" height="1055" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.32982844" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.13835086" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Database Changes" order="0" />
@@ -627,22 +688,22 @@
       <window_info anchor="bottom" id="Message" order="2" />
       <window_info anchor="bottom" id="Find" order="3" weight="0.32972974" />
       <window_info anchor="bottom" id="Run" order="4" weight="0.9664865" />
-      <window_info active="true" anchor="bottom" id="Debug" order="5" sideWeight="0.4964029" visible="true" weight="0.44216216" />
+      <window_info active="true" anchor="bottom" id="Debug" order="5" sideWeight="0.4964029" visible="true" weight="0.40324324" />
       <window_info anchor="bottom" id="Cvs" order="6" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="7" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="8" weight="0.32864866" />
       <window_info anchor="bottom" id="Version Control" order="9" weight="0.32864866" />
       <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.50359714" side_tool="true" weight="0.40864864" />
       <window_info anchor="bottom" id="Messages" order="11" />
-      <window_info anchor="bottom" id="Terminal" order="12" sideWeight="0.7216381" weight="0.25945947" />
-      <window_info anchor="bottom" id="Python Console" order="13" sideWeight="0.4991699" weight="0.42054054" />
+      <window_info anchor="bottom" id="Terminal" order="12" sideWeight="0.7216381" weight="0.2583784" />
+      <window_info anchor="bottom" id="Python Console" order="13" sideWeight="0.4991699" weight="0.26486486" />
       <window_info anchor="right" id="Database" order="0" sideWeight="0.47040972" weight="0.32484782" />
       <window_info anchor="right" id="SciView" order="1" />
       <window_info anchor="right" id="Coverage" order="2" side_tool="true" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="3" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="4" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="5" weight="0.25" />
-      <window_info anchor="right" x="0" y="0" width="413" height="855" id="Documentation" order="6" sideWeight="0.5295903" side_tool="true" visible="true" weight="0.050913114" />
+      <window_info anchor="right" x="0" y="0" width="413" height="855" id="Documentation" order="6" sideWeight="0.5295903" side_tool="true" visible="true" weight="0.016602103" />
     </layout>
     <layout-to-restore>
       <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.2899834" />
@@ -682,6 +743,16 @@
           <line>23</line>
           <option name="timeStamp" value="43" />
         </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/semantic-map-docker/siamese_main.py</url>
+          <line>263</line>
+          <option name="timeStamp" value="44" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/semantic-map-docker/ROS_IO.py</url>
+          <line>36</line>
+          <option name="timeStamp" value="53" />
+        </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
         <breakpoint type="python-exception">
@@ -693,11 +764,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/ncc-extension/setup.py" />
-    <entry file="file://$PROJECT_DIR$/data_preparation.py" />
-    <entry file="file://$PROJECT_DIR$/siamese_pytorch.py" />
-    <entry file="file://$PROJECT_DIR$/ncc-extension/ncc.cpp" />
-    <entry file="file://$PROJECT_DIR$/plot_results.py" />
     <entry file="file://$PROJECT_DIR$/siamese_models.py" />
     <entry file="file://$PROJECT_DIR$/siamese_main.py" />
     <entry file="file://$PROJECT_DIR$/pytorchtools.py" />
@@ -826,13 +892,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/.local/lib/python3.6/site-packages/torch/nn/modules/conv.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="158">
-          <caret line="319" selection-start-line="319" selection-end-line="319" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/semantic-map-docker/imprint.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="418">
@@ -877,16 +936,6 @@
           <caret line="183" selection-start-line="177" selection-start-column="4" selection-end-line="183" />
           <folding>
             <element signature="e#1#10#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/utils/bag_converter.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="833">
-          <caret line="80" column="18" selection-start-line="73" selection-end-line="80" selection-end-column="18" />
-          <folding>
-            <element signature="e#429#442#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -961,16 +1010,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/semantic-map-docker/common_sense.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1691">
-          <caret line="89" selection-start-line="89" selection-end-line="89" />
-          <folding>
-            <element signature="e#1#32#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/README.md">
       <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
         <state split_layout="SPLIT">
@@ -998,23 +1037,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/.local/lib/python3.6/site-packages/torch/nn/modules/module.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-283">
-          <caret line="689" selection-start-line="689" selection-end-line="689" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/semantic-map-docker/siamese_main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="152">
-          <caret line="41" column="40" selection-start-line="41" selection-start-column="40" selection-end-line="41" selection-end-column="40" />
-          <folding>
-            <element signature="e#0#12#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$USER_HOME$/.local/lib/python3.6/site-packages/torchvision/ops/roi_align.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="266">
@@ -1022,22 +1044,104 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/semantic-map-docker/test.py">
+    <entry file="file://$USER_HOME$/.local/lib/python3.6/site-packages/torch/nn/modules/conv.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="342">
-          <caret line="391" selection-start-line="391" selection-end-line="391" />
+        <state relative-caret-position="162">
+          <caret line="337" selection-start-line="337" selection-end-line="337" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.local/lib/python3.6/site-packages/torch/nn/modules/module.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="19">
+          <caret line="689" selection-start-line="689" selection-end-line="689" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file:///opt/ros/melodic/lib/python2.7/dist-packages/rospy/impl/registration.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="174">
+          <caret line="298" selection-start-line="298" selection-end-line="298" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file:///opt/ros/melodic/lib/python2.7/dist-packages/rospy/impl/tcpros_base.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="226">
+          <caret line="104" selection-start-line="104" selection-end-line="104" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file:///opt/ros/melodic/lib/python2.7/dist-packages/rospy/topics.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="229">
+          <caret line="749" selection-start-line="749" selection-end-line="749" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/_pydev_imps/_pydev_execfile.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="323">
+          <caret line="17" selection-start-line="17" selection-end-line="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/utils/bag_converter.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1395">
+          <caret line="80" column="18" selection-start-line="73" selection-end-line="80" selection-end-column="18" />
           <folding>
-            <element signature="e#0#12#0" expanded="true" />
+            <element signature="e#429#442#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/semantic-map-docker/common_sense.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2489">
+          <caret line="136" selection-start-line="136" selection-end-line="136" />
+          <folding>
+            <element signature="e#1#32#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/semantic-map-docker/segment.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="246">
-          <caret line="471" column="4" selection-start-line="471" selection-start-column="4" selection-end-line="471" selection-end-column="4" />
+        <state relative-caret-position="5453">
+          <caret line="291" column="46" selection-start-line="291" selection-start-column="40" selection-end-line="291" selection-end-column="46" />
           <folding>
             <element signature="e#210#220#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/semantic-map-docker/test.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="193">
+          <caret line="390" column="39" selection-start-line="389" selection-start-column="16" selection-end-line="390" selection-end-column="39" />
+          <folding>
+            <element signature="e#0#12#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/semantic-map-docker/ROS_IO.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="489">
+          <caret line="38" column="38" selection-start-line="38" selection-start-column="38" selection-end-line="38" selection-end-column="38" />
+          <folding>
+            <element signature="e#96#108#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/semantic-map-docker/siamese_main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="232">
+          <caret line="260" column="18" lean-forward="true" selection-start-line="260" selection-start-column="18" selection-end-line="260" selection-end-column="18" />
+          <folding>
+            <element signature="e#0#12#0" expanded="true" />
           </folding>
         </state>
       </provider>

@@ -16,7 +16,8 @@ class ImageConverter:
     def __init__(self):
 
         self.img = None
-        self.im_publisher = rospy.Publisher("/image_raw", Image, queue_size=10)
+        # /image_bbox topic to publish results after processing
+        self.im_publisher = rospy.Publisher("/image_bbox", Image, queue_size=1)
         self.bridge = CvBridge()
         self.im_subscriber = rospy.Subscriber("/image_raw", Image, self.callback)
 
@@ -36,14 +37,18 @@ class ImageConverter:
 
             if self.img is not None:
 
+                """
                 #show subscribed image
                 cv2.imshow('cam in',self.img)
                 cv2.waitKey(10000)
                 cv2.destroyAllWindows()
+                """
+
+                processed_img = self.img
 
                 try:
 
-                    self.im_publisher.publish(self.bridge.cv2_to_imgmsg(self.img,'bgr8'))
+                    self.im_publisher.publish(self.bridge.cv2_to_imgmsg(processed_img,'bgr8'))
 
                 except CvBridgeError as e:
 

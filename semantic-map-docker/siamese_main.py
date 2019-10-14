@@ -3,7 +3,7 @@ from torch import optim
 from torchvision import transforms
 import os
 import argparse
-import rospy
+
 
 #custom classes and methods
 import data_loaders
@@ -14,7 +14,7 @@ from train import train
 from validate import validate
 from test import test
 from imprint import imprint
-from ROS_IO import ImageConverter
+
 
 #-----------------------------------------------------------------------------------------#
 
@@ -36,18 +36,18 @@ def main(args):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     input_type = args.it
-    path_to_bags = args.path_to_test
+    path_to_input = args.path_to_test
     train_imgs = args.path_to_train
     path_to_train_embeds = args.emb
-    path_to_query_data = args.query
+    #path_to_query_data = args.query
 
     do_learn = True if args.stage =='train' else False
     feature_extraction = True if args.transfer else False
     keep_embeddings = True if args.store_emb else False
 
     ResNet = True if args.resnet else False
-    KNET = True if args.model=='knet' else False
-    NNET = True if args.model=='nnet' else False
+    KNET = True if args.model == 'knet' else False
+    NNET = True if args.model == 'nnet' else False
     imprinting = False if args.noimprint else True
     two_branch = True if args.twobranch else False
     STN = True if args.stn else False  # Whether to use Spatial Transformer module on input or not
@@ -244,24 +244,26 @@ def main(args):
 
     else:
 
-        #Test on held-out set
+        #Test/Inference phase
 
-        #TO-DO inference on input data from sensor in real-time
-        #currently pointing to annotated JSON through path_to_bags
+        if args.it == 'camera': #Input data from sensor in real-time
 
-        #Init & start ROS node including a subscriber and a publisher
+            # Init & start ROS node including a subscriber and a publisher
+            import rospy
+            from ROS_IO import ImageConverter
 
-        from cv_bridge.boost.cv_bridge_boost import getCvType
+            rospy.init_node('image_converter', anonymous=True)
+            io = ImageConverter()
+            io.start()
 
-        rospy.init_node('image_converter', anonymous=True)
-        io = ImageConverter()
-        io.start()
+            import sys
+            sys.exit(0)
 
-        import sys
-        sys.exit(0)
+            class_wise_res= None
 
-        class_wise_res = test(model, model_checkpoint, input_type, path_to_query_data, path_to_bags,\
-                              device, base_trans, path_to_train_embeds, args)
+        else: #e.g. annotated JSON through path_to_bags
+            class_wise_res = test(model, model_checkpoint, input_type, path_to_input,\
+                                  device, base_trans, path_to_train_embeds, args)
 
         #Test plot grouped by class
         if class_wise_res is not None and args.plots:
@@ -284,8 +286,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     #positional
-    parser.add_argument('it', choices=['reference', 'pickled', 'json'],
-                        help='Input type at test time: can be one between reference, pickled or json (if environment data have been tagged)')
+    parser.add_argument('it', choices=['reference', 'pickled', 'json', 'camera'],
+                        help='Input type at test time: can be one between reference, pickled or json (if environment data have been tagged)'
+                             'Choose camera option for online testing on robot - requires ROS melodic')
     parser.add_argument('stage',choices=['train','test', 'baseline'],
                         help='One between train, test or baseline (i.e., run baseline NN at test time)')
 
@@ -386,7 +389,6 @@ if __name__ == '__main__':
 
     parser.add_argument('--query', default='./data/shapenet20/test/',
                         help='Path to data used with support on test time in prior trials')
-
 
 
     main(parser.parse_args())

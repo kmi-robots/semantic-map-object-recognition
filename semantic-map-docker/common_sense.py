@@ -130,7 +130,6 @@ def query_conceptnet(class_set, path_to_dict):
                 node = requests.get('http://api.conceptnet.io/relatedness?node1=' + \
                                     base + term + '&node2=' + base + term2).json()
 
-
             except:
 
                 time.sleep(60)

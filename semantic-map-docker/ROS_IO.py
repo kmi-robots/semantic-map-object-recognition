@@ -35,7 +35,7 @@ class ImageConverter:
 
             print(e)
 
-    def start(self, path_to_input, args):
+    def start(self, path_to_input, args, model, device, base_trans, rate):
 
         while not rospy.is_shutdown():
 
@@ -48,12 +48,14 @@ class ImageConverter:
                 cv2.destroyAllWindows()
                 """
 
-                processed_img = test(args.it, path_to_input, args=args, camera_img= (self.timestamp,self.img) )
+                processed_img = test(args.it, path_to_input, args, model, device, base_trans, camera_img= (self.timestamp,self.img))
 
+                #print(type(processed_img))
                 #And publish results after processing the single image
                 try:
 
                     self.im_publisher.publish(self.bridge.cv2_to_imgmsg(processed_img,'bgr8'))
+                    rate.sleep() #to make sure it publishes at 1 Hz
 
                 except CvBridgeError as e:
 

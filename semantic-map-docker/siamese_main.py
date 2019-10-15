@@ -253,11 +253,12 @@ def main(args):
             from ROS_IO import ImageConverter
 
             rospy.init_node('image_converter', anonymous=True)
+            rate = rospy.Rate(1)
             io = ImageConverter()
-            io.start(path_to_input,args)  #processing called inside the ROS node directly
+            io.start(path_to_input,args, model, device, base_trans, rate)  #processing called inside the ROS node directly
 
         else:
-            class_wise_res = test(input_type, path_to_input, args=args, model=model, device=device, trans=base_trans, \
+            class_wise_res = test(input_type, path_to_input, args, model, device, base_trans, \
                                   path_to_train_embeds=path_to_train_embeds)
 
         #Test plot grouped by class

@@ -115,6 +115,7 @@ def KNN(input_e, all_embs, K, logfile, voting):
         votes = Counter()
         ids = {}
 
+
         # Majority voting with discounts by distance from top position
         for k, (key, val) in enumerate(ranking[:K]):
 
@@ -135,9 +136,16 @@ def KNN(input_e, all_embs, K, logfile, voting):
             #print("With unique ID %s \n" % key)
             #logfile.write("With unique ID %s \n" % key)
 
+        #print(str(ranking[:K]))
+        #print("RANKING Discounted majority voting")
+        #print(str(votes))
+
         win_label, win_score = max(votes.items(), key=lambda x: x[1])
 
         """
+        print("The winner is "+win_label)
+        print("With confidence score " + win_score)
+        
         win_id = ids[win_label]
         if win_score > 1.0:
 
@@ -157,8 +165,7 @@ def KNN(input_e, all_embs, K, logfile, voting):
 
 
 
-
-def test(model, model_checkpoint, data_type, path_to_input, device, trans, path_to_train_embeds, args):
+def test(data_type, path_to_input,  args=None,camera_img = None, model=None, device=None, trans=None, path_to_train_embeds=None):
 
     K =args.K
     N =args.N
@@ -242,9 +249,15 @@ def test(model, model_checkpoint, data_type, path_to_input, device, trans, path_
 
         #Data acquired from camera online
         base_path = path_to_input
+        timestamp, img = camera_img
+        node = OrderedDict()
+        node["filename"] = timestamp
+        node["regions"] = None
+        node["data"] = img
 
+        img_collection.update(node)
 
-    elif data_type== 'pickled':
+    elif data_type == 'pickled':
 
         # Path points to pickled file, e.g., after extracting and converting data from a rosbag - for offline processing
         # Can be used for the output of the utils/bag_converter.py script
@@ -283,13 +296,13 @@ def test(model, model_checkpoint, data_type, path_to_input, device, trans, path_
                 for file in files:  # For each example in that class
 
                     node = OrderedDict()
-                    node["filename"] =os.path.join(root,file)
+                    node["filename"] = os.path.join(root,file)
                     node["regions"] = None
 
                     img_collection.update(node)
 
     #Process each image
-    data = img_collection.values()
+    data = list(reversed(img_collection.values()))[2:]
 
     with open('pt_results/ranking_log.txt', 'a') as outr:
 
@@ -299,12 +312,13 @@ def test(model, model_checkpoint, data_type, path_to_input, device, trans, path_
 
                 img = data_point["data"]
 
-            except:
+            except Exception as e:
+                #print(e)
                 img = cv2.imread(os.path.join(base_path, data_point["filename"]))
 
             #if ".bag" in data_point["filename"]:
-
-            img = BGRtoRGB(img)
+            if data_type == 'camera' or ".bag" in data_point["filename"]:
+                img = BGRtoRGB(img)
 
             # create copy to draw predictions on
             out_img = img.copy()
@@ -315,7 +329,7 @@ def test(model, model_checkpoint, data_type, path_to_input, device, trans, path_
             print("Analyzing frame %s" % data_point["filename"])
             outr.write("Analyzing frame %s" % data_point["filename"])
 
-            frame_objs=[]
+            frame_objs = []
 
             if data_point["regions"] is not None:
 
@@ -362,7 +376,6 @@ def test(model, model_checkpoint, data_type, path_to_input, device, trans, path_
                 obj = obj[y:y2, x:x2]
 
                 input_emb = array_embedding(model, path_to_state, obj, device, transforms=trans)
-
 
                 """
                 cv2.imwrite('./temp.png', obj)
@@ -420,13 +433,10 @@ def test(model, model_checkpoint, data_type, path_to_input, device, trans, path_
                     out_img = display_mask(out_img, mask,color)
 
 
-
             print("%EOF---------------------------------------------------------------------% \n")
-
-
-            cv2.imshow('union', out_img)
-            cv2.waitKey(10000)
-            cv2.destroyAllWindows()
+            #cv2.imshow('union', out_img)
+            #cv2.waitKey(10000)
+            #cv2.destroyAllWindows()
 
             # Correction via ConceptNet + VG -----------------------------------------------------------------------
             """Correcting least confident predictions by querying external knowledge"""
@@ -438,8 +448,7 @@ def test(model, model_checkpoint, data_type, path_to_input, device, trans, path_
 
                 orig_label, _, coords, _ = frame_objs[weak_idx]
 
-
-                if VG_data and sem=='full':
+                if VG_data and sem == 'full':
 
                     #Pre-correction based on a subset of relations in Visual Genome
                     o_y = coords[1]
@@ -450,8 +459,12 @@ def test(model, model_checkpoint, data_type, path_to_input, device, trans, path_
                     if corrected_flag:
 
                         #Skip further reasoning
-                        corr_preds, _, _, _ = zip(*frame_objs)
+                        corr_preds, _, _, modified_rank = zip(*frame_objs)
+
                         y_pred.extend(corr_preds)
+
+                        print("Ranking for weakest object changed into")
+                        print(str(modified_rank))
                         """
                         #And show corrected image 
                         for lb,cf,(x,y,w,h), rank in frame_objs:
@@ -487,18 +500,17 @@ def test(model, model_checkpoint, data_type, path_to_input, device, trans, path_
 
                     #Take the max w.r.t. semantic relatedness
                     wlabel, wscore = max(new_preds.items(), key=lambda x: x[1])
-
                     wlabel = reverse_map(wlabel)
 
                     print("Based on all nearby objects this is a %s" %wlabel)
                     print("With confidence %f" % wscore)
-
+                    print("Rankings after conceptnet relatedness:")
                     print(sorted(new_preds.items(), key=lambda x: x[1], reverse=True))
 
                     if sem == 'full':
                         # is the rel VG-validated w.r.t. floor?
                         orig_floor = proxy_floor(orig_label, VG_data['on'])
-                        corrected_floor_out =proxy_floor(wlabel, VG_data['on'])
+                        corrected_floor_out = proxy_floor(wlabel, VG_data['on'])
 
 
                         #ONLY if so (or if originally OOV) change it
@@ -526,8 +538,15 @@ def test(model, model_checkpoint, data_type, path_to_input, device, trans, path_
 
                     cv2.imwrite(os.path.join(out_imgs, 'Kground_ImprintedKNET', data_point["filename"]), out_VG)
                     """
-            corr_preds, _ , _, _= zip(*frame_objs)
+            corr_preds, _, _, _ = zip(*frame_objs)
             y_pred.extend(corr_preds)
+
+
+            if data_type == 'camera':
+
+                #pass result to subscriber
+                #Currently supporting one image at a time
+                return out_img
 
 
             # And show corrected image
@@ -555,6 +574,7 @@ def test(model, model_checkpoint, data_type, path_to_input, device, trans, path_
 
     #Only if annotated ground truth is available
     if run_eval:
+
         print("Class-wise test results \n")
         print(classification_report(y_true, y_pred))  # , target_names=all_classes))
         print(accuracy_score(y_true, y_pred))

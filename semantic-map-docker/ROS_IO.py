@@ -8,7 +8,9 @@ and back
 import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge,CvBridgeError
-import cv2
+#import cv2
+
+from test import test
 
 class ImageConverter:
 
@@ -23,15 +25,17 @@ class ImageConverter:
 
 
     def callback(self, msg):
+
         try:
 
             self.img = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
+            self.timestamp = msg.header.stamp.to_sec()
 
         except CvBridgeError as e:
 
             print(e)
 
-    def start(self):
+    def start(self, path_to_input, args):
 
         while not rospy.is_shutdown():
 
@@ -44,8 +48,9 @@ class ImageConverter:
                 cv2.destroyAllWindows()
                 """
 
-                processed_img = self.img
+                processed_img = test(args.it, path_to_input, args=args, camera_img= (self.timestamp,self.img) )
 
+                #And publish results after processing the single image
                 try:
 
                     self.im_publisher.publish(self.bridge.cv2_to_imgmsg(processed_img,'bgr8'))

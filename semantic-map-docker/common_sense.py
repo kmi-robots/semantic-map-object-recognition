@@ -183,6 +183,7 @@ def call_cp_api(word1, word2):
 
 
 def conceptnet_relatedness(subject, candidates, object):
+
     base_score = call_cp_api(subject, object)
 
     pred_subject = subject
@@ -350,6 +351,7 @@ def check_spatial(x1, x2, y1, y2, w1, h1, w2, h2):
 
 
 def replace(ranking, coords, VG_onrel, frame_objs, weak_idx, replaced=False):
+
     for l, s in ranking.most_common():
 
         qlab, syn = formatlabel(l)
@@ -428,6 +430,7 @@ def proxy_floor(object, VG_base):
 
 
 def correct_floating(o_y, o_h, weak_idx, frame_objs, VG_base, rflag=False):
+
     floor_rel = check_horizontal(o_y, o_h)
 
     label, score, coords, ranking = frame_objs[weak_idx]
@@ -469,7 +472,6 @@ def correct_floating(o_y, o_h, weak_idx, frame_objs, VG_base, rflag=False):
 
                     frame_objs, rflag = replace(ranking, coords, VG_onrel, frame_objs, weak_idx)
 
-
                 else:
 
                     print(qlabel + " makes sense on the floor ")
@@ -494,8 +496,10 @@ def show_leastconf(scene_objs):
 
         print("Weakest prediction was \n")
         print(preds[i])
+
         print("With associated ranking scores \n")
         print(rankings[i])
+
 
         return i
 

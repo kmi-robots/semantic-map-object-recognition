@@ -254,19 +254,15 @@ def main(args):
 
             rospy.init_node('image_converter', anonymous=True)
             io = ImageConverter()
-            io.start()
+            io.start(path_to_input,args)  #processing called inside the ROS node directly
 
-            import sys
-            sys.exit(0)
-
-            class_wise_res= None
-
-        else: #e.g. annotated JSON through path_to_bags
-            class_wise_res = test(model, model_checkpoint, input_type, path_to_input,\
-                                  device, base_trans, path_to_train_embeds, args)
+        else:
+            class_wise_res = test(input_type, path_to_input, args=args, model=model, device=device, trans=base_trans, \
+                                  path_to_train_embeds=path_to_train_embeds)
 
         #Test plot grouped by class
         if class_wise_res is not None and args.plots:
+
             #Evaluation only available for data held out from ground truth
             #When evaluating on robot-collected data, rankings are logged anyways
             bar_plot(class_wise_res)
@@ -333,7 +329,7 @@ if __name__ == '__main__':
                     )
 
     parser.add_argument('--bboxes', choices=['true', 'segmented'], default='true',
-                        help='Can be set to decide which bounding boxes to use: maually-annotated/ ground truth,'
+                        help='Can be set to decide which bounding boxes to use: manually-annotated/ ground truth,'
                              'or produced via segmentation'
                         )
 

@@ -30,7 +30,7 @@ with open(CLASSES, 'r') as f:
     classes = [line.strip() for line in f.readlines()] + ['N/A','saliency region']
 
 scale = 0.00392         # 1/255.  factor
-conf_threshold = 0.01   #0.5
+conf_threshold = 0.05 #0.01   #0.5
 nms_threshold = 0.1     #0.4
 overlapThresh = 0.4
 low = 2000

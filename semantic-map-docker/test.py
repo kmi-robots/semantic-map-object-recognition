@@ -448,12 +448,12 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
             if y - 10 > 0:
 
-                cv2.putText(out_img, prediction + "  " + segm_label + str(round(conf, 2)), (x - 10, y - 10),
+                cv2.putText(out_img, prediction + "  " + segm_label + "  "+str(round(conf, 2)), (x - 10, y - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
             else:
 
-                cv2.putText(out_img, prediction + "  " + segm_label + str(round(conf, 2)), (x - 10, y2 + 10),
+                cv2.putText(out_img, prediction + "  " + segm_label + "  "+str(round(conf, 2)), (x - 10, y2 + 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
             # draw semantic masks if any (supports pytorch masks only for now)

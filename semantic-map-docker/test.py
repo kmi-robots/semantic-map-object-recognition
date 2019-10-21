@@ -25,7 +25,6 @@ NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'powe
 n_support = 10
 
 
-
 def compute_similarity(qembedding, train_embeds):
     # Similarity matching against indexed data
 

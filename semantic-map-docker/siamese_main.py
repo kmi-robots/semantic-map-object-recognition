@@ -252,7 +252,7 @@ def main(args):
             import rospy
             from ROS_IO import ImageConverter
 
-            rospy.init_node('image_converter', anonymous=True)
+            rospy.init_node('image_converter') #, anonymous=True)
             rate = rospy.Rate(1)
             io = ImageConverter()
             io.start(path_to_input,args, model, device, base_trans, rate)  #processing called inside the ROS node directly

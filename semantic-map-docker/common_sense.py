@@ -395,6 +395,7 @@ def replace(ranking, coords, VG_onrel, frame_objs, weak_idx, replaced=False):
 
 
 def proxy_floor(object, VG_base):
+
     objl, objsyn = formatlabel(object)
     VG_onrel = VG_base["relations"]
 

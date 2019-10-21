@@ -19,9 +19,9 @@ class ImageConverter:
 
         self.img = None
         # /image_bbox topic to publish results after processing
-        self.im_publisher = rospy.Publisher("/image_bbox", Image, queue_size=1)
+        self.im_publisher = rospy.Publisher("/camera/rgb/image_bbox", Image, queue_size=1)
         self.bridge = CvBridge()
-        self.im_subscriber = rospy.Subscriber("/image_raw", Image, self.callback)
+        self.im_subscriber = rospy.Subscriber("/camera/rgb/image_raw", Image, self.callback)
 
 
     def callback(self, msg):
@@ -41,14 +41,13 @@ class ImageConverter:
 
             if self.img is not None:
 
-                """
-                #show subscribed image
-                cv2.imshow('cam in',self.img)
-                cv2.waitKey(10000)
-                cv2.destroyAllWindows()
-                """
 
-                processed_img = test(args.it, path_to_input, args, model, device, base_trans, camera_img= (self.timestamp,self.img))
+                #show subscribed image
+                #cv2.imshow('cam in',self.img)
+                #cv2.waitKey(10000)
+                #cv2.destroyAllWindows()
+
+                processed_img = test(args.it, path_to_input, args, model, device, base_trans, camera_img=(self.timestamp,self.img))
 
                 #print(type(processed_img))
                 #And publish results after processing the single image

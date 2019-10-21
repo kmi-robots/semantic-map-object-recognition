@@ -5,10 +5,11 @@ regardless of image class/label
 Derived from code at
 https://github.com/meenavyas/Misc/blob/master/ObjectDetectionUsingYolo/ObjectDetectionUsingYolo.ipynb
 """
-
+import torch
 import cv2
 import numpy as np
 import torchvision
+
 from torchvision import transforms as T
 from PIL import Image
 
@@ -21,6 +22,8 @@ CLASSES='./data/yolo/yolov3.txt'
 # 'path to yolo pre-trained weights'
 # wget https://pjreddie.com/media/files/yolov3.weights
 WEIGHTS='./data/yolo/yolov3.weights'
+
+
 
 # read class names from text file
 classes = None
@@ -41,6 +44,24 @@ COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
 # in the architecture
 
 net = cv2.dnn.readNet(WEIGHTS, CONFIG)
+
+#Mask RCNN
+model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True, box_nms_thresh=0.0001)
+
+COCO_INSTANCE_CATEGORY_NAMES = [
+        '__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+        'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'N/A', 'stop sign',
+        'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
+        'elephant', 'bear', 'zebra', 'giraffe', 'N/A', 'backpack', 'umbrella', 'N/A', 'N/A',
+        'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
+        'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+        'bottle', 'N/A', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
+        'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza',
+        'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'N/A', 'dining table',
+        'N/A', 'N/A', 'toilet', 'N/A', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone',
+        'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'N/A', 'book',
+        'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
+    ]
 
 def get_output_layers(net):
 
@@ -242,44 +263,35 @@ def run_YOLO(blob, net, mu=None, w=None, h=None):
     return boxes, confidences, indices, class_ids
 
 
-def run_FRCNN(img_path, threshold=0.15, nms=nms_threshold):
+def run_FRCNN(img, threshold=0.15, nms=nms_threshold):
 
     #confidence used to be 0.2
 
-    #Mask RCNN
-    model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True, box_nms_thresh=0.0001)
     # Faster RCNN
     #model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True, box_nms_thresh=0.0001)
     model.eval()
 
-    COCO_INSTANCE_CATEGORY_NAMES = [
-        '__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
-        'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'N/A', 'stop sign',
-        'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
-        'elephant', 'bear', 'zebra', 'giraffe', 'N/A', 'backpack', 'umbrella', 'N/A', 'N/A',
-        'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
-        'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
-        'bottle', 'N/A', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
-        'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza',
-        'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'N/A', 'dining table',
-        'N/A', 'N/A', 'toilet', 'N/A', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone',
-        'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'N/A', 'book',
-        'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
-    ]
+    #print(np.transpose(img, (2, 0, 1)).shape)
+    #img2 = Image.open('./temp.jpg')  # Load the image
 
+    transform = T.Compose([T.ToPILImage(),T.ToTensor()])  # Defing PyTorch Transform
+    img2= transform(img) # Apply the transform to the image
 
-    img = Image.open(img_path)  # Load the image
-    transform = T.Compose([T.ToTensor()])  # Defing PyTorch Transform
-
-    img = transform(img) # Apply the transform to the image
-
-    pred = model([img])  # Pass the image to the model)
+    #img_wrong = torch.from_numpy(np.transpose(img, (2, 0, 1)))
+    pred = model([img2])#[torch.Tensor(np.transpose(img.copy(), (2, 0, 1)))])  # Pass the image to the model)
 
     pred_class = [COCO_INSTANCE_CATEGORY_NAMES[i] for i in
                       list(pred[0]['labels'].numpy())]  # Get the Prediction Score
     pred_boxes = [[(i[0], i[1]), (i[2], i[3])] for i in list(pred[0]['boxes'].detach().numpy())]  # Bounding boxes
     pred_score = list(pred[0]['scores'].detach().numpy())
-    pred_t = [pred_score.index(x) for x in pred_score if x > threshold][-1]  # Get list of index with score greater than threshold.
+
+    try:
+        pred_t = [pred_score.index(x) for x in pred_score if x > threshold][-1]  # Get list of index with score greater than threshold.
+
+    except IndexError:
+
+        return None, None, None
+
     masks = (pred[0]['masks'] > 0.5).squeeze().detach().cpu().numpy()
     pred_boxes = pred_boxes[:pred_t + 1]
     pred_class = pred_class[:pred_t + 1]
@@ -289,12 +301,12 @@ def run_FRCNN(img_path, threshold=0.15, nms=nms_threshold):
 
 
 
-def segment(temp_path, img, YOLO=False, w_saliency=False, static=False, masks=None):
+def segment(img, YOLO=False, w_saliency=False, static=False, masks=None):
 
     Width = img.shape[1]
     Height = img.shape[0]
 
-    img = cv2.imread(temp_path)
+    #img = cv2.imread(temp_path)
 
     temp = img.copy()
 
@@ -378,19 +390,19 @@ def segment(temp_path, img, YOLO=False, w_saliency=False, static=False, masks=No
 
     else:
 
-        fcnn_boxes, fcnn_labels, masks = run_FRCNN(temp_path)
+        fcnn_boxes, fcnn_labels, masks = run_FRCNN(temp)
         all_boxes = []
 
-        for coords, label in zip(fcnn_boxes, fcnn_labels):
+        if fcnn_boxes is not None:
 
-            x, y = coords[0]
-            x2, y2 = coords[1]
+            for coords, label in zip(fcnn_boxes, fcnn_labels):
 
-            #area = (int(x2) - int(x) + 1) * (int(y2) - int(y) + 1)
+                x, y = coords[0]
+                x2, y2 = coords[1]
 
-            #if area > 5000:
+                #if area > 5000:
 
-            all_boxes.append(([int(round(x)), int(round(y)), int(round(x2)), int(round(y2))], str(label)))
+                all_boxes.append(([int(round(x)), int(round(y)), int(round(x2)), int(round(y2))], str(label)))
 
 
         """
@@ -456,8 +468,8 @@ def segment(temp_path, img, YOLO=False, w_saliency=False, static=False, masks=No
         #print(np.asarray(all_boxes).shape)
 
     #Removing overlapping boxes
-
-    all_boxes = checkRectangles(all_boxes, overlapThresh)
+    if len(all_boxes)>1:
+        all_boxes = checkRectangles(all_boxes, overlapThresh)
 
     return all_boxes, masks
 

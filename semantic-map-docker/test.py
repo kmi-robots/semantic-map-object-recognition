@@ -228,7 +228,9 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
 
     COLORS = np.random.uniform(0, 255, size=(len(all_classes), 3))
 
-    if os.path.isfile(path_to_VG):
+    VG_data=None
+
+    if sem is not None and os.path.isfile(path_to_VG):
 
         start = time.time()
         print("Loading Visual Genome spatial relations...")
@@ -317,9 +319,9 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
         data = img_collection
 
         #returning processed img directly (for ROS publisher)
-        output_img, _, _, _ = run_processing_pipeline(data, base_path, data_type, args, model, path_to_state, device, trans, cardinalities, COLORS, all_classes, \
+        output_imgs, _, _, _ = run_processing_pipeline(data, base_path, data_type, args, model, path_to_state, device, trans, cardinalities, COLORS, all_classes, \
                                                                K, sem, voting, VG_data, y_true, y_pred, embedding_space)
-        return output_img
+        return output_imgs
 
     #Evaluation------------------------------------------------------------------------------------------------
 
@@ -357,11 +359,12 @@ def run_processing_pipeline(data_point, base_path, data_type, args, model, path_
     # create copy to draw predictions on
     out_img = img.copy()
     out_VG = img.copy()
-    out_CP = img.copy()
+    #out_CP = img.copy()
 
     print("%-----------------------------------------------------------------------% \n")
     print("Analyzing frame %s" % data_point["filename"])
 
+    whole_start = time.time()
 
     frame_objs = []
 
@@ -376,222 +379,236 @@ def run_processing_pipeline(data_point, base_path, data_type, args, model, path_
     else:
 
         # segment it
-        cv2.imwrite('temp.jpg', img)
-        predicted_boxes, predicted_masks = segment('temp.jpg', img)
-        bboxes, yolo_labels = zip(*predicted_boxes)
+        #cv2.imwrite('temp.jpg', img)
+        predicted_boxes, predicted_masks = segment(img)
+        try:
+            bboxes, yolo_labels = zip(*predicted_boxes)
+        except ValueError:
+            #no bboxes returned
+            bboxes= None
+            yolo_labels = None
         run_eval = False
 
-    # For each bounding box
-    for idx, region in enumerate(bboxes):
+    if bboxes is not None:
 
-        # create a copy, crop it to region and store ground truth label
+        # For each bounding box
+        for idx, region in enumerate(bboxes):
 
-        obj = img.copy()
-        segm_label = ''
+            # create a copy, crop it to region and store ground truth label
 
-        if args.bboxes == 'true':
+            obj = img.copy()
+            segm_label = ''
 
-            box_data = region["shape_attributes"]
-            x = box_data["x"]
-            y = box_data["y"]
-            x2 = x + box_data["width"]
-            y2 = y + box_data["height"]
+            if args.bboxes == 'true':
 
-        else:
+                box_data = region["shape_attributes"]
+                x = box_data["x"]
+                y = box_data["y"]
+                x2 = x + box_data["width"]
+                y2 = y + box_data["height"]
 
-            segm_label = yolo_labels[idx]
+            else:
 
-            x = region[0]
-            x2 = region[2]
-            y = region[1]
-            y2 = region[3]
+                segm_label = yolo_labels[idx]
 
-        obj = obj[y:y2, x:x2]
+                x = region[0]
+                x2 = region[2]
+                y = region[1]
+                y2 = region[3]
 
-        input_emb = array_embedding(model, path_to_state, obj, device, transforms=trans)
+            obj = obj[y:y2, x:x2]
 
-        """
-        cv2.imwrite('./temp.png', obj)
-        basein_emb = base_embedding('./temp.png', device, trans)
-        """
-        try:
-            gt_label = region["region_attributes"]["class"]
+            input_emb = array_embedding(model, path_to_state, obj, device, transforms=trans)
 
-        except:
-            # not annotated yet
-            gt_label = 'N/A'
+            """
+            cv2.imwrite('./temp.png', obj)
+            basein_emb = base_embedding('./temp.png', device, trans)
+            """
+            try:
+                gt_label = region["region_attributes"]["class"]
 
-        # Visualize current object
-        """
-        cv2.imshow('union', obj)
-        cv2.waitKey(5000)
-        cv2.destroyAllWindows()
-        """
+            except:
+                # not annotated yet
+                gt_label = 'N/A'
 
-        cardinalities[gt_label] += 1
-        y_true.append(gt_label)
+            # Visualize current object
+            """
+            cv2.imshow('union', obj)
+            cv2.waitKey(5000)
+            cv2.destroyAllWindows()
+            """
 
-        # Find (K)NN from input embedding
-        """
-        print("%%%%%%%The baseline NN predicted %%%%%%%%%%%%%%%%%%%%%")
-        baseline_pred = KNN(basein_emb, base_embedding_space, K, outr, voting)
-        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-        """
+            cardinalities[gt_label] += 1
+            y_true.append(gt_label)
 
-        # print("%%%%%%%The trained model predicted %%%%%%%%%%%%%%%%%%%%%")
-        prediction, conf, rank_confs = KNN(input_emb, embedding_space, K, voting)
-        # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+            # Find (K)NN from input embedding
+            """
+            print("%%%%%%%The baseline NN predicted %%%%%%%%%%%%%%%%%%%%%")
+            baseline_pred = KNN(basein_emb, base_embedding_space, K, outr, voting)
+            print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+            """
 
-        frame_objs.append((prediction, conf, (x, y, x2, y2), rank_confs))
-        # y_pred.append(prediction)
+            # print("%%%%%%%The trained model predicted %%%%%%%%%%%%%%%%%%%%%")
+            prediction, conf, rank_confs = KNN(input_emb, embedding_space, K, voting)
+            # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
-        # draw prediction
-        color = COLORS[all_classes.index(prediction)]
-        cv2.rectangle(out_img, (x, y), (x2, y2), color, 2)
+            frame_objs.append((prediction, conf, (x, y, x2, y2), rank_confs))
+            # y_pred.append(prediction)
 
-        if y - 10 > 0:
+            # draw prediction
+            color = COLORS[all_classes.index(prediction)]
+            cv2.rectangle(out_img, (x, y), (x2, y2), color, 2)
 
-            cv2.putText(out_img, prediction + "  " + segm_label + str(round(conf, 2)), (x - 10, y - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            if y - 10 > 0:
 
-        else:
+                cv2.putText(out_img, prediction + "  " + segm_label + str(round(conf, 2)), (x - 10, y - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-            cv2.putText(out_img, prediction + "  " + segm_label + str(round(conf, 2)), (x - 10, y2 + 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            else:
 
-        # draw semantic masks if any
-        if predicted_masks is not None:
-            # print(predicted_masks[idx])
-            # print(predicted_masks[idx].shape)
-            mask = predicted_masks[idx]
+                cv2.putText(out_img, prediction + "  " + segm_label + str(round(conf, 2)), (x - 10, y2 + 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-            out_img = display_mask(out_img, mask, color)
+            # draw semantic masks if any
+            if predicted_masks is not None:
+                # print(predicted_masks[idx])
+                # print(predicted_masks[idx].shape)
+                mask = predicted_masks[idx]
 
+                out_img = display_mask(out_img, mask, color)
+
+
+        # Correction via ConceptNet + VG -----------------------------------------------------------------------
+        """Correcting least confident predictions by querying external knowledge"""
+        if sem is not None:# Only if semantic modules are to be included
+
+            weak_idx = show_leastconf(frame_objs)
+
+            if weak_idx is not None:
+
+                orig_label, _, coords, _ = frame_objs[weak_idx]
+
+                if VG_data and sem == 'full':
+
+                    # Pre-correction based on a subset of relations in Visual Genome
+                    o_y = coords[1]
+                    o_h = coords[3]
+
+                    frame_objs, corrected_flag = correct_floating(o_y, o_h, weak_idx, frame_objs, VG_data['on'])
+
+                    if corrected_flag:
+                        # Skip further reasoning
+                        corr_preds, _, _, modified_rank = zip(*frame_objs)
+
+                        y_pred.extend(corr_preds)
+
+                        print("Ranking for weakest object changed into")
+                        print(str(modified_rank))
+
+                        #And show corrected image
+                        for lb,cf,(x,y,w,h), rank in frame_objs:
+
+                            color = COLORS[all_classes.index(lb)]
+                            cv2.rectangle(out_VG, (x, y), (x + w, y + h), color, 2)
+
+                            if y - 10 > 0:
+                                cv2.putText(out_VG, lb, (x - 10, y - 10),
+                                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                            else:
+                                cv2.putText(out_VG, lb, (x - 10, y + h + 10),
+                                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+                        """
+                        cv2.imwrite(os.path.join(out_imgs, 'Kground_ImprintedKNET', data_point["filename"]), out_VG)
+                        """
+                        return [out_img, out_VG], y_pred, y_true, run_eval  # Continue to next image
+
+                if len(frame_objs) <= 1:
+
+                    print("Only one object found in this scene...skipping contextual reasoning")
+                    corr_preds, _, _, _ = zip(*frame_objs)
+                    y_pred.extend(corr_preds)
+
+                    # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
+
+                    return [out_img, out_VG], y_pred, y_true, run_eval  #Continue to next image
+
+                new_preds = extract_spatial(weak_idx, frame_objs, VG_base=VG_data)
+
+                if new_preds:
+
+                    # Take the max w.r.t. semantic relatedness
+                    wlabel, wscore = max(new_preds.items(), key=lambda x: x[1])
+                    wlabel = reverse_map(wlabel)
+
+                    print("Based on all nearby objects this is a %s" % wlabel)
+                    print("With confidence %f" % wscore)
+                    print("Rankings after conceptnet relatedness:")
+                    print(sorted(new_preds.items(), key=lambda x: x[1], reverse=True))
+
+                    if sem == 'full':
+                        # is the rel VG-validated w.r.t. floor?
+                        orig_floor = proxy_floor(orig_label, VG_data['on'])
+                        corrected_floor_out = proxy_floor(wlabel, VG_data['on'])
+
+                        # ONLY if so (or if originally OOV) change it
+                        if orig_floor == 'no synset' or orig_floor == corrected_floor_out:
+
+                            print("Accepting proposed correction")
+                            frame_objs[weak_idx] = (wlabel.replace('_', '-'), wscore, coords, new_preds)
+                        else:
+
+                            print("Rejecting suggested correction: replacement does not make sense w.r.t floor")
+
+
+                    for lb, cf, (x, y, w, h), rank in frame_objs:
+
+                        color = COLORS[all_classes.index(lb)]
+                        cv2.rectangle(out_VG, (x, y), (x + w, y + h), color, 2)
+
+                        if y - 10 > 0:
+                            cv2.putText(out_VG, lb, (x - 10, y - 10),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                        else:
+                            cv2.putText(out_VG, lb, (x - 10, y + h + 10),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                    """
+                    cv2.imwrite(os.path.join(out_imgs, 'Kground_ImprintedKNET', data_point["filename"]), out_VG)
+                    """
+            corr_preds, _, _, _ = zip(*frame_objs)
+            y_pred.extend(corr_preds)
+
+            if data_type == 'camera':
+                # pass result to subscriber
+                # Currently supporting one image at a time
+                return [out_img, out_VG], y_pred, y_true, run_eval
+
+            # And show corrected image
+            """
+            for lb, cf, (x, y, w, h), rank in frame_objs:
+        
+                color = COLORS[all_classes.index(lb)]
+                cv2.rectangle(out_CP, (x, y), (x + w, y + h), color, 2)
+        
+                if y - 10 > 0:
+                    cv2.putText(out_CP, lb, (x - 10, y - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                else:
+                    cv2.putText(out_CP, lb, (x - 10, y + h + 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        
+        
+            cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET_ConceptRel', data_point["filename"]), out_CP)
+            """
+    else:
+
+        print("No bboxes above threshold found by segmentation module")
+
+    print("Took %f seconds " % (time.time() - whole_start))
     print("%EOF---------------------------------------------------------------------% \n")
     # cv2.imshow('union', out_img)
     # cv2.waitKey(10000)
     # cv2.destroyAllWindows()
 
-    # Correction via ConceptNet + VG -----------------------------------------------------------------------
-    """Correcting least confident predictions by querying external knowledge"""
-
-    weak_idx = show_leastconf(frame_objs)
-
-    if weak_idx is not None and sem is not None:  # Only if semantic modules are to be included
-
-        orig_label, _, coords, _ = frame_objs[weak_idx]
-
-        if VG_data and sem == 'full':
-
-            # Pre-correction based on a subset of relations in Visual Genome
-            o_y = coords[1]
-            o_h = coords[3]
-
-            frame_objs, corrected_flag = correct_floating(o_y, o_h, weak_idx, frame_objs, VG_data['on'])
-
-            if corrected_flag:
-                # Skip further reasoning
-                corr_preds, _, _, modified_rank = zip(*frame_objs)
-
-                y_pred.extend(corr_preds)
-
-                print("Ranking for weakest object changed into")
-                print(str(modified_rank))
-                """
-                #And show corrected image 
-                for lb,cf,(x,y,w,h), rank in frame_objs:
-
-                    color = COLORS[all_classes.index(lb)]
-                    cv2.rectangle(out_VG, (x, y), (x + w, y + h), color, 2)
-
-                    if y - 10 > 0:
-                        cv2.putText(out_VG, lb, (x - 10, y - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-                    else:
-                        cv2.putText(out_VG, lb, (x - 10, y + h + 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-                cv2.imwrite(os.path.join(out_imgs, 'Kground_ImprintedKNET', data_point["filename"]), out_VG)
-                """
-                return out_img, y_pred, y_true, run_eval  # Continue to next image
-
-        if len(frame_objs) <= 1:
-
-            print("Only one object found in this scene...skipping contextual reasoning")
-            corr_preds, _, _, _ = zip(*frame_objs)
-            y_pred.extend(corr_preds)
-
-            # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
-
-            return out_img, y_pred, y_true, run_eval  #Continue to next image
-
-        new_preds = extract_spatial(weak_idx, frame_objs, VG_base=VG_data)
-
-        if new_preds:
-
-            # Take the max w.r.t. semantic relatedness
-            wlabel, wscore = max(new_preds.items(), key=lambda x: x[1])
-            wlabel = reverse_map(wlabel)
-
-            print("Based on all nearby objects this is a %s" % wlabel)
-            print("With confidence %f" % wscore)
-            print("Rankings after conceptnet relatedness:")
-            print(sorted(new_preds.items(), key=lambda x: x[1], reverse=True))
-
-            if sem == 'full':
-                # is the rel VG-validated w.r.t. floor?
-                orig_floor = proxy_floor(orig_label, VG_data['on'])
-                corrected_floor_out = proxy_floor(wlabel, VG_data['on'])
-
-                # ONLY if so (or if originally OOV) change it
-                if orig_floor == 'no synset' or orig_floor == corrected_floor_out:
-
-                    print("Accepting proposed correction")
-                    frame_objs[weak_idx] = (wlabel.replace('_', '-'), wscore, coords, new_preds)
-                else:
-
-                    print("Rejecting suggested correction: replacement does not make sense w.r.t floor")
-
-            """
-            for lb, cf, (x, y, w, h), rank in frame_objs:
-
-                color = COLORS[all_classes.index(lb)]
-                cv2.rectangle(out_VG, (x, y), (x + w, y + h), color, 2)
-
-                if y - 10 > 0:
-                    cv2.putText(out_VG, lb, (x - 10, y - 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-                else:
-                    cv2.putText(out_VG, lb, (x - 10, y + h + 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-            cv2.imwrite(os.path.join(out_imgs, 'Kground_ImprintedKNET', data_point["filename"]), out_VG)
-            """
-    corr_preds, _, _, _ = zip(*frame_objs)
-    y_pred.extend(corr_preds)
-
-    if data_type == 'camera':
-        # pass result to subscriber
-        # Currently supporting one image at a time
-        return out_img, y_pred, y_true, run_eval
-
-    # And show corrected image
-    """
-    for lb, cf, (x, y, w, h), rank in frame_objs:
-
-        color = COLORS[all_classes.index(lb)]
-        cv2.rectangle(out_CP, (x, y), (x + w, y + h), color, 2)
-
-        if y - 10 > 0:
-            cv2.putText(out_CP, lb, (x - 10, y - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-        else:
-            cv2.putText(out_CP, lb, (x - 10, y + h + 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-
-    cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET_ConceptRel', data_point["filename"]), out_CP)
-    """
-
     # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
-    return out_img, y_pred, y_true, run_eval
+    return [out_img, out_VG], y_pred, y_true, run_eval

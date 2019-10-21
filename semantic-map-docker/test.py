@@ -456,14 +456,15 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
                 cv2.putText(out_img, prediction + "  " + segm_label + str(round(conf, 2)), (x - 10, y2 + 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-            # draw semantic masks if any
+            # draw semantic masks if any (supports pytorch masks only for now)
+            """
             if predicted_masks is not None:
                 # print(predicted_masks[idx])
                 # print(predicted_masks[idx].shape)
                 mask = predicted_masks[idx]
 
                 out_img = display_mask(out_img, mask, color)
-
+            """
 
         # Correction via ConceptNet + VG -----------------------------------------------------------------------
         """Correcting least confident predictions by querying external knowledge"""

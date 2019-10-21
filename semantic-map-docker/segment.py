@@ -24,7 +24,6 @@ CLASSES='./data/yolo/yolov3.txt'
 WEIGHTS='./data/yolo/yolov3.weights'
 
 
-
 # read class names from text file
 classes = None
 with open(CLASSES, 'r') as f:
@@ -43,10 +42,23 @@ COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
 # function to get the output layer names
 # in the architecture
 
-net = cv2.dnn.readNet(WEIGHTS, CONFIG)
+yolonet = cv2.dnn.readNet(WEIGHTS, CONFIG)
+
+
 
 #Mask RCNN
-model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True, box_nms_thresh=0.0001)
+#segm_model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True, box_nms_thresh=0.0001)
+# Faster RCNN
+# model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True, box_nms_thresh=0.0001)
+#segm_model.eval()
+
+#Loading Mask RCNN through OpenCV instead
+textGraph = "./data/opencv-zoo/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt" #created through opencv-4.0.0/samples/dnn/tf_text_graph_mask_rcnn.py
+modelWeights = "./data/opencv-zoo/mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
+segm_model = cv2.dnn.readNetFromTensorflow(modelWeights, textGraph)
+segm_model.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+segm_model.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+
 
 COCO_INSTANCE_CATEGORY_NAMES = [
         '__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
@@ -202,8 +214,7 @@ def checkRectangles(rects, overlapThresh, tol=100):
     return rectsCC
 
 
-def run_YOLO(blob, net, mu=None, w=None, h=None):
-
+def run_YOLO(net, mu=None, w=None, h=None):
 
     # run inference through the network
     # and gather predictions from output layers
@@ -263,13 +274,53 @@ def run_YOLO(blob, net, mu=None, w=None, h=None):
     return boxes, confidences, indices, class_ids
 
 
+def run_FRCNN_cv2(net,W, H, threshold=0.15):
+
+    # Run the forward pass to get output from the output layers
+    boxes, masks = net.forward(['detection_out_final', 'detection_masks'])
+
+    # Output size of masks is NxCxHxW where
+    # N - number of detected boxes
+    # C - number of classes (excluding background)
+    # HxW - segmentation shape
+    numDetections = boxes.shape[2]
+
+    pred_boxes=[]
+    pred_class=[]
+    pred_masks=[]
+
+    for i in range(numDetections):
+
+        box = boxes[0,0, i, :]
+        mask = masks[i]
+        score = box[2]
+        id = int(box[1])
+
+        if score > threshold:
+
+            pred_class.append(COCO_INSTANCE_CATEGORY_NAMES[id])
+
+            left = int(W * box[3])
+            top = int(H * box[4])
+            right = int(W * box[5])
+            bottom = int(H * box[6])
+
+            left = max(0, min(left, W - 1))
+            top = max(0, min(top, H - 1))
+            right = max(0, min(right, W - 1))
+            bottom = max(0, min(bottom, H - 1))
+
+            pred_boxes.append([(left,top),(right,bottom)])
+            pred_masks.append(mask[id])
+
+
+    return pred_boxes, pred_class, pred_masks
+
+
+
 def run_FRCNN(img, threshold=0.15, nms=nms_threshold):
 
     #confidence used to be 0.2
-
-    # Faster RCNN
-    #model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True, box_nms_thresh=0.0001)
-    model.eval()
 
     #print(np.transpose(img, (2, 0, 1)).shape)
     #img2 = Image.open('./temp.jpg')  # Load the image
@@ -278,7 +329,7 @@ def run_FRCNN(img, threshold=0.15, nms=nms_threshold):
     img2= transform(img) # Apply the transform to the image
 
     #img_wrong = torch.from_numpy(np.transpose(img, (2, 0, 1)))
-    pred = model([img2])#[torch.Tensor(np.transpose(img.copy(), (2, 0, 1)))])  # Pass the image to the model)
+    pred = segm_model([img2])#[torch.Tensor(np.transpose(img.copy(), (2, 0, 1)))])  # Pass the image to the model)
 
     pred_class = [COCO_INSTANCE_CATEGORY_NAMES[i] for i in
                       list(pred[0]['labels'].numpy())]  # Get the Prediction Score
@@ -301,7 +352,7 @@ def run_FRCNN(img, threshold=0.15, nms=nms_threshold):
 
 
 
-def segment(img, YOLO=False, w_saliency=False, static=False, masks=None):
+def segment(img, YOLO=True, w_saliency=False, static=False, masks=None):
 
     Width = img.shape[1]
     Height = img.shape[0]
@@ -312,6 +363,7 @@ def segment(img, YOLO=False, w_saliency=False, static=False, masks=None):
 
     # Denoise image
     denoised = cv2.fastNlMeansDenoisingColored(temp, None, 10, 10, 7, 15)
+
 
     if w_saliency and static:
 
@@ -331,26 +383,14 @@ def segment(img, YOLO=False, w_saliency=False, static=False, masks=None):
 
             #draw_bounding_box(output, -1, None, startX, startY, endX, endY)
 
-
     if YOLO:
-        #Visualise binarised saliency regions
-        #cv2.imshow('Saliency',bin)
-        #cv2.waitKey(5000)
-        #cv2.destroyAllWindows()
-
-
-        #Visualise bboxes for saliency regions only
-        #cv2.imshow('Saliency', img)
-        #cv2.waitKey(5000)
-        #cv2.destroyAllWindows()
-
-        # set input blob for the network
 
         blob = cv2.dnn.blobFromImage(denoised, scale, (416, 416), (0, 0, 0), swapRB=True, crop=False)
 
-        net.setInput(blob)
+        # set input blob for the network
+        yolonet.setInput(blob)
 
-        yolo_boxes, confidences, indices, class_ids = run_YOLO(blob, net, mu=conf_threshold, w=Width,h=Height)
+        yolo_boxes, confidences, indices, class_ids = run_YOLO(yolonet, mu=conf_threshold, w=Width,h=Height)
 
         #yolo_map = np.zeros_like(saliency_map)
         #predictions = []
@@ -390,7 +430,12 @@ def segment(img, YOLO=False, w_saliency=False, static=False, masks=None):
 
     else:
 
-        fcnn_boxes, fcnn_labels, masks = run_FRCNN(temp)
+        blob = cv2.dnn.blobFromImage(denoised, swapRB=True, crop=False)
+
+        segm_model.setInput(blob)
+
+        fcnn_boxes, fcnn_labels, masks = run_FRCNN_cv2(segm_model, Width, Height)  #run_FCRNN(denoised)
+
         all_boxes = []
 
         if fcnn_boxes is not None:
@@ -403,41 +448,6 @@ def segment(img, YOLO=False, w_saliency=False, static=False, masks=None):
                 #if area > 5000:
 
                 all_boxes.append(([int(round(x)), int(round(y)), int(round(x2)), int(round(y2))], str(label)))
-
-
-        """
-        blob = cv2.dnn.blobFromImage(denoised, scale, (416, 416), (0, 0, 0), swapRB=True, crop=False)
-
-        net.setInput(blob)
-
-        yolo_boxes, confidences, indices, class_ids = run_YOLO(blob, net, mu=conf_threshold, w=Width, h=Height)
-
-        
-        if len(list(indices)) > 0:
-            # if len(list(boxes))>0:
-
-            for i in indices.flatten():  # for i,box in enumerate(boxes): #
-
-                box = yolo_boxes[i]
-                x = round(box[0])
-                y = round(box[1])
-                w = round(box[2])
-                h = round(box[3])
-
-                # in case negative coordinates are returned
-                if x < 0:
-
-                    x = 0
-
-                elif y < 0:
-
-                    y = 0
-
-                area = (int(x) + int(w) - int(x) + 1) * (int(y) + int(h) - int(y) + 1)
-
-                if area > 3000 and area < 10000:
-                    all_boxes.append(([x, y, x + w, y + h], str(classes[class_ids[i]])))
-        """
 
 
     if w_saliency:
@@ -468,8 +478,11 @@ def segment(img, YOLO=False, w_saliency=False, static=False, masks=None):
         #print(np.asarray(all_boxes).shape)
 
     #Removing overlapping boxes
+
     if len(all_boxes)>1:
+        
         all_boxes = checkRectangles(all_boxes, overlapThresh)
+
 
     return all_boxes, masks
 

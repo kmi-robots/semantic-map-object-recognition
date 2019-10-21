@@ -195,6 +195,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
 
 
     sem = args.sem if args.sem != 'none' else None
+
     voting = args.Kvoting
 
     path_to_space = os.path.join(path_to_input.split('KMi_collection')[0],
@@ -228,7 +229,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
 
     COLORS = np.random.uniform(0, 255, size=(len(all_classes), 3))
 
-    VG_data=None
+    VG_data = None
 
     if sem is not None and os.path.isfile(path_to_VG):
 
@@ -239,27 +240,21 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
 
         print("Took %f seconds " % (time.time() - start))
 
-    img_collection= OrderedDict()
+    img_collection = OrderedDict()
 
-    if data_type == 'json':
+    if data_type == 'camera':
+        # Data acquired from camera online
+        # Initialises and returns loaded data spaces only once
+
+        return VG_data, embedding_space, cardinalities,COLORS, all_classes
+
+
+    elif data_type == 'json':
 
         #Path points to a VIA Annotated JSON file
         base_path, img_collection = load_jsondata(path_to_input)
         #data = list(reversed(img_collection.values()))#[16:]
 
-    elif data_type == 'camera':
-
-        #Data acquired from camera online
-        #Assumption: only one image at a time, img_collection is dictionary of one node
-
-        base_path = path_to_input
-        timestamp, img = camera_img
-        #img_collection = {}
-        img_collection["filename"] = str(timestamp)
-        img_collection["regions"] = None
-        img_collection["data"] = img
-
-        #img_collection.update(node)
 
     elif data_type == 'pickled':
 
@@ -305,23 +300,15 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
                     img_collection.update(node)
 
     #Image Processing------------------------------------------------------------------------------------------
-    if data_type !='camera':
+    #if data_type !='camera':
 
-        data = img_collection.values()
-        #batch of multiple images to process
-        for data_point in data:  # reversed(img_collection.values()):
+    data = img_collection.values()
+    #batch of multiple images to process
+    for data_point in data:  # reversed(img_collection.values()):
 
-            _, y_pred, y_true, run_eval = run_processing_pipeline(data_point, base_path, data_type, args, model, path_to_state, device, trans, cardinalities, COLORS, all_classes, \
-                                                               K, sem, voting, VG_data, y_true, y_pred, embedding_space)
+        _, y_pred, y_true, run_eval = run_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
+                                                           K, sem, voting, VG_data, y_true, y_pred, embedding_space)
 
-    else:
-        #Online, one image at a time from camera
-        data = img_collection
-
-        #returning processed img directly (for ROS publisher)
-        output_imgs, _, _, _ = run_processing_pipeline(data, base_path, data_type, args, model, path_to_state, device, trans, cardinalities, COLORS, all_classes, \
-                                                               K, sem, voting, VG_data, y_true, y_pred, embedding_space)
-        return output_imgs
 
     #Evaluation------------------------------------------------------------------------------------------------
 
@@ -336,7 +323,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
     return None
 
 
-def run_processing_pipeline(data_point, base_path, data_type, args, model, path_to_state, device, trans, cardinalities, COLORS, all_classes, \
+def run_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
                                                            K, sem, voting, VG_data, y_true, y_pred, embedding_space):
     #print(type(data_point))
 
@@ -418,7 +405,7 @@ def run_processing_pipeline(data_point, base_path, data_type, args, model, path_
 
             obj = obj[y:y2, x:x2]
 
-            input_emb = array_embedding(model, path_to_state, obj, device, transforms=trans)
+            input_emb = array_embedding(model, obj, device, transforms=trans)
 
             """
             cv2.imwrite('./temp.png', obj)
@@ -480,7 +467,7 @@ def run_processing_pipeline(data_point, base_path, data_type, args, model, path_
 
         # Correction via ConceptNet + VG -----------------------------------------------------------------------
         """Correcting least confident predictions by querying external knowledge"""
-        if sem is not None:# Only if semantic modules are to be included
+        if sem !='none':# Only if semantic modules are to be included
 
             weak_idx = show_leastconf(frame_objs)
 
@@ -578,11 +565,13 @@ def run_processing_pipeline(data_point, base_path, data_type, args, model, path_
             corr_preds, _, _, _ = zip(*frame_objs)
             y_pred.extend(corr_preds)
 
+            """
             if data_type == 'camera':
                 # pass result to subscriber
                 # Currently supporting one image at a time
                 return [out_img, out_VG], y_pred, y_true, run_eval
 
+            """
             # And show corrected image
             """
             for lb, cf, (x, y, w, h), rank in frame_objs:

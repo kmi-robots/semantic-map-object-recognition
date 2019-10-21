@@ -11,11 +11,11 @@ from data_loaders import img_preproc
 from siamese_models import ResSiamese
 import torchvision
 
-def extract_embeddings(model, path_to_state, path_to_data, train_img_folder, device, outp, transforms=None):
+def extract_embeddings(model, path_to_state, train_img_folder, device, outp, transforms=None):
 
     model.load_state_dict(torch.load(path_to_state))
     model.eval()
-    #data = torch.load(path_to_data)
+
     data = torchvision.datasets.ImageFolder(train_img_folder, \
                                             transform=transforms)
 
@@ -70,14 +70,14 @@ def path_embedding(model, path_to_state, path_to_img,  device, transforms=None):
     return model.get_embedding(img)
 
 
-def array_embedding(model, path_to_state, img_array,  device, transforms=None):
+def array_embedding(model, img_array,  device, transforms=None):
     """
     Same as path_embedding but requiring image array instead of path
     to image file as input
     """
     #model = ResSiamese(feature_extraction=True).to(device)
-    model.load_state_dict(torch.load(path_to_state, map_location={'cuda:0': 'cpu'}))
-    model.eval()
+    #model.load_state_dict(torch.load(path_to_state, map_location={'cuda:0': 'cpu'}))
+    #model.eval()
 
     #read image
     img = img_preproc(img_array, transforms, ros=True) #torch.from_numpy(img_preproc(img_array, ros=True))

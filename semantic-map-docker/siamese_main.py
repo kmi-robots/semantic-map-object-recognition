@@ -245,6 +245,14 @@ def main(args):
     else:
 
         #Test/Inference phase
+        # Load training checkpoint and set model in test mode
+        path_to_state = os.path.join(path_to_input.split('KMi_collection')[0],
+                                     'kmish25/checkpoint_imprKNET_1prod.pt')  # checkpoint_imprKNET_1prod_DA_static
+        model.load_state_dict(torch.load(path_to_state, map_location={'cuda:0': 'cpu'}))
+
+        model.eval()
+
+        keep_embeddings = False
 
         if args.it == 'camera': #Input data from sensor in real-time
 
@@ -254,7 +262,7 @@ def main(args):
 
             rospy.init_node('image_converter') #, anonymous=True)
             rate = rospy.Rate(1)
-            io = ImageConverter()
+            io = ImageConverter(path_to_input, args, model, device, base_trans)
             io.start(path_to_input,args, model, device, base_trans, rate)  #processing called inside the ROS node directly
 
         else:
@@ -267,8 +275,6 @@ def main(args):
             #Evaluation only available for data held out from ground truth
             #When evaluating on robot-collected data, rankings are logged anyways
             bar_plot(class_wise_res)
-
-        keep_embeddings = False
 
 
     if keep_embeddings:

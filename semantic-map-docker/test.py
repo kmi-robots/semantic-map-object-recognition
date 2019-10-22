@@ -409,6 +409,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
             if input_emb is None:
 
+                #Image could not be processed/ embedding could not be generated for some reason, return
                 return [out_img, out_VG], y_pred, y_true, run_eval
 
             """

@@ -3,8 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="617a581a-9181-4313-98a8-b4bcfa829686" name="Default Changelist" comment="Adding base model and train on MNIST">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/semantic-map-docker/pytorchtools.py" beforeDir="false" afterPath="$PROJECT_DIR$/semantic-map-docker/pytorchtools.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/semantic-map-docker/segment.py" beforeDir="false" afterPath="$PROJECT_DIR$/semantic-map-docker/segment.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/semantic-map-docker/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/semantic-map-docker/test.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -64,25 +63,13 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/semantic-map-docker/test.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="6764">
-              <caret line="371" column="24" selection-start-line="371" selection-start-column="20" selection-end-line="371" selection-end-column="24" />
+            <state relative-caret-position="504">
+              <caret line="411" column="97" selection-start-line="411" selection-start-column="97" selection-end-line="411" selection-end-column="97" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/semantic-map-docker/embedding_extractor.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="323">
-              <caret line="20" selection-start-line="20" selection-end-line="20" />
-              <folding>
-                <element signature="e#140#152#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -112,11 +99,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/semantic-map-docker/pytorchtools.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="339">
-              <caret line="27" lean-forward="true" selection-start-line="27" selection-end-line="27" />
+            <state>
+              <caret column="3" selection-end-line="27" />
               <folding>
                 <element signature="e#112#130#0" expanded="true" />
               </folding>
@@ -220,9 +207,9 @@
         <option value="$PROJECT_DIR$/semantic-map-docker/embedding_extractor.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/siamese_main.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/ROS_IO.py" />
-        <option value="$PROJECT_DIR$/semantic-map-docker/test.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/segment.py" />
         <option value="$PROJECT_DIR$/semantic-map-docker/pytorchtools.py" />
+        <option value="$PROJECT_DIR$/semantic-map-docker/test.py" />
       </list>
     </option>
   </component>
@@ -699,12 +686,12 @@
       <workItem from="1571651107823" duration="18684000" />
       <workItem from="1571737157660" duration="1443000" />
       <workItem from="1571745011370" duration="1444000" />
-      <workItem from="1571753834141" duration="36000" />
+      <workItem from="1571753834141" duration="1051000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="855740000" />
+    <option name="totallyTimeSpent" value="856755000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -734,7 +721,7 @@
       <window_info anchor="bottom" id="Version Control" order="9" weight="0.32864866" />
       <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.50359714" side_tool="true" weight="0.40864864" />
       <window_info anchor="bottom" id="Messages" order="11" />
-      <window_info anchor="bottom" id="Terminal" order="12" sideWeight="0.7216381" weight="0.25754312" />
+      <window_info anchor="bottom" id="Terminal" order="12" sideWeight="0.7216381" visible="true" weight="0.2572973" />
       <window_info anchor="bottom" id="Python Console" order="13" sideWeight="0.4991699" weight="0.26378378" />
       <window_info anchor="right" id="Database" order="0" sideWeight="0.47040972" weight="0.32484782" />
       <window_info anchor="right" id="SciView" order="1" />
@@ -990,16 +977,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/semantic-map-docker/data_loaders.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1680">
-          <caret line="76" selection-start-line="76" selection-end-line="76" />
-          <folding>
-            <element signature="e#0#38#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/semantic-map-docker/baseline_KNN.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="2356">
@@ -1137,26 +1114,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/semantic-map-docker/test.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="6764">
-          <caret line="371" column="24" selection-start-line="371" selection-start-column="20" selection-end-line="371" selection-end-column="24" />
-          <folding>
-            <element signature="e#0#12#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/semantic-map-docker/embedding_extractor.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="323">
-          <caret line="20" selection-start-line="20" selection-end-line="20" />
-          <folding>
-            <element signature="e#140#152#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/semantic-map-docker/common_sense.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="8436">
@@ -1179,10 +1136,40 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/semantic-map-docker/pytorchtools.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="339">
-          <caret line="27" lean-forward="true" selection-start-line="27" selection-end-line="27" />
+        <state>
+          <caret column="3" selection-end-line="27" />
           <folding>
             <element signature="e#112#130#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/semantic-map-docker/data_loaders.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-6878">
+          <caret line="76" selection-start-line="76" selection-end-line="76" />
+          <folding>
+            <element signature="e#0#38#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/semantic-map-docker/embedding_extractor.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="361">
+          <caret line="54" lean-forward="true" selection-start-line="54" selection-end-line="54" />
+          <folding>
+            <element signature="e#140#152#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/semantic-map-docker/test.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="504">
+          <caret line="411" column="97" selection-start-line="411" selection-start-column="97" selection-end-line="411" selection-end-column="97" />
+          <folding>
+            <element signature="e#0#12#0" expanded="true" />
           </folding>
         </state>
       </provider>

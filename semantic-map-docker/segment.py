@@ -45,7 +45,6 @@ COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
 yolonet = cv2.dnn.readNet(WEIGHTS, CONFIG)
 
 
-
 #Mask RCNN
 #segm_model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True, box_nms_thresh=0.0001)
 # Faster RCNN

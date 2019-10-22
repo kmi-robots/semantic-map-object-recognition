@@ -55,9 +55,9 @@ yolonet = cv2.dnn.readNet(WEIGHTS, CONFIG)
 #Loading Mask RCNN through OpenCV instead
 textGraph = "./data/opencv-zoo/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt" #created through opencv-4.0.0/samples/dnn/tf_text_graph_mask_rcnn.py
 modelWeights = "./data/opencv-zoo/mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
-segm_model = cv2.dnn.readNetFromTensorflow(modelWeights, textGraph)
-segm_model.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
-segm_model.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+segm_model = None #cv2.dnn.readNetFromTensorflow(modelWeights, textGraph)
+#segm_model.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+#segm_model.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
 
 COCO_INSTANCE_CATEGORY_NAMES = [

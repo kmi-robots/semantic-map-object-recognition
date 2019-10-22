@@ -431,6 +431,7 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
 
 
     if not ros:
+    
         img = cv2.imread(path_to_image)
         img = BGRtoRGB(img)
 
@@ -451,9 +452,12 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
     """
     #x = np.asarray(img) #x)
 
-    x = Image.fromarray(img, mode='RGB')
+    try:
+    	x = Image.fromarray(img, mode='RGB')
 
+    except:
 
+        return None
     """
     #display_img(x)
     print(type(x))

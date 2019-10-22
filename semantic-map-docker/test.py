@@ -407,6 +407,10 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
             input_emb = array_embedding(model, obj, device, transforms=trans)
 
+            if input_emb is None:
+
+                return [out_img, out_VG], y_pred, y_true, run_eval
+
             """
             cv2.imwrite('./temp.png', obj)
             basein_emb = base_embedding('./temp.png', device, trans)

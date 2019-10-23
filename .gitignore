@@ -1,5 +1,5 @@
-./old
-./robosherlock_test
+old
+robosherlock_test
 object-recognition/ncc-extension
 object-recognition/temp.jpg
 object-recognition/checkpoint.pt

@@ -1,0 +1,32 @@
+#
+#For trials with robosherlock (requires Ubuntu 16.04 and ROS kinetic desktop full)
+##
+
+FROM osrf/ros:kinetic-desktop-full-xenial 
+# Set the working directory to /app
+
+RUN apt-get update && apt-get -y install tmux wget vim sudo \
+    && apt-get -y install libopenblas-dev \
+    && apt-get -y install libxerces-c-dev libicu-dev libapr1-dev mongodb openjdk-8-jdk ros-kinetic-libmongocxx-ros swi-prolog 
+
+#EXPOSE 443
+RUN export uid=1000 gid=1000 && \
+    mkdir -p /home/developer && \
+    echo "developer:x:${uid}:${gid}:Developer,,,:/home/developer:/bin/bash" >> /etc/passwd && \
+    echo "developer:x:${uid}:" >> /etc/group && \
+    echo "developer ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/developer && \
+    chmod 0440 /etc/sudoers.d/developer && \
+    chown ${uid}:${gid} -R /home/developer
+
+USER developer
+ENV HOME /home/developer
+
+
+#create catkin workspace
+RUN mkdir -p $HOME/catkin_ws/src && /bin/bash -c '. /opt/ros/kinetic/setup.bash; cd $HOME/catkin_ws; catkin_make' \
+    && cd $HOME/catkin_ws/src \
+    && git clone https://github.com/RoboSherlock/robosherlock.git --recursive \
+    && /bin/bash -c '. /opt/ros/kinetic/setup.bash; cd $HOME/catkin_ws; catkin_make' \
+    && /bin/bash -c 'source $HOME/catkin_ws/devel/setup.bash;'
+
+

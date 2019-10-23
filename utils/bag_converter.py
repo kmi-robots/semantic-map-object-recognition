@@ -69,7 +69,7 @@ def main(path_to_bag):
 
     print("Saving all imported images as numpy pickle")
 
-    np.save('../semantic-map-docker/data/robot_collected.npy', img_mat)
+    np.save('../object-recognition/data/robot_collected.npy', img_mat)
 
 if __name__ == '__main__':
 

@@ -1,6 +1,0 @@
-ncc.cpp
-setup.py
-ncc.egg-info/PKG-INFO
-ncc.egg-info/SOURCES.txt
-ncc.egg-info/dependency_links.txt
-ncc.egg-info/top_level.txt

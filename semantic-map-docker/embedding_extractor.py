@@ -83,6 +83,10 @@ def array_embedding(model, img_array,  device, transforms=None):
     img = img_preproc(img_array, transforms, ros=True) #torch.from_numpy(img_preproc(img_array, ros=True))
 
     #img[0, :] = transforms(img[0, :].float())
+    if img is None:
+
+        return None
+
     img = img.view(1, img.shape[0], img.shape[1], img.shape[2]).to(device)
     #img = img.float().to(device)
 

@@ -8,7 +8,7 @@ inspired by paper by Qi et al. (CVPR 2018)
 
 import torch
 from data_loaders import img_preproc
-from siamese_models import ResSiamese
+from models import ResSiamese
 import torchvision
 
 def extract_embeddings(model, path_to_state, train_img_folder, device, outp, transforms=None):

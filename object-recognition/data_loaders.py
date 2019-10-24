@@ -4,7 +4,7 @@ import os
 from PIL import Image
 import torch
 import random
-from siamese_models import ResSiamese
+from models import ResSiamese
 
 """"
 

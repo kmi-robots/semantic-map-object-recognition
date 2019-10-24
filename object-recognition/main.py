@@ -7,7 +7,7 @@ import argparse
 
 #custom classes and methods
 import data_loaders
-from siamese_models import NCCNet, ResSiamese, ResTwoBranch, KNet, NNet, ImprintedKNet #, ContrastiveLoss
+from models import NCCNet, ResSiamese, ResTwoBranch, KNet, NNet, ImprintedKNet #, ContrastiveLoss
 from pytorchtools import EarlyStopping
 from embedding_extractor import extract_embeddings
 from train import train

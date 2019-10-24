@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score,roc_auc_score
 import numpy as np
-from siamese_models import TripletLoss
+from models import TripletLoss
 
 def validate(model, device, test_loader, metric_avg, knet=False,nnet=False):
 

@@ -7,8 +7,9 @@ This code has been tested for / requires
 
 - Python 3.5 or later
 - ROS kinetic / ROS melodic  + rospkg and catkin-pkg
-- It requires that OpenCV bridge to link I/O with ROS is built for Python3 (by default it works only for Python2)
-  [This answer](https://stackoverflow.com/questions/49221565/unable-to-use-cv-bridge-with-ros-kinetic-and-python3) can be taken as reference on how to achieve this
+- It requires that OpenCV bridge and TF link I/O with ROS is built for Python3 (by default it works only for Python2)
+  [This answer](https://stackoverflow.com/questions/49221565/unable-to-use-cv-bridge-with-ros-kinetic-and-python3) can be taken as reference for CV bridge
+  [a similar approach](https://github.com/ros/geometry2/issues/259) can be used to import tf in Python3
 
 - Pytorch +  Torchvision (CPU-only is enough to run the inference without retraining, for the training we tested the pipeline on CUDA 9) 
 

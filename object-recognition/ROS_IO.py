@@ -9,9 +9,11 @@ import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge,CvBridgeError
 from collections import OrderedDict
+import tf
 #import cv2
 
 from test import test, run_processing_pipeline
+from DH_integration import DH_img_send
 
 class ImageConverter:
 
@@ -24,7 +26,7 @@ class ImageConverter:
         self.corrim_publisher = rospy.Publisher("/camera/rgb/image_corrected", Image, queue_size=1) #second publisher after knowledge-based correction
         self.bridge = CvBridge()
         self.im_subscriber = rospy.Subscriber("/camera/rgb/image_raw", Image, self.callback)
-
+        self.tf_lis = tf.TransformListener()
 
     def callback(self, msg):
 
@@ -55,18 +57,47 @@ class ImageConverter:
                 data["regions"] = None
                 data["data"] = self.img
 
+                try:
+
+                    #Get robot latest location
+                    trans, _ = self.tf_lis.lookupTransform('/map', '/base_link', rospy.Time(0))
+
+                    data["x"] = trans[0]
+                    data["y"] = trans[1]
+                    data["z"] = trans[2]
+
+
+                except:
+
+                    #if available
+                    data["x"] = 0
+                    data["y"] = 0
+                    data["z"] = 0
+
+                #Send acquired img to Data Hub
+                print(DH_img_send(data).content)
+
                 #Then images are processed one by one by calling run_processing_pipeline directly
 
-                processed_imgs, _, _, _ = run_processing_pipeline(data, path_to_input, args, model,  device, base_trans \
+                processed_data, _, _, _ = run_processing_pipeline(data, path_to_input, args, model,  device, base_trans \
                                                                   , self.cardinalities,self.COLORS, self.all_classes, \
                                                               args.K, args.sem, args.Kvoting, self.VG_data, [], [], self.embedding_space)
 
                 #print(type(processed_img))
                 #And publish results after processing the single image
+
                 try:
 
-                    self.im_publisher.publish(self.bridge.cv2_to_imgmsg(processed_imgs[0],'bgr8'))
-                    self.corrim_publisher.publish(self.bridge.cv2_to_imgmsg(processed_imgs[1], 'bgr8'))
+                    self.im_publisher.publish(self.bridge.cv2_to_imgmsg(processed_data[0],'bgr8'))
+                    self.corrim_publisher.publish(self.bridge.cv2_to_imgmsg(processed_data[1], 'bgr8'))
+
+                    data["data"]= processed_data[0]
+                    data["regions"] = processed_data[2]
+                    #Send processed image to Data Hub
+                    print(DH_img_send(data).content)
+
+                    #Optional TO-DO: sends a third image after knowledge-based correction
+
                     #rate.sleep() #to make sure it publishes at 1 Hz
 
                 except CvBridgeError as e:

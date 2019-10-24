@@ -410,7 +410,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
             if input_emb is None:
 
                 #Image could not be processed/ embedding could not be generated for some reason, return
-                return [out_img, out_VG], y_pred, y_true, run_eval
+                return [out_img, out_VG, None], y_pred, y_true, run_eval
 
             """
             cv2.imwrite('./temp.png', obj)
@@ -514,7 +514,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
                         """
                         cv2.imwrite(os.path.join(out_imgs, 'Kground_ImprintedKNET', data_point["filename"]), out_VG)
                         """
-                        return [out_img, out_VG], y_pred, y_true, run_eval  # Continue to next image
+                        return [out_img, out_VG, frame_objs], y_pred, y_true, run_eval  # Continue to next image
 
                 if len(frame_objs) <= 1:
 
@@ -524,7 +524,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
                     # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
 
-                    return [out_img, out_VG], y_pred, y_true, run_eval  #Continue to next image
+                    return [out_img, out_VG, frame_objs], y_pred, y_true, run_eval  #Continue to next image
 
                 new_preds = extract_spatial(weak_idx, frame_objs, VG_base=VG_data)
 
@@ -606,4 +606,4 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
     # cv2.destroyAllWindows()
 
     # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
-    return [out_img, out_VG], y_pred, y_true, run_eval
+    return [out_img, out_VG, frame_objs], y_pred, y_true, run_eval

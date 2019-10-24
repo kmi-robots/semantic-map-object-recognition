@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, roc_auc_score
 import numpy as np
-from siamese_models import TripletLoss
+from models import TripletLoss
 
 
 def train(model, device, train_loader, epoch, optimizer, num_epochs, metric_avg, knet=False,nnet=False):

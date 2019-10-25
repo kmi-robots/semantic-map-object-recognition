@@ -13,7 +13,7 @@ object-recognition/data/kmish25
 object-recognition/data/numberbatch
 object-recognition/data/visual_genome
 object-recognition/data/objectness_trained_model
-object-recognition/data/yolo
+object-recognition/data/yolo/yolov3.weights
 object-recognition/data/opencv-zoo
 object-recognition/data/raw
 object-recognition/data/processed

@@ -10,6 +10,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge,CvBridgeError
 from collections import OrderedDict
 import tf
+from std_srvs.srv import SetBool,SetBoolResponse
 #import cv2
 
 from test import test, run_processing_pipeline
@@ -25,8 +26,21 @@ class ImageConverter:
         self.im_publisher = rospy.Publisher("/camera/rgb/image_bbox", Image, queue_size=1)
         self.corrim_publisher = rospy.Publisher("/camera/rgb/image_corrected", Image, queue_size=1) #second publisher after knowledge-based correction
         self.bridge = CvBridge()
-        self.im_subscriber = rospy.Subscriber("/camera/rgb/image_raw", Image, self.callback)
+        self.s = rospy.Service("start_exploration", SetBool, self.service_callback)
+        self.im_subscriber = None
         self.tf_lis = tf.TransformListener()
+
+    def service_callback(self, msg):
+
+        if msg.data:
+
+            self.im_subscriber = rospy.Subscriber("/camera/rgb/image_raw", Image, self.callback, queue_size=1)
+            return SetBoolResponse(True, "Image subscriber registered")
+
+        else:
+
+            self.im_subscriber.unregister()
+            return SetBoolResponse(False,"Shutting down image subscriber")
 
     def callback(self, msg):
 
@@ -56,6 +70,7 @@ class ImageConverter:
                 data["filename"] = str(self.timestamp)
                 data["regions"] = None
                 data["data"] = self.img
+                self.img = None #to deal with unregistered subscriber
 
                 try:
 
@@ -98,10 +113,8 @@ class ImageConverter:
 
                     #Optional TO-DO: sends a third image after knowledge-based correction
 
-                    #rate.sleep() #to make sure it publishes at 1 Hz
-
                 except CvBridgeError as e:
 
                     print(e)
 
-
+            rate.sleep() #to make sure it publishes at 1 Hz

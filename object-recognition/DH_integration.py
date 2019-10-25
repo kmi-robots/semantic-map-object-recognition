@@ -41,7 +41,6 @@ def DH_img_send(img_obj):
 
     base64_img = arrayTo64(img_obj["data"])
 
-
     json_body = { "@id": img_id,
                   "@type": type,
                   "team" : teamid,

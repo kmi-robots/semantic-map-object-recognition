@@ -36,7 +36,7 @@ class ImageConverter:
 
             self.im_subscriber = rospy.Subscriber("/camera/rgb/image_raw", Image, self.callback, queue_size=1)
 
-            print(DH_status_send("Starting to look around"))
+            print(DH_status_send("Starting to look around").content)
 
             return SetBoolResponse(True, "Image subscriber registered")
 
@@ -44,7 +44,7 @@ class ImageConverter:
 
             self.im_subscriber.unregister()
 
-            print(DH_status_send("Stopping observation"))
+            print(DH_status_send("Stopping observation").content)
 
             return SetBoolResponse(False,"Shutting down image subscriber")
 
@@ -100,17 +100,17 @@ class ImageConverter:
                 #Send acquired img to Data Hub
 
 
-                print(DH_status_send("Sending new image from camera"))
+                print(DH_status_send("Sending new image from camera").content)
                 print(DH_img_send(data).content)
 
-                print(DH_status_send("Analysing the image"))
+                print(DH_status_send("Analysing the image").content)
                 #Then images are processed one by one by calling run_processing_pipeline directly
 
                 processed_data, _, _, _ = run_processing_pipeline(data, path_to_input, args, model,  device, base_trans \
                                                                   , self.cardinalities,self.COLORS, self.all_classes, \
                                                               args.K, args.sem, args.Kvoting, self.VG_data, [], [], self.embedding_space)
 
-                print(DH_status_send("Image analysed"))
+                print(DH_status_send("Image analysed").content)
                 #print(type(processed_img))
                 #And publish results after processing the single image
 
@@ -122,7 +122,7 @@ class ImageConverter:
                     data["data"]= processed_data[0]
                     data["regions"] = processed_data[2]
                     #Send processed image to Data Hub
-                    print(DH_status_send("Sending processed image with annotated objects"))
+                    print(DH_status_send("Sending processed image with annotated objects").content)
                     print(DH_img_send(data).content)
 
                     #Optional TO-DO: sends a third image after knowledge-based correction

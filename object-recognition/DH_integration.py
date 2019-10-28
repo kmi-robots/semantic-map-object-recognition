@@ -62,9 +62,9 @@ def DH_img_send(img_obj):
 def DH_status_send(msg):
 
     t = datetime.datetime.fromtimestamp(rospy.Time.now().secs)
-    timestamp = t.strftime("%Y-%m-%dT%H:%M:%SZ").replace(":",'')
+    timestamp = t.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    status_id = "status_" + timestamp
+    status_id = "status_" + timestamp.replace(":",'')
 
     complete_url = os.path.join(url, "sciroc-robot-status", status_id)
 
@@ -73,7 +73,7 @@ def DH_status_send(msg):
                  "message": msg,
                  "episode": episode,
                  "team": teamid,
-                 "timestamp": timestamp,
+                 "timestamp": str(timestamp),
                  "x": 0,
                  "y": 0,
                  "z": 0

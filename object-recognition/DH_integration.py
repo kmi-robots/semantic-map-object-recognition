@@ -11,10 +11,12 @@ import json
 teamid = "kmirobots"
 teamkey = "0e920c05-e7a0-4745-9e94-eff7e1343b5d"
 
-url = "https://api.mksmart.org/sciroc-competition/kmirobots/sciroc-episode12-image/"
+url = "https://api.mksmart.org/sciroc-competition/kmirobots/"
 
-type = "ImageReport"
+imgtype = "ImageReport"
+sttype = "RobotStatus"
 format = "image/jpeg"
+episode = "EPISODE12"
 #-----------------------------------------#
 
 
@@ -35,14 +37,14 @@ def DH_img_send(img_obj):
         #This is the captured original image, i.e., pre annotation
         img_id = img_id + "_processed"
 
-    complete_url = os.path.join(url, img_id)
+    complete_url = os.path.join(url,"sciroc-episode12-image", img_id)
 
     #Convert img array to base64
 
     base64_img = arrayTo64(img_obj["data"])
 
     json_body = { "@id": img_id,
-                  "@type": type,
+                  "@type": imgtype,
                   "team" : teamid,
                   "timestamp": timestamp,
                   "x": img_obj["x"],
@@ -56,6 +58,28 @@ def DH_img_send(img_obj):
 
     return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, ''))
 
+
+def DH_status_send(msg):
+
+    t = datetime.datetime.fromtimestamp(rospy.Time.now().secs)
+    timestamp = t.strftime("%Y-%m-%dT%H:%M:%SZ").replace(":",'')
+
+    status_id = "status_" + timestamp
+
+    complete_url = os.path.join(url, "sciroc-robot-status", status_id)
+
+    json_body = {"@id": status_id,
+                 "@type": sttype,
+                 "message": msg,
+                 "episode": episode,
+                 "team": teamid,
+                 "timestamp": timestamp,
+                 "x": 0,
+                 "y": 0,
+                 "z": 0
+                 }
+
+    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, ''))
 
 def arrayTo64(img_array):
 

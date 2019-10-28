@@ -36,7 +36,12 @@ class ImageConverter:
 
             self.im_subscriber = rospy.Subscriber("/camera/rgb/image_raw", Image, self.callback, queue_size=1)
 
-            print(DH_status_send("Starting to look around").content)
+            res = DH_status_send("Starting to look around")
+
+            if not res.ok:
+
+                print("Failed communication with Data Hub ")
+                print(res.content)
 
             return SetBoolResponse(True, "Image subscriber registered")
 
@@ -44,7 +49,12 @@ class ImageConverter:
 
             self.im_subscriber.unregister()
 
-            print(DH_status_send("Stopping observation").content)
+            res = DH_status_send("Stopping observation")
+
+            if not res.ok:
+
+                print("Failed communication with Data Hub ")
+                print(res.content)
 
             return SetBoolResponse(False,"Shutting down image subscriber")
 
@@ -100,17 +110,37 @@ class ImageConverter:
                 #Send acquired img to Data Hub
 
 
-                print(DH_status_send("Sending new image from camera").content)
-                print(DH_img_send(data).content)
+                res = DH_status_send("Sending new image from camera")
 
-                print(DH_status_send("Analysing the image").content)
+                if not res.ok:
+
+                    print("Failed communication with Data Hub ")
+                    print(res.content)
+
+                res = DH_img_send(data)
+
+                if not res.ok:
+                    print("Failed to send img to Data Hub ")
+                    print(res.content)
+
+                res = DH_status_send("Analysing the image")
+
+                if not res.ok:
+                    print("Failed communication with Data Hub ")
+                    print(res.content)
+
                 #Then images are processed one by one by calling run_processing_pipeline directly
 
                 processed_data, _, _, _ = run_processing_pipeline(data, path_to_input, args, model,  device, base_trans \
                                                                   , self.cardinalities,self.COLORS, self.all_classes, \
                                                               args.K, args.sem, args.Kvoting, self.VG_data, [], [], self.embedding_space)
 
-                print(DH_status_send("Image analysed").content)
+                res = DH_status_send("Image analysed")
+
+                if not res.ok:
+                    print("Failed communication with Data Hub ")
+                    print(res.content)
+
                 #print(type(processed_img))
                 #And publish results after processing the single image
 
@@ -122,8 +152,16 @@ class ImageConverter:
                     data["data"]= processed_data[0]
                     data["regions"] = processed_data[2]
                     #Send processed image to Data Hub
-                    print(DH_status_send("Sending processed image with annotated objects").content)
-                    print(DH_img_send(data).content)
+                    res = DH_status_send("Sending processed image with annotated objects")
+                    if not res.ok:
+
+                        print("Failed communication with Data Hub ")
+                        print(res.content)
+
+                    res = DH_img_send(data)
+                    if not res.ok:
+                        print("Failed to send img to Data Hub ")
+                        print(res.content)
 
                     #Optional TO-DO: sends a third image after knowledge-based correction
 

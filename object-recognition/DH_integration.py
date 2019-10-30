@@ -37,6 +37,20 @@ def DH_img_send(img_obj):
         #This is the captured original image, i.e., pre annotation
         img_id = img_id + "_processed"
 
+        #find the position of each object based on depth map
+        dmap = img_obj["depth_map"]
+
+        for obj_label, score, coords, rank  in img_obj["regions"]:
+
+            x,x2,y,y2 = coords
+            center_depth = dmap[int(x+(x2-x)/2), int(y+ (y2-y)/2)] #uint16 in mm
+
+            #TODO: transform based on camera position and robot position
+
+            #append to list of x,y,z object locations to send to DH together with object list
+
+            continue
+
     complete_url = os.path.join(url,"sciroc-episode12-image", img_id)
 
     #Convert img array to base64

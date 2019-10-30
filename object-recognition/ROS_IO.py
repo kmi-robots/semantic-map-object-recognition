@@ -68,12 +68,13 @@ class ImageConverter:
             return SetBoolResponse(False,"Shutting down image subscriber")
 
 
-    def callback(self, img_msg, depth_msg ):
+    def callback(self, img_msg, depth_msg):
 
         try:
 
-            self.img = self.bridge.imgmsg_to_cv2(img_msg, 'bgr8')
             self.timestamp = img_msg.header.stamp.to_sec()
+            self.img = self.bridge.imgmsg_to_cv2(img_msg, 'bgr8')
+            self.dimg = self.bridge.imgmsg_to_cv2(depth_msg, "passthrough") #uint16 depth values in mm
 
         except CvBridgeError as e:
 
@@ -96,7 +97,13 @@ class ImageConverter:
                 data["filename"] = str(self.timestamp)
                 data["regions"] = None
                 data["data"] = self.img
+                data["depth_map"] = None
+
+                if self.dimg is not None:
+                    data["depth_map"] = self.dimg
+
                 self.img = None #to deal with unregistered subscriber
+                self.dimg = None
 
                 try:
 
@@ -106,7 +113,6 @@ class ImageConverter:
                     data["x"] = trans[0]
                     data["y"] = trans[1]
                     data["z"] = trans[2]
-
 
                 except:
 
@@ -142,6 +148,7 @@ class ImageConverter:
                                                                   , self.cardinalities,self.COLORS, self.all_classes, \
                                                               args.K, args.sem, args.Kvoting, self.VG_data, [], [], self.embedding_space)
 
+
                 res, stat_id = DH_status_send("Image analysed",status_id=stat_id)
 
                 if not res.ok:
@@ -156,9 +163,12 @@ class ImageConverter:
                     self.im_publisher.publish(self.bridge.cv2_to_imgmsg(processed_data[0],'bgr8'))
                     self.corrim_publisher.publish(self.bridge.cv2_to_imgmsg(processed_data[1], 'bgr8'))
 
-                    data["data"]= processed_data[0]
+                    data["data"] = processed_data[0]
                     data["regions"] = processed_data[2]
                     #Send processed image to Data Hub
+
+                    print(data["regions"])
+
                     res, stat_id = DH_status_send("Sending processed image", status_id=stat_id)
                     if not res.ok:
 

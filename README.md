@@ -7,6 +7,12 @@ This code has been tested for / requires
 
 - Python 3.5 or later
 - ROS kinetic / ROS melodic  + rospkg and catkin-pkg
+- We also recommend to add the following line to your .bashrc
+
+```
+    export ROS_PYTHON_VERSION=3
+```
+
 - It requires that OpenCV bridge and TF link I/O with ROS is built for Python3 (by default it works only for Python2)
   [This answer](https://stackoverflow.com/questions/49221565/unable-to-use-cv-bridge-with-ros-kinetic-and-python3) can be taken as reference for CV bridge
   [a similar approach](https://github.com/ros/geometry2/issues/259) can be used to import tf in Python3

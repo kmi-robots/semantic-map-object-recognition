@@ -6,6 +6,7 @@ and back
 
 #Added online link with camera sensor
 import rospy
+import message_filters
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge,CvBridgeError
 from collections import OrderedDict
@@ -34,9 +35,16 @@ class ImageConverter:
 
         if msg.data:
 
-            self.im_subscriber = rospy.Subscriber("/camera/rgb/image_raw", Image, self.callback, queue_size=1)
+            self.im_subscriber = message_filters.Subscriber("/camera/rgb/image_raw", Image) #, self.callback, queue_size=1)
+            self.depth_subscriber = message_filters.Subscriber("/camera/depth/image_raw", Image)
 
-            res = DH_status_send("Starting to look around")
+            #synchronise two topics
+            self.ts = message_filters.ApproximateTimeSynchronizer([self.im_subscriber, self.depth_subscriber], queue_size=1, slop=0.1)
+            #one callback for both
+            self.ts.registerCallback(self.callback)
+
+
+            res, stat_id = DH_status_send("Starting to look around", first=True)
 
             if not res.ok:
 
@@ -48,8 +56,9 @@ class ImageConverter:
         else:
 
             self.im_subscriber.unregister()
+            self.depth_subscriber.unregister()
 
-            res = DH_status_send("Stopping observation")
+            res, stat_id = DH_status_send("Stopping observation", first=True)
 
             if not res.ok:
 
@@ -59,13 +68,12 @@ class ImageConverter:
             return SetBoolResponse(False,"Shutting down image subscriber")
 
 
-
-    def callback(self, msg):
+    def callback(self, img_msg, depth_msg ):
 
         try:
 
-            self.img = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
-            self.timestamp = msg.header.stamp.to_sec()
+            self.img = self.bridge.imgmsg_to_cv2(img_msg, 'bgr8')
+            self.timestamp = img_msg.header.stamp.to_sec()
 
         except CvBridgeError as e:
 
@@ -107,23 +115,22 @@ class ImageConverter:
                     data["y"] = 0
                     data["z"] = 0
 
-                #Send acquired img to Data Hub
-
-
-                res = DH_status_send("Sending new image from camera")
+                #Send a status message
+                res,stat_id = DH_status_send("Sending new image from camera", first=True)
 
                 if not res.ok:
 
                     print("Failed communication with Data Hub ")
                     print(res.content)
 
+                #send acquired img to Data Hub
                 res = DH_img_send(data)
 
                 if not res.ok:
                     print("Failed to send img to Data Hub ")
                     print(res.content)
 
-                res = DH_status_send("Analysing the image")
+                res,stat_id = DH_status_send("Analysing the image", status_id=stat_id)
 
                 if not res.ok:
                     print("Failed communication with Data Hub ")
@@ -135,7 +142,7 @@ class ImageConverter:
                                                                   , self.cardinalities,self.COLORS, self.all_classes, \
                                                               args.K, args.sem, args.Kvoting, self.VG_data, [], [], self.embedding_space)
 
-                res = DH_status_send("Image analysed")
+                res, stat_id = DH_status_send("Image analysed",status_id=stat_id)
 
                 if not res.ok:
                     print("Failed communication with Data Hub ")
@@ -152,13 +159,14 @@ class ImageConverter:
                     data["data"]= processed_data[0]
                     data["regions"] = processed_data[2]
                     #Send processed image to Data Hub
-                    res = DH_status_send("Sending processed image with annotated objects")
+                    res, stat_id = DH_status_send("Sending processed image", status_id=stat_id)
                     if not res.ok:
 
                         print("Failed communication with Data Hub ")
                         print(res.content)
 
                     res = DH_img_send(data)
+
                     if not res.ok:
                         print("Failed to send img to Data Hub ")
                         print(res.content)
@@ -166,7 +174,7 @@ class ImageConverter:
                     #Optional TO-DO: sends a third image after knowledge-based correction
 
                 except CvBridgeError as e:
-
+                    print("The provided image could not be processed")
                     print(e)
 
             rate.sleep() #to make sure it publishes at 1 Hz

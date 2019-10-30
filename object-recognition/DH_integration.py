@@ -59,12 +59,24 @@ def DH_img_send(img_obj):
     return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, ''))
 
 
-def DH_status_send(msg):
+def DH_status_send(msg, status_id="", first=False):
 
+    """
+    :param msg:
+    :param first: this boolean flag adds increments for messages at the same timestamp
+    :return:
+    """
     t = datetime.datetime.fromtimestamp(rospy.Time.now().secs)
     timestamp = t.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    status_id = "status_" + timestamp.replace(":",'')
+    if first:
+        #create the first one
+        status_id = "status_" + timestamp.replace(":",'')+"_1"
+    else:
+
+        i = int(status_id.split('_')[-1]) + 1
+        status_id ="_".join(status_id.split('_')[:-1]) + "_"+str(i)
+        pass
 
     complete_url = os.path.join(url, "sciroc-robot-status", status_id)
 
@@ -79,7 +91,7 @@ def DH_status_send(msg):
                  "z": 0
                  }
 
-    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, ''))
+    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, '')), status_id
 
 def arrayTo64(img_array):
 

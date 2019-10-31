@@ -7,7 +7,8 @@ and back
 #Added online link with camera sensor
 import rospy
 import message_filters
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, PointCloud2
+from sensor_msgs import point_cloud2
 from cv_bridge import CvBridge,CvBridgeError
 from collections import OrderedDict
 import tf
@@ -36,10 +37,10 @@ class ImageConverter:
         if msg.data:
 
             self.im_subscriber = message_filters.Subscriber("/camera/rgb/image_raw", Image) #, self.callback, queue_size=1)
-            self.depth_subscriber = message_filters.Subscriber("/camera/depth/image_raw", Image)
+            self.pcl_subscriber = message_filters.Subscriber("/camera/depth/points", PointCloud2)
 
             #synchronise two topics
-            self.ts = message_filters.ApproximateTimeSynchronizer([self.im_subscriber, self.depth_subscriber], queue_size=1, slop=0.1)
+            self.ts = message_filters.ApproximateTimeSynchronizer([self.im_subscriber, self.pcl_subscriber], queue_size=1, slop=0.1)
             #one callback for both
             self.ts.registerCallback(self.callback)
 
@@ -56,7 +57,7 @@ class ImageConverter:
         else:
 
             self.im_subscriber.unregister()
-            self.depth_subscriber.unregister()
+            self.pcl_subscriber.unregister()
 
             res, stat_id = DH_status_send("Stopping observation", first=True)
 
@@ -68,13 +69,18 @@ class ImageConverter:
             return SetBoolResponse(False,"Shutting down image subscriber")
 
 
-    def callback(self, img_msg, depth_msg):
+    def callback(self, img_msg, pcl_msg):
 
         try:
 
             self.timestamp = img_msg.header.stamp.to_sec()
             self.img = self.bridge.imgmsg_to_cv2(img_msg, 'bgr8')
-            self.dimg = self.bridge.imgmsg_to_cv2(depth_msg, "passthrough") #uint16 depth values in mm
+
+            #self.dimg = self.bridge.imgmsg_to_cv2(depth_msg, "passthrough") #uint16 depth values in mm
+            #Replacing with pcl
+            assert isinstance(pcl_msg, PointCloud2)
+            self.pcl = pcl_msg
+            #.read_points(pcl_msg, field_names=("x","y","z"), skip_nans=True)
 
         except CvBridgeError as e:
 
@@ -97,13 +103,10 @@ class ImageConverter:
                 data["filename"] = str(self.timestamp)
                 data["regions"] = None
                 data["data"] = self.img
-                data["depth_map"] = None
-
-                if self.dimg is not None:
-                    data["depth_map"] = self.dimg
+                data["pcl"] = self.pcl
 
                 self.img = None #to deal with unregistered subscriber
-                self.dimg = None
+                self.pcl = None
 
                 try:
 

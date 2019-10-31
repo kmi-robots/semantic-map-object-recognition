@@ -32,24 +32,43 @@ def DH_img_send(img_obj):
 
     img_id  = img_obj["filename"].replace(".",'_')
 
+    results = []
+
     if img_obj["regions"] is not None:
 
         #This is the captured original image, i.e., pre annotation
         img_id = img_id + "_processed"
 
         #find the position of each object based on depth map
-        dmap = img_obj["depth_map"]
+        pcl = img_obj["pcl"]
 
         for obj_label, score, coords, rank  in img_obj["regions"]:
 
             x,x2,y,y2 = coords
-            center_depth = dmap[int(x+(x2-x)/2), int(y+ (y2-y)/2)] #uint16 in mm
-
-            #TODO: transform based on camera position and robot position
-
+            center_coords = (int(x+(x2-x)/2), int(y+ (y2-y)/2)) #uint16 in mm
+            #Find equivalent of center coords in pointcloud
+            point_idx = center_coords[0]* pcl.point_step +center_coords[1]*pcl.row_step
+            idx_x = point_idx + pcl.fields[0].offset
+            idx_y = point_idx + pcl.fields[1].offset
+            idx_z = point_idx + pcl.fields[2].offset
             #append to list of x,y,z object locations to send to DH together with object list
 
-            continue
+            node = {'item': obj_label,
+                    'score': score,
+                    'ranking': rank,
+                    'box_top': (x,x2),
+                    'box_bottom': (y,y2),
+                    'map_x': 0,
+                    'map_y': 0,
+                    'map_z': 0
+                    }
+
+            results.append(node)
+            #print("object location")
+            #print(pcl.data)
+            #print(pcl.data[idx_x])
+            #print(pcl.data[idx_y])
+            #print(pcl.data[idx_z])
 
     complete_url = os.path.join(url,"sciroc-episode12-image", img_id)
 
@@ -66,7 +85,7 @@ def DH_img_send(img_obj):
                   "z": img_obj["z"],
                   "base64": base64_img,
                   "format": format,
-                  "object_list": img_obj["regions"]
+                  "results": results
                 }
 
 

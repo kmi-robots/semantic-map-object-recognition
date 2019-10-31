@@ -34,6 +34,7 @@ def DH_img_send(img_obj):
 
     results = []
 
+
     if img_obj["regions"] is not None:
 
         #This is the captured original image, i.e., pre annotation
@@ -52,10 +53,11 @@ def DH_img_send(img_obj):
             idx_y = point_idx + pcl.fields[1].offset
             idx_z = point_idx + pcl.fields[2].offset
             #append to list of x,y,z object locations to send to DH together with object list
+            ranking_list = [{'item': key, 'score': val} for key, val in rank.items()]
 
             node = {'item': obj_label,
                     'score': score,
-                    'ranking': rank,
+                    'ranking': ranking_list,
                     'box_top': (x,x2),
                     'box_bottom': (y,y2),
                     'map_x': 0,

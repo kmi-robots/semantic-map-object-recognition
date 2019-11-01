@@ -50,7 +50,7 @@ def DH_img_send(img_obj):
         center_coords = [(int(x+(x2-x)/2), int(y+ (y2-y)/2))  for x,x2,y,y2 in coords]
 
         #find correspondence on pcl for all centers
-        points_list = point_cloud2.read_points_list(pcl, field_names=("x", "y", "z"), uvs=center_coords)
+        points_list = point_cloud2.read_points_list(pcl, field_names=("x", "y", "z")) #, uvs=center_coords)
 
         for i, obj_label in enumerate(labels): #obj_label, score, coords, rank  in img_obj["regions"]:
 

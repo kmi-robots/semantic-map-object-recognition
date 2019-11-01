@@ -8,7 +8,6 @@ and back
 import rospy
 import message_filters
 from sensor_msgs.msg import Image, PointCloud2
-from sensor_msgs import point_cloud2
 from cv_bridge import CvBridge,CvBridgeError
 from collections import OrderedDict
 import tf
@@ -80,7 +79,8 @@ class ImageConverter:
             #Replacing with pcl
             assert isinstance(pcl_msg, PointCloud2)
             self.pcl = pcl_msg
-            #.read_points(pcl_msg, field_names=("x","y","z"), skip_nans=True)
+            #self.points = point_cloud2.read_points(pcl_msg, field_names=("x","y","z"), skip_nans=False)
+
 
         except CvBridgeError as e:
 

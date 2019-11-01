@@ -1,11 +1,14 @@
 import rospy
 import requests
 from requests.auth import HTTPBasicAuth
+from sensor_msgs.msg import PointCloud2
 import datetime
 import cv2
 import base64
 import os
 import json
+from sensor_msgs import point_cloud2
+
 
 #---- Hardcoded DH API params ------------#
 teamid = "kmirobots"
@@ -43,34 +46,32 @@ def DH_img_send(img_obj):
         #find the position of each object based on depth map
         pcl = img_obj["pcl"]
 
-        for obj_label, score, coords, rank  in img_obj["regions"]:
+        labels, scores, coords, ranks = zip(*img_obj["regions"])
+        center_coords = [(int(x+(x2-x)/2), int(y+ (y2-y)/2))  for x,x2,y,y2 in coords]
 
-            x,x2,y,y2 = coords
-            center_coords = (int(x+(x2-x)/2), int(y+ (y2-y)/2)) #uint16 in mm
-            #Find equivalent of center coords in pointcloud
-            point_idx = center_coords[0]* pcl.point_step +center_coords[1]*pcl.row_step
-            idx_x = point_idx + pcl.fields[0].offset
-            idx_y = point_idx + pcl.fields[1].offset
-            idx_z = point_idx + pcl.fields[2].offset
-            #append to list of x,y,z object locations to send to DH together with object list
-            ranking_list = [{'item': key, 'score': val} for key, val in rank.items()]
+        #find correspondence on pcl for all centers
+        points_list = point_cloud2.read_points_list(pcl, field_names=("x", "y", "z"), uvs=center_coords)
+
+        for i, obj_label in enumerate(labels): #obj_label, score, coords, rank  in img_obj["regions"]:
+
+            x,x2,y,y2 = coords[i]
+
+            #Equivalent of center coords in pointcloud
+            map_x, map_y, map_z = points_list[i]
+
+            ranking_list = [{'item': key, 'score': val} for key, val in ranks[i].items()]
 
             node = {'item': obj_label,
-                    'score': score,
+                    'score': scores[i],
                     'ranking': ranking_list,
                     'box_top': (x,x2),
                     'box_bottom': (y,y2),
-                    'map_x': 0,
-                    'map_y': 0,
-                    'map_z': 0
+                    'map_x': map_x,
+                    'map_y': map_y,
+                    'map_z': map_z
                     }
 
             results.append(node)
-            #print("object location")
-            #print(pcl.data)
-            #print(pcl.data[idx_x])
-            #print(pcl.data[idx_y])
-            #print(pcl.data[idx_z])
 
     complete_url = os.path.join(url,"sciroc-episode12-image", img_id)
 
@@ -111,7 +112,7 @@ def DH_status_send(msg, status_id="", first=False):
 
         i = int(status_id.split('_')[-1]) + 1
         status_id ="_".join(status_id.split('_')[:-1]) + "_"+str(i)
-        pass
+
 
     complete_url = os.path.join(url, "sciroc-robot-status", status_id)
 

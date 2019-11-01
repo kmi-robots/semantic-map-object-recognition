@@ -8,6 +8,7 @@ import base64
 import os
 import json
 from sensor_msgs import point_cloud2
+import struct
 
 
 #---- Hardcoded DH API params ------------#
@@ -47,17 +48,21 @@ def DH_img_send(img_obj):
         pcl = img_obj["pcl"]
 
         labels, scores, coords, ranks = zip(*img_obj["regions"])
-        center_coords = [(int(x+(x2-x)/2), int(y+ (y2-y)/2))  for x,x2,y,y2 in coords]
+        #center_coords = [(int(x+(x2-x)/2), int(y+ (y2-y)/2))  for x,x2,y,y2 in coords]
 
-        #find correspondence on pcl for all centers
+        #read all points in pointcloud
         points_list = point_cloud2.read_points_list(pcl, field_names=("x", "y", "z")) #, uvs=center_coords)
 
         for i, obj_label in enumerate(labels): #obj_label, score, coords, rank  in img_obj["regions"]:
 
             x,x2,y,y2 = coords[i]
 
+            #our u,v in this case are the coords of the center of each bbox
+            u =int(x + (x2 - x) / 2)
+            v = int(y + (y2 - y) / 2)
+
             #Equivalent of center coords in pointcloud
-            map_x, map_y, map_z = points_list[i]
+            map_x, map_y, map_z = pixelTo3DPoint(pcl, u, v)
 
             ranking_list = [{'item': key, 'score': val} for key, val in ranks[i].items()]
 
@@ -106,7 +111,7 @@ def DH_status_send(msg, status_id="", first=False):
     timestamp = t.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     if first:
-        #create the first one
+        #create the first onecloud
         status_id = "status_" + timestamp.replace(":",'')+"_1"
     else:
 
@@ -133,9 +138,33 @@ def arrayTo64(img_array):
 
     """
     :param img_array: expects img in array format read through OpenCV
-    :return: base64 converted string
+    :return: base64 converted stringcloud
     """
     _, buffer = cv2.imencode('.jpg', img_array)
 
     return base64.b64encode(buffer).decode('utf-8')
+
+def pixelTo3DPoint(cloud, u, v):
+
+    width = cloud.width
+    height = cloud.height
+    point_step = cloud.point_step
+    row_step = cloud.row_step
+
+    array_pos = v*row_step + u*point_step
+
+    bytesX = [ord(x) for x in cloud.data[array_pos:array_pos+4]]
+    bytesY = [ord(x) for x in cloud.data[array_pos+4: array_pos+8]]
+    bytesZ = [ord(x) for x in cloud.data[array_pos+8:array_pos+12]]
+
+    byte_format=struct.pack('4B', *bytesX)
+    X = struct.unpack('f', byte_format)[0]
+
+    byte_format=struct.pack('4B', *bytesY)
+    Y = struct.unpack('f', byte_format)[0]
+
+    byte_format=struct.pack('4B', *bytesZ)
+    Z = struct.unpack('f', byte_format)[0]
+
+    return X, Y, Z
 

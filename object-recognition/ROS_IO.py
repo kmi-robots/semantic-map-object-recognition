@@ -168,9 +168,9 @@ class ImageConverter:
 
                     data["data"] = processed_data[0]
                     data["regions"] = processed_data[2]
+                    data["colours"] = processed_data[3]
                     #Send processed image to Data Hub
 
-                    print(data["regions"])
 
                     res, stat_id = DH_status_send("Sending processed image", status_id=stat_id)
                     if not res.ok:

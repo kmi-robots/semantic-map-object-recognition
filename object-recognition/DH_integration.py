@@ -37,6 +37,7 @@ def DH_img_send(img_obj):
 
     img_id  = img_obj["filename"].replace(".",'_')
     pcl = img_obj["pcl"]
+    xyz_img = img_obj["data"]
 
     results = []
 
@@ -56,8 +57,8 @@ def DH_img_send(img_obj):
 
         for i, obj_label in enumerate(labels): #obj_label, score, coords, rank  in img_obj["regions"]:
 
-            x,x2,y,y2 = coords[i]
-
+            x,y,x2,y2 = coords[i]
+            
             #our u,v in this case are the coords of the center of each bbox
             u =int(x + (x2 - x) / 2)
             v = int(y + (y2 - y) / 2)
@@ -97,6 +98,11 @@ def DH_img_send(img_obj):
 
             results.append(node)
 
+
+            # And draw center coords on img
+            cv2.circle(xyz_img, (u,v), 5, colour_array*255, thickness=5, lineType=8, shift=0)
+            #cv2.putText(xyz_img, "( "+str(map_x)+", "+str(map_y) + ", "+str(map_z)+" )", (u-10, v-10),cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour_array*255, 2)
+
     complete_url = os.path.join(url,"sciroc-episode12-image", img_id)
 
     #Convert img array to base64
@@ -116,7 +122,7 @@ def DH_img_send(img_obj):
                 }
 
 
-    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, ''))
+    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, '')), xyz_img
 
 
 def DH_status_send(msg, status_id="", first=False):

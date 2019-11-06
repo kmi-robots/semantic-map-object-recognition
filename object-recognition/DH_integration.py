@@ -82,12 +82,16 @@ def DH_img_send(img_obj):
             ranking_list = [{'item': key, 'score': val} for key, val in ranks[i].items()]
 
             #adding colour coding
-            colour_array = img_obj["colours"][i]/255
+            #but swapping from open cv's default BGR back to RGB for DH web GUI
+            bgr_array =img_obj["colours"][i].tolist()
             
+            colour_array = [bgr_array[2], bgr_array[1], bgr_array[0]] #/255
+
+            # rgb2hex(colour_array)
 
             node = {'item': obj_label,
                     'score': scores[i],
-                    'colour_code': rgb2hex(colour_array),
+                    'colour_code': colour_array,
                     'ranking': ranking_list,
                     'box_top': (x,x2),
                     'box_bottom': (y,y2),
@@ -100,7 +104,7 @@ def DH_img_send(img_obj):
 
 
             # And draw center coords on img
-            cv2.circle(xyz_img, (u,v), 5, colour_array*255, thickness=5, lineType=8, shift=0)
+            cv2.circle(xyz_img, (u,v), 5, img_obj["colours"][i], thickness=5, lineType=8, shift=0)
             #cv2.putText(xyz_img, "( "+str(map_x)+", "+str(map_y) + ", "+str(map_z)+" )", (u-10, v-10),cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour_array*255, 2)
 
     complete_url = os.path.join(url,"sciroc-episode12-image", img_id)

@@ -357,7 +357,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
     pcl = data_point["pcl"]
 
     frame_objs = []
-
+    colour_seq = []
     if data_point["regions"] is not None:
 
         # rely on ground truth boxes
@@ -455,6 +455,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
             # draw prediction
             color = COLORS[all_classes.index(prediction)]
+            colour_seq.append(color)
             cv2.rectangle(out_img, (x, y), (x2, y2), color, 2)
 
             if y - 10 > 0:
@@ -612,4 +613,4 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
     # cv2.destroyAllWindows()
 
     # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
-    return [out_img, out_VG, frame_objs], y_pred, y_true, run_eval
+    return [out_img, out_VG, frame_objs, colour_seq], y_pred, y_true, run_eval

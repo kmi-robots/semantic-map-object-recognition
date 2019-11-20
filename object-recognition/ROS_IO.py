@@ -132,7 +132,7 @@ class ImageConverter:
                     print(res.content)
 
                 #send acquired img to Data Hub
-                res = DH_img_send(data)
+                res,_ = DH_img_send(data)
 
                 if not res.ok:
                     print("Failed to send img to Data Hub ")
@@ -162,14 +162,15 @@ class ImageConverter:
 
                 try:
 
-                    self.im_publisher.publish(self.bridge.cv2_to_imgmsg(processed_data[0],'bgr8'))
-                    self.corrim_publisher.publish(self.bridge.cv2_to_imgmsg(processed_data[1], 'bgr8'))
+                    #self.im_publisher.publish(self.bridge.cv2_to_imgmsg(processed_data[0],'bgr8'))
 
+                    #self.corrim_publisher.publish(self.bridge.cv2_to_imgmsg(processed_data[1], 'bgr8'))
+                    
                     data["data"] = processed_data[0]
                     data["regions"] = processed_data[2]
+                    data["colours"] = processed_data[3]
                     #Send processed image to Data Hub
 
-                    print(data["regions"])
 
                     res, stat_id = DH_status_send("Sending processed image", status_id=stat_id)
                     if not res.ok:
@@ -177,12 +178,13 @@ class ImageConverter:
                         print("Failed communication with Data Hub ")
                         print(res.content)
 
-                    res = DH_img_send(data)
+                    res, xyz_img = DH_img_send(data)
 
                     if not res.ok:
                         print("Failed to send img to Data Hub ")
                         print(res.content)
 
+                    self.im_publisher.publish(self.bridge.cv2_to_imgmsg(xyz_img,'bgr8'))
                     #Optional TO-DO: sends a third image after knowledge-based correction
 
                 except CvBridgeError as e:

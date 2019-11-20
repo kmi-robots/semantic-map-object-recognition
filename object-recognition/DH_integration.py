@@ -9,7 +9,8 @@ import os
 import json
 from sensor_msgs import point_cloud2
 import struct
-
+import math
+from matplotlib.colors import rgb2hex
 
 #---- Hardcoded DH API params ------------#
 teamid = "kmirobots"
@@ -35,39 +36,62 @@ def DH_img_send(img_obj):
     timestamp = t.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     img_id  = img_obj["filename"].replace(".",'_')
+    pcl = img_obj["pcl"]
+    xyz_img = img_obj["data"]
 
     results = []
 
 
-    if img_obj["regions"] is not None:
+    if img_obj["regions"] is not None and img_obj["regions"]!=[]:
 
         #This is the captured original image, i.e., pre annotation
         img_id = img_id + "_processed"
 
         #find the position of each object based on depth map
-        pcl = img_obj["pcl"]
 
         labels, scores, coords, ranks = zip(*img_obj["regions"])
         #center_coords = [(int(x+(x2-x)/2), int(y+ (y2-y)/2))  for x,x2,y,y2 in coords]
 
         #read all points in pointcloud
-        points_list = point_cloud2.read_points_list(pcl, field_names=("x", "y", "z")) #, uvs=center_coords)
+        #points_list = point_cloud2.read_points_list(pcl, field_names=("x", "y", "z")) #, uvs=center_coords)
 
         for i, obj_label in enumerate(labels): #obj_label, score, coords, rank  in img_obj["regions"]:
 
-            x,x2,y,y2 = coords[i]
-
+            x,y,x2,y2 = coords[i]
+            
             #our u,v in this case are the coords of the center of each bbox
             u =int(x + (x2 - x) / 2)
             v = int(y + (y2 - y) / 2)
 
             #Equivalent of center coords in pointcloud
+            
             map_x, map_y, map_z = pixelTo3DPoint(pcl, u, v)
-
+            
+            if math.isnan(map_x):
+                map_x = None 
+            if math.isnan(map_y):
+                map_y = None 
+            
+            if math.isnan(map_z):
+                map_z = None 
+            
+            #map_x = 0.0
+            #map_y = 0.0  
+            #map_z = 0.0            
+            
             ranking_list = [{'item': key, 'score': val} for key, val in ranks[i].items()]
+
+            #adding colour coding
+            #but swapping from open cv's default BGR back to RGB for DH web GUI
+            bgr_array =img_obj["colours"][i].tolist()
+            
+            colour_array = [bgr_array[2], bgr_array[1], bgr_array[0]] #/255
+
+            # rgb2hex(colour_array)
 
             node = {'item': obj_label,
                     'score': scores[i],
+                    'colour_code': colour_array,
                     'ranking': ranking_list,
                     'box_top': (x,x2),
                     'box_bottom': (y,y2),
@@ -77,6 +101,11 @@ def DH_img_send(img_obj):
                     }
 
             results.append(node)
+
+
+            # And draw center coords on img
+            cv2.circle(xyz_img, (u,v), 5, img_obj["colours"][i], thickness=5, lineType=8, shift=0)
+            #cv2.putText(xyz_img, "( "+str(map_x)+", "+str(map_y) + ", "+str(map_z)+" )", (u-10, v-10),cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour_array*255, 2)
 
     complete_url = os.path.join(url,"sciroc-episode12-image", img_id)
 
@@ -93,11 +122,11 @@ def DH_img_send(img_obj):
                   "z": img_obj["z"],
                   "base64": base64_img,
                   "format": format,
-                  "results": results
+                  "results": results,
                 }
 
 
-    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, ''))
+    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, '')), xyz_img
 
 
 def DH_status_send(msg, status_id="", first=False):
@@ -153,9 +182,9 @@ def pixelTo3DPoint(cloud, u, v):
 
     array_pos = v*row_step + u*point_step
 
-    bytesX = [ord(x) for x in cloud.data[array_pos:array_pos+4]]
-    bytesY = [ord(x) for x in cloud.data[array_pos+4: array_pos+8]]
-    bytesZ = [ord(x) for x in cloud.data[array_pos+8:array_pos+12]]
+    bytesX = [x for x in cloud.data[array_pos:array_pos+4]]
+    bytesY = [x for x in cloud.data[array_pos+4: array_pos+8]]
+    bytesZ = [x for x in cloud.data[array_pos+8:array_pos+12]]
 
     byte_format=struct.pack('4B', *bytesX)
     X = struct.unpack('f', byte_format)[0]
@@ -166,5 +195,5 @@ def pixelTo3DPoint(cloud, u, v):
     byte_format=struct.pack('4B', *bytesZ)
     Z = struct.unpack('f', byte_format)[0]
 
-    return X, Y, Z
+    return float(X), float(Y), float(Z)
 

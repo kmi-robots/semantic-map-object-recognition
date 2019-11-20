@@ -370,7 +370,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
         # segment it
         
-        predicted_boxes, predicted_masks = segment(img, w_saliency=True, static=True)
+        predicted_boxes, predicted_masks = segment(img, w_saliency=True,  depth_image= data_point["depth_image"])
 
         try:
 
@@ -380,6 +380,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
             #no bboxes returned
             bboxes= None
             yolo_labels = None
+
         run_eval = False
 
     if bboxes is not None:

@@ -36,10 +36,11 @@ class ImageConverter:
         if msg.data:
 
             self.im_subscriber = message_filters.Subscriber("/camera/rgb/image_raw", Image) #, self.callback, queue_size=1)
+            self.d_subscriber = message_filters.Subscriber("/camera/depth/image_raw", Image)
             self.pcl_subscriber = message_filters.Subscriber("/camera/depth/points", PointCloud2)
 
             #synchronise two topics
-            self.ts = message_filters.ApproximateTimeSynchronizer([self.im_subscriber, self.pcl_subscriber], queue_size=1, slop=0.1)
+            self.ts = message_filters.ApproximateTimeSynchronizer([self.im_subscriber, self.pcl_subscriber, self.d_subscriber], queue_size=1, slop=0.1)
             #one callback for both
             self.ts.registerCallback(self.callback)
 
@@ -56,6 +57,7 @@ class ImageConverter:
 
             self.im_subscriber.unregister()
             self.pcl_subscriber.unregister()
+            self.d_subscriber.unregister()
 
             res, stat_id = DH_status_send("Stopping observation", first=True)
 
@@ -67,15 +69,16 @@ class ImageConverter:
             return SetBoolResponse(False,"Shutting down image subscriber")
 
 
-    def callback(self, img_msg, pcl_msg):
+    def callback(self, img_msg, pcl_msg, depth_msg):
 
         try:
 
             self.timestamp = img_msg.header.stamp.to_sec()
             self.img = self.bridge.imgmsg_to_cv2(img_msg, 'bgr8')
 
-            #self.dimg = self.bridge.imgmsg_to_cv2(depth_msg, "passthrough") #uint16 depth values in mm
-            #Replacing with pcl
+            self.dimg = self.bridge.imgmsg_to_cv2(depth_msg, "32FC1") #uint16 depth values in mm
+
+
             assert isinstance(pcl_msg, PointCloud2)
             self.pcl = pcl_msg
             #self.points = point_cloud2.read_points(pcl_msg, field_names=("x","y","z"), skip_nans=False)
@@ -103,9 +106,11 @@ class ImageConverter:
                 data["regions"] = None
                 data["data"] = self.img
                 data["pcl"] = self.pcl
+                data["depth_image"] = self.dimg
 
                 self.img = None #to deal with unregistered subscriber
                 self.pcl = None
+                self.dimg = None
 
                 try:
 

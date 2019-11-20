@@ -35,7 +35,7 @@ with open(CLASSES, 'r') as f:
     classes = [line.strip() for line in f.readlines()] + ['N/A','saliency region']
 
 scale = 0.00392         # 1/255.  factor
-conf_threshold = 0.01 #0.01   #0.5
+conf_threshold = 0.1 #0.01   #0.5
 nms_threshold = 0.1     #0.4
 overlapThresh = 0.4
 low = 2000
@@ -415,7 +415,7 @@ def white_balance(img):
     return cv2.cvtColor(result, cv2.COLOR_LAB2BGR)
 
 
-def segment(img, YOLO=True, w_saliency=False, static=False, masks=None):
+def segment(img, YOLO=True, w_saliency=False, static=False, masks=None, depth_image= None):
 
     Width = img.shape[1]
     Height = img.shape[0]
@@ -427,8 +427,8 @@ def segment(img, YOLO=True, w_saliency=False, static=False, masks=None):
     denoised = cv2.fastNlMeansDenoisingColored(temp, None, 10, 10, 7, 15)
     denoised = white_balance(denoised)
 
-    cv2.imshow("Whiter Image", denoised)
-    cv2.waitKey(1000)
+    #cv2.imshow("Whiter Image", denoised)
+    #cv2.waitKey(1000)
 
     #compute colour histogram
     """
@@ -446,7 +446,7 @@ def segment(img, YOLO=True, w_saliency=False, static=False, masks=None):
     #Cluster pixels
     from data_loaders import BGRtoRGB
     cluster_colours(BGRtoRGB(denoised))
-
+    for_mask = denoised.copy()
 
     if w_saliency and static:
 
@@ -456,21 +456,56 @@ def segment(img, YOLO=True, w_saliency=False, static=False, masks=None):
 
     elif w_saliency and not static:
 
-        saliency_map = get_obj_saliency_map(denoised)
+        saliency_map = get_obj_saliency_map(denoised)[5:,:]
+        output = img.copy()
 
         # first dim of saliency map gives the no. of detections
-        for i in range(min(saliency_map.shape[0], 10)):
+        for i in range(min(saliency_map.shape[0], 5)):
             # for each candidate salient region
             startX, startY, endX, endY = saliency_map[i].flatten()
 
-            output = img.copy()
             color = np.random.randint(0, 255, size=(3,))
             color = [int(c) for c in color]
             cv2.rectangle(output, (startX, startY), (endX, endY), color, 2)
 
+
+
+    if depth_image is not None:
+
+        #binarise based on depth value (within 50 cm)
+        #print(len(depth_image[(depth_image> 0.) & (depth_image <800.) ]))
+
+        mask = depth_image.copy()
+        mask[depth_image >= 3000.] = 0. #& (depth_image < 2000.)] = 0.
+        # mask[(depth_image >= 2000.) | (depth_image == 0.)] = 1.
+        mask[depth_image < 3000.] = 1.
+
+        #trying to reduce noisy edges due to invalid depth measure
+        #kernel = np.ones((5, 5), np.float32) / 25
+        smask = cv2.blur(mask,(5,5)) #cv2.filter2D(mask, -1, kernel)
+        smask = smask.astype(np.uint8)
+
+        #mask the RGB image based on extracted foreground
+        res = cv2.bitwise_and(for_mask, for_mask, mask=smask)
+
+        # cv2.imshow("masked Image", denoised)
+        # cv2.waitKey(8000)
+        # cv2.destroyAllWindows()
+
+        """
+        d_saliency_map = get_obj_saliency_map(depth_image)
+
+        for i in range(min(d_saliency_map.shape[0], 10)):
+            # for each candidate salient region
+            startX, startY, endX, endY = saliency_map[i].flatten()
+
+            color = np.random.randint(0, 255, size=(3,))
+            color = [int(c) for c in color]
+            cv2.rectangle(output, (startX, startY), (endX, endY), color, 2)
+        """
+
     # show the output image
-    #cv2.imshow("Image", output)
-    #cv2.waitKey(1000)
+
 
     if YOLO:
 
@@ -510,9 +545,9 @@ def segment(img, YOLO=True, w_saliency=False, static=False, masks=None):
 
                 #assign conf value of box to all pixels in that box
                 #saliency_map[x:x+w,y:y+h] = confidences[i]*100
-
-                #draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
-                all_boxes.append(([x,y,x+w,y+h], str(classes[class_ids[i]])))
+                if area > 5000:
+                    #draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
+                    all_boxes.append(([x,y,x+w,y+h], str(classes[class_ids[i]])))
 
                 #tmp = img.copy()
                 #predictions.append((tmp[y:y+h, x:x+w],str(classes[class_ids[i]])))

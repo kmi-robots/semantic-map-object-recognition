@@ -353,6 +353,9 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
     whole_start = time.time()
 
+    #Extract foreground from pcl
+    pcl = data_point["pcl"]
+
     frame_objs = []
 
     if data_point["regions"] is not None:
@@ -366,10 +369,13 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
     else:
 
         # segment it
-        #cv2.imwrite('temp.jpg', img)
-        predicted_boxes, predicted_masks = segment(img)
+        
+        predicted_boxes, predicted_masks = segment(img, w_saliency=True, static=True)
+
         try:
+
             bboxes, yolo_labels = zip(*predicted_boxes)
+
         except ValueError:
             #no bboxes returned
             bboxes= None

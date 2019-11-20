@@ -5,6 +5,8 @@ regardless of image class/label
 Derived from code at
 https://github.com/meenavyas/Misc/blob/master/ObjectDetectionUsingYolo/ObjectDetectionUsingYolo.ipynb
 """
+from __future__ import (division, absolute_import, print_function, unicode_literals)
+
 import torch
 import cv2
 import numpy as np
@@ -12,6 +14,9 @@ import torchvision
 
 from torchvision import transforms as T
 from PIL import Image
+from sklearn.cluster import KMeans
+from matplotlib import pyplot as plt
+
 
 # 'path to yolo config file'
 CONFIG='./data/yolo/yolov3.cfg'
@@ -350,37 +355,122 @@ def run_FRCNN(img, threshold=0.15, nms=nms_threshold):
     return pred_boxes, pred_class, masks
 
 
+def cluster_colours(image):
+
+    d = image.copy()
+    flat = d.reshape((d.shape[0] * d.shape[1], 3))
+    clt = KMeans(n_clusters=5)
+    clt.fit(flat)
+    hist = centroid_histogram(clt)
+    bar = plot_colors(hist, clt.cluster_centers_)
+
+    # show our color bart
+    plt.figure()
+    plt.axis("off")
+    plt.imshow(bar)
+    plt.show()
+
+
+def centroid_histogram(clt):
+    # grab the number of different clusters and create a histogram
+    # based on the number of pixels assigned to each cluster
+    numLabels = np.arange(0, len(np.unique(clt.labels_)) + 1)
+    (hist, _) = np.histogram(clt.labels_, bins=numLabels)
+
+    # normalize the histogram, such that it sums to one
+    hist = hist.astype("float")
+    hist /= hist.sum()
+
+    # return the histogram
+    return hist
+
+
+def plot_colors(hist, centroids):
+    # initialize the bar chart representing the relative frequency
+    # of each of the colors
+    bar = np.zeros((50, 300, 3), dtype="uint8")
+    startX = 0
+
+    # loop over the percentage of each cluster and the color of
+    # each cluster
+    for (percent, color) in zip(hist, centroids):
+        # plot the relative percentage of each cluster
+        endX = startX + (percent * 300)
+        cv2.rectangle(bar, (int(startX), 0), (int(endX), 50),
+                      color.astype("uint8").tolist(), -1)
+        startX = endX
+
+    # return the bar chart
+    return bar
+
+
+def white_balance(img):
+
+    result = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    avg_a = np.average(result[:, :, 1])
+    avg_b = np.average(result[:, :, 2])
+    result[:, :, 1] = result[:, :, 1] - ((avg_a - 128) * (result[:, :, 0] / 255.0) * 1.1)
+    result[:, :, 2] = result[:, :, 2] - ((avg_b - 128) * (result[:, :, 0] / 255.0) * 1.1)
+
+    return cv2.cvtColor(result, cv2.COLOR_LAB2BGR)
+
 
 def segment(img, YOLO=True, w_saliency=False, static=False, masks=None):
 
     Width = img.shape[1]
     Height = img.shape[0]
 
-    #img = cv2.imread(temp_path)
-
     temp = img.copy()
+
 
     # Denoise image
     denoised = cv2.fastNlMeansDenoisingColored(temp, None, 10, 10, 7, 15)
+    denoised = white_balance(denoised)
+
+    cv2.imshow("Whiter Image", denoised)
+    cv2.waitKey(1000)
+
+    #compute colour histogram
+    """
+    hist = cv2.calcHist([temp], [0,1,2], None, histSize=[32,32,32], ranges=[0, 256, 0,256, 0,256])
+
+    plt.figure()
+    plt.title("RGB Histogram")
+    plt.xlabel("Bins")
+    plt.ylabel("# of Pixels")
+    plt.plot(hist)
+    plt.xlim([0, 256])
+    plt.show()
+    """
+
+    #Cluster pixels
+    from data_loaders import BGRtoRGB
+    cluster_colours(BGRtoRGB(denoised))
 
 
     if w_saliency and static:
 
         #Take bottom-up saliency also into account
         saliency_map = get_static_saliency_map(denoised)
-
+        output = cv2.threshold(saliency_map.astype('uint8'), 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
     elif w_saliency and not static:
 
         saliency_map = get_obj_saliency_map(denoised)
 
+        # first dim of saliency map gives the no. of detections
         for i in range(min(saliency_map.shape[0], 10)):
             # for each candidate salient region
             startX, startY, endX, endY = saliency_map[i].flatten()
 
             output = img.copy()
+            color = np.random.randint(0, 255, size=(3,))
+            color = [int(c) for c in color]
+            cv2.rectangle(output, (startX, startY), (endX, endY), color, 2)
 
-            #draw_bounding_box(output, -1, None, startX, startY, endX, endY)
+    # show the output image
+    #cv2.imshow("Image", output)
+    #cv2.waitKey(1000)
 
     if YOLO:
 
@@ -448,8 +538,8 @@ def segment(img, YOLO=True, w_saliency=False, static=False, masks=None):
 
                 all_boxes.append(([int(round(x)), int(round(y)), int(round(x2)), int(round(y2))], str(label)))
 
-
-    if w_saliency:
+    """
+    if w_saliency and static:
 
         bin2 = cv2.threshold(saliency_map, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
@@ -475,6 +565,7 @@ def segment(img, YOLO=True, w_saliency=False, static=False, masks=None):
                 #draw_bounding_box(temp, -1, None, x, y, x + w, y + h)
 
         #print(np.asarray(all_boxes).shape)
+    """
 
     #Removing overlapping boxes
 

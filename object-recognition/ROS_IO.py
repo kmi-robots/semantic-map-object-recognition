@@ -43,7 +43,6 @@ class ImageConverter:
             #one callback for both
             self.ts.registerCallback(self.callback)
 
-
             res, stat_id = DH_status_send("Starting to look around", first=True)
 
             if not res.ok:

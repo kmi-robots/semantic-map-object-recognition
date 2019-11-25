@@ -36,4 +36,6 @@ This code has been tested for / requires
 
 ```
 
-
+- the Pythia VQA model developed at Facebook is also used for inference.
+  Please refer to their [official tutorial](https://colab.research.google.com/drive/1Z9fsh10rFtgWe4uy8nvU4mQmqdokdIRR) for the relevant installation steps and dependencies
+  

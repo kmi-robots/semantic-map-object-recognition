@@ -10,10 +10,11 @@ from collections import Counter, OrderedDict
 import time
 
 
-from common_sense import show_leastconf, correct_floating, extract_spatial, proxy_floor, reverse_map
+from common_sense import show_leastconf, correct_floating, extract_spatial, proxy_floor, reverse_map, extract_spatial_unbound
 from data_loaders import BGRtoRGB
 from sklearn.metrics import classification_report, accuracy_score
 from baseline_KNN import run_baseline
+from segment import white_balance
 
 
 #Set of labels to retain from segmentation
@@ -306,7 +307,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
     #batch of multiple images to process
     for data_point in data:  # reversed(img_collection.values()):
 
-        _, y_pred, y_true, run_eval = run_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
+        _, y_pred, y_true, run_eval, _ = run_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
                                                            K, sem, voting, VG_data, y_true, y_pred, embedding_space)
 
 
@@ -324,7 +325,8 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
 
 
 def run_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
-                                                           K, sem, voting, VG_data, y_true, y_pred, embedding_space):
+                                                           K, sem, voting, VG_data, y_true, y_pred, embedding_space, extract_SR=True, VQA=False, \
+                                                            SR_KB=None):
     #print(type(data_point))
 
     try:
@@ -344,10 +346,15 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
         img = BGRtoRGB(img)
 
     # create copy to draw predictions on
-    out_img = img.copy()
-    out_VG = img.copy()
+
+    denoised = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 15)
+    denoised = white_balance(denoised)
+
+    out_img = denoised.copy()
+    out_VG = denoised.copy()
     #out_CP = img.copy()
 
+    
     print("%-----------------------------------------------------------------------% \n")
     print("Analyzing frame %s" % data_point["filename"])
 
@@ -370,7 +377,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
         # segment it
         
-        predicted_boxes, predicted_masks = segment(img, w_saliency=True,  depth_image= data_point["depth_image"])
+        predicted_boxes, predicted_masks = segment(denoised, w_saliency=True,  depth_image= data_point["depth_image"])
 
         try:
 
@@ -390,8 +397,9 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
             # create a copy, crop it to region and store ground truth label
 
-            obj = img.copy()
+            obj = denoised.copy() #change img to denoised to see effect of denoising and white balancing on predictions
             segm_label = ''
+
 
             if args.bboxes == 'true':
 
@@ -416,8 +424,10 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
             if input_emb is None:
 
-                #Image could not be processed/ embedding could not be generated for some reason, return
-                return [out_img, out_VG, None], y_pred, y_true, run_eval
+                # Image could not be processed/ embedding could not be generated for some reason, skip obj
+                continue
+
+                #return [out_img, out_VG, None], y_pred, y_true, run_eval, SR_KB
 
             """
             cv2.imwrite('./temp.png', obj)
@@ -478,6 +488,54 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
                 out_img = display_mask(out_img, mask, color)
             """
+            # cv2.imshow('union', obj)
+            # cv2.waitKey(10000)
+            # cv2.destroyAllWindows()
+
+            vqastart = time.time()
+            if VQA:
+                # Also ask Pythia about this object
+                from pythia_demo import PythiaDemo
+                import pandas as pd
+
+                demo = PythiaDemo()
+
+                question_text = "is this a "+prediction
+
+                scores, predictions = demo.predict(obj, question_text)
+
+                winner, w_score = (predictions[0], scores[0])
+
+                if winner =="yes":
+
+                    print("Pythia says that object IS a "+ prediction)
+
+                else:
+
+                    print("Pythia says that object IS NOT a "+ prediction)
+
+                """
+                scores = [score * 100 for score in scores]
+                df = pd.DataFrame({
+                    "Prediction": predictions,
+                    "Confidence": scores
+                })
+
+                print(df)
+                """
+                print("Took %f sec for Pythia to guess" % float(time.time() - vqastart))
+
+
+
+        if extract_SR:
+
+            # Also extract spatial relations for each processed scene
+            # and update internal KB with extracted occurrences
+
+            for i in range(len(frame_objs)):
+
+                SR_KB = extract_spatial_unbound(i, frame_objs, SR_KB)
+
 
         # Correction via ConceptNet + VG -----------------------------------------------------------------------
         """Correcting least confident predictions by querying external knowledge"""
@@ -522,7 +580,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
                         """
                         cv2.imwrite(os.path.join(out_imgs, 'Kground_ImprintedKNET', data_point["filename"]), out_VG)
                         """
-                        return [out_img, out_VG, frame_objs], y_pred, y_true, run_eval  # Continue to next image
+                        return [out_img, out_VG, frame_objs], y_pred, y_true, run_eval, SR_KB  # Continue to next image
 
                 if len(frame_objs) <= 1:
 
@@ -532,7 +590,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
                     # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
 
-                    return [out_img, out_VG, frame_objs], y_pred, y_true, run_eval  #Continue to next image
+                    return [out_img, out_VG, frame_objs], y_pred, y_true, run_eval, SR_KB  #Continue to next image
 
                 new_preds = extract_spatial(weak_idx, frame_objs, VG_base=VG_data)
 
@@ -614,4 +672,4 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
     # cv2.destroyAllWindows()
 
     # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
-    return [out_img, out_VG, frame_objs, colour_seq], y_pred, y_true, run_eval
+    return [out_img, out_VG, frame_objs, colour_seq], y_pred, y_true, run_eval, SR_KB

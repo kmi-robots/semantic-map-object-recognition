@@ -445,8 +445,8 @@ def segment(img, YOLO=True, w_saliency=False, static=False, masks=None, depth_im
     """
 
     #Cluster pixels
-    from data_loaders import BGRtoRGB
-    cluster_colours(BGRtoRGB(denoised))
+    # from data_loaders import BGRtoRGB
+    # cluster_colours(BGRtoRGB(denoised))
     for_mask = denoised.copy()
 
     if w_saliency and static:
@@ -469,8 +469,7 @@ def segment(img, YOLO=True, w_saliency=False, static=False, masks=None, depth_im
             color = [int(c) for c in color]
             cv2.rectangle(output, (startX, startY), (endX, endY), color, 2)
 
-
-
+    """
     if depth_image is not None:
 
         #binarise based on depth value (within 50 cm)
@@ -493,17 +492,17 @@ def segment(img, YOLO=True, w_saliency=False, static=False, masks=None, depth_im
         # cv2.waitKey(8000)
         # cv2.destroyAllWindows()
 
-        """
-        d_saliency_map = get_obj_saliency_map(depth_image)
+        
+        # d_saliency_map = get_obj_saliency_map(depth_image)
 
-        for i in range(min(d_saliency_map.shape[0], 10)):
+        #for i in range(min(d_saliency_map.shape[0], 10)):
             # for each candidate salient region
-            startX, startY, endX, endY = saliency_map[i].flatten()
+        #    startX, startY, endX, endY = saliency_map[i].flatten()
 
-            color = np.random.randint(0, 255, size=(3,))
-            color = [int(c) for c in color]
-            cv2.rectangle(output, (startX, startY), (endX, endY), color, 2)
-        """
+        #    color = np.random.randint(0, 255, size=(3,))
+        #    color = [int(c) for c in color]
+        #    cv2.rectangle(output, (startX, startY), (endX, endY), color, 2)
+    """
 
     # show the output image
 
@@ -543,11 +542,9 @@ def segment(img, YOLO=True, w_saliency=False, static=False, masks=None, depth_im
 
                 area = (int(x) + int(w) - int(x) + 1) * (int(y) + int(h) - int(y) + 1)
 
-
                 #assign conf value of box to all pixels in that box
                 #saliency_map[x:x+w,y:y+h] = confidences[i]*100
                 if area > int(tot_pix/20):
-
 
                     #draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
                     all_boxes.append(([x,y,x+w,y+h], str(classes[class_ids[i]])))

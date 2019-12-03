@@ -13,12 +13,14 @@ from collections import OrderedDict
 import tf
 from std_srvs.srv import SetBool,SetBoolResponse
 #import cv2
+from collections import Counter
+import json
+import os
 
 from test import test, run_processing_pipeline
 from DH_integration import DH_img_send, DH_status_send
 
 class ImageConverter:
-
 
     def __init__(self, path_to_input, args, model, device, base_trans):
 
@@ -46,6 +48,19 @@ class ImageConverter:
 
             res, stat_id = DH_status_send("Starting to look around", first=True)
 
+            #Counter to keep track of spatial relations
+            if not os.path.isfile("./SR_KB.json"):
+
+                print("Initializing spatial rel KB")
+                self.SR_KB = Counter()
+
+            else:
+                print("Retrieving spatial rel KB")
+                with open("./SR_KB.json", 'r') as jf:
+
+                    self.SR_KB = json.load(jf)
+
+
             if not res.ok:
 
                 print("Failed communication with Data Hub ")
@@ -62,9 +77,14 @@ class ImageConverter:
             res, stat_id = DH_status_send("Stopping observation", first=True)
 
             if not res.ok:
-
                 print("Failed communication with Data Hub ")
                 print(res.content)
+
+            with open("./SR_KB.json", 'r') as jf:
+
+                json.dump(self.SR_KB, jf)
+
+            print("Saved updated SR KB locally")
 
             return SetBoolResponse(False,"Shutting down image subscriber")
 
@@ -151,9 +171,11 @@ class ImageConverter:
 
                 #Then images are processed one by one by calling run_processing_pipeline directly
 
-                processed_data, _, _, _ = run_processing_pipeline(data, path_to_input, args, model,  device, base_trans \
+                processed_data, _, _, _ , self.SR_KB = run_processing_pipeline(data, path_to_input, args, model,  device, base_trans \
                                                                   , self.cardinalities,self.COLORS, self.all_classes, \
-                                                              args.K, args.sem, args.Kvoting, self.VG_data, [], [], self.embedding_space)
+                                                              args.K, args.sem, args.Kvoting, self.VG_data, [], [], \
+                                                                  self.embedding_space, SR_KB=self.SR_KB)
+                #,VQA= True)
 
 
                 res, stat_id = DH_status_send("Image analysed",status_id=stat_id)

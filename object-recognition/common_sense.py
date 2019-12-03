@@ -5,6 +5,9 @@ import requests
 import time
 from collections import Counter, OrderedDict
 import json
+from DH_integration import pixelTo3DPoint
+import math
+
 
 def compute_sem_sim(wemb1, wemb2):
     """
@@ -214,6 +217,8 @@ def conceptnet_relatedness(subject, candidates, object):
     return pred_subject.replace('_', '-'), base_score
 
 
+
+
 def extract_spatial(weak_idx, obj_list, VG_base=None):
     preds, confs, coords, rankings = zip(*obj_list)
 
@@ -307,6 +312,56 @@ def extract_spatial(weak_idx, obj_list, VG_base=None):
 
 FLOOR = get_synset("floor").name()
 TABLE = wordnet.synsets("table")[1].name()  # table.n.01 is a data table
+
+
+
+def extract_spatial_unbound(obj_idx, obj_list, SR_KB):
+
+    #same as extract_spatial but without:
+    # thresholding on confidence
+    # validation against external knowledge
+    # ranking correction
+    # other differences:
+    # requires counter of prior relations found
+    # includes rel with floor
+
+    preds, confs, coords, rankings = zip(*obj_list)
+
+    obj_pred, obj_synset = formatlabel(preds[obj_idx])
+
+    x_a, y_a, w_a, h_a = coords[obj_idx]
+
+    floor_rel = check_horizontal_unbound(y_a, h_a)
+    SR_KB[(floor_rel, (obj_pred, obj_synset), ("floor", FLOOR))] += 1
+
+    # Are any other objects are nearby?
+    for label, score, (x_b,y_b,w_b,h_b), ranking in [obj_list[i] for i in range(len(obj_list)) if i != obj_idx]:
+
+            # Spatial ref is relative to anchor object
+            spatial_rel = check_spatial(x_a, x_b, y_a, y_b, w_a, h_a, w_b, h_b)
+
+            if spatial_rel is not None:
+
+                sem_obj, obj_syn = formatlabel(label)
+
+                SR_KB[(spatial_rel, (obj_pred, obj_synset),(sem_obj,obj_syn))] += 1
+
+
+    return SR_KB
+
+
+def check_horizontal_unbound(y, h, img_res=(1280, 720)):
+    bar_y = y + h  # /2  #Replace bar_y with actual lower y
+    thresh = img_res[1] - img_res[1] / 3
+
+    if bar_y > thresh and bar_y <= img_res[1]:
+
+        return "on "
+
+    else:
+
+        return "above"
+
 
 
 # While the piece of furniture is table.n.02

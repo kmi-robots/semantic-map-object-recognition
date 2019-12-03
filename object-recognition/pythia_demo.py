@@ -17,7 +17,6 @@ import requests
 import numpy as np
 import gc
 import torch.nn.functional as F
-import pandas as pd
 
 import torchvision.models as models
 import torchvision.transforms as transforms
@@ -110,7 +109,7 @@ class PythiaDemo:
         resnet152.eval()
         modules = list(resnet152.children())[:-2]
         self.resnet152_model = torch.nn.Sequential(*modules)
-        #self.resnet152_model.to("cuda")
+        self.resnet152_model.to("cpu")
 
     def _multi_gpu_state_to_single(self, state_dict):
         new_sd = {}
@@ -121,12 +120,12 @@ class PythiaDemo:
             new_sd[k1] = v
         return new_sd
 
-    def predict(self, url, question):
+    def predict(self, image_array, question):
 
         with torch.no_grad():
 
-            detectron_features = self.get_detectron_features(url)
-            resnet_features = self.get_resnet_features(url)
+            detectron_features = self.get_detectron_features(image_array)
+            resnet_features = self.get_resnet_features(image_array)
 
             sample = Sample()
 
@@ -134,15 +133,17 @@ class PythiaDemo:
             sample.text = processed_text["text"]
             sample.text_len = len(processed_text["tokens"])
 
+
             sample.image_feature_0 = detectron_features
             sample.image_info_0 = Sample({
                 "max_features": torch.tensor(100, dtype=torch.long)
+
             })
 
             sample.image_feature_1 = resnet_features
 
             sample_list = SampleList([sample])
-            sample_list = sample_list #.to("cuda")
+            sample_list = sample_list.to("cpu")
 
             scores = self.pythia_model(sample_list)["scores"]
             scores = torch.nn.functional.softmax(scores, dim=1)
@@ -175,29 +176,21 @@ class PythiaDemo:
 
         load_state_dict(model, checkpoint.pop("model"))
 
-        #model.to("cuda")
+        model.to("cpu")
         model.eval()
         return model
 
-    def get_actual_image(self, image_path):
-        if image_path.startswith('http'):
-            path = requests.get(image_path, stream=True).raw
-        else:
-            path = image_path
 
-        return path
+    def _image_transform(self, image_array):
 
-    def _image_transform(self, image_path):
-        path = self.get_actual_image(image_path)
-
-        img = Image.open(path)
-        im = np.array(img).astype(np.float32)
+        im = image_array.astype(np.float32)
         im = im[:, :, ::-1]
         im -= np.array([102.9801, 115.9465, 122.7717])
         im_shape = im.shape
         im_size_min = np.min(im_shape[0:2])
         im_size_max = np.max(im_shape[0:2])
         im_scale = float(800) / float(im_size_min)
+
         # Prevent the biggest axis from being more than max_size
         if np.round(im_scale * im_size_max) > 1333:
             im_scale = float(1333) / float(im_size_max)
@@ -249,48 +242,29 @@ class PythiaDemo:
         y = x1 / x1_sum
         return y
 
-    def get_resnet_features(self, image_path):
-        path = self.get_actual_image(image_path)
-        img = Image.open(path).convert("RGB")
-        img_transform = self.data_transforms(img)
+    def get_resnet_features(self, image_array):
+
+        image_array = Image.fromarray(image_array, mode='RGB')
+
+        img_transform = self.data_transforms(image_array)
 
         if img_transform.shape[0] == 1:
             img_transform = img_transform.expand(3, -1, -1)
-        img_transform = img_transform.unsqueeze(0) #.to("cuda")
+        img_transform = img_transform.unsqueeze(0).to("cpu")
 
         features = self.resnet152_model(img_transform).permute(0, 2, 3, 1)
         features = features.view(196, 2048)
         return features
 
-    def get_detectron_features(self, image_path):
+    def get_detectron_features(self, image_array):
 
-        im, im_scale = self._image_transform(image_path)
+        im, im_scale = self._image_transform(image_array)
         img_tensor, im_scales = [im], [im_scale]
         current_img_list = to_image_list(img_tensor, size_divisible=32)
-        #current_img_list = current_img_list.to('cuda')
+        current_img_list = current_img_list.to('cpu')
         with torch.no_grad():
             output = self.detection_model(current_img_list)
         feat_list = self._process_feature_extraction(output, im_scales,
                                                      'fc6', 0.2)
         return feat_list[0]
 
-
-
-if __name__ == '__main__':
-
-    demo = PythiaDemo()
-    image_text = "http://images.cocodataset.org/train2017/000000505539.jpg"
-    question_text = "where is this place?"
-
-    image_path = demo.get_actual_image(image_text)
-    image = Image.open(image_path)
-
-    scores, predictions = demo.predict(image_text, question_text)
-    scores = [score * 100 for score in scores]
-    df = pd.DataFrame({
-            "Prediction": predictions,
-            "Confidence": scores
-        })
-
-
-    print(df)

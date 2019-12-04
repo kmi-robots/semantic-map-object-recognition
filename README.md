@@ -41,3 +41,28 @@ This code has been tested for / requires
 - the Pythia VQA model developed at Facebook is also used for inference.
   Please refer to their [official tutorial](https://colab.research.google.com/drive/1Z9fsh10rFtgWe4uy8nvU4mQmqdokdIRR) for the relevant installation steps and dependencies
   
+  
+## Test commands
+
+The inference pipeline can be tested with, e.g.:
+
+```
+python3 main.py camera test ./data/KMi_collection/train ./data/KMi_collection/test/tagged_KMi.json ./pt_results/kmish25/embeddings_imprKNET_1prod.dat --bboxes segmented --sem none
+```
+
+In this case the scene will be also segmented (--boxes segmented) and no common-sense based correction
+will be applied (--sem none). You can run ```python3 main.py --help``` for more options:
+
+
+It will launch the pipeline and be in the lookout for a service call
+to start the exploration (i.e., object recognition/image analysis). 
+You can send this call through the following command for testing/debugging
+
+```
+rosservice call /start_exploration "data: true"
+```
+or define a ROS service sending the same command when, e.g., the robot 
+has reached a specific waypoint (an sample script which uses this rationale 
+is available in our [dh_interaction repo](https://github.com/kmi-robots/dh_interaction/blob/master/scripts/navigation_exploration.py))
+
+ 

@@ -327,7 +327,8 @@ def extract_spatial_unbound(obj_idx, obj_list, SR_KB):
 
     preds, confs, coords, rankings = zip(*obj_list)
 
-    obj_pred, obj_synset = formatlabel(preds[obj_idx])
+    orig_alias = preds[obj_idx]
+    obj_pred, obj_synset = formatlabel(orig_alias)
 
     x_a, y_a, w_a, h_a = coords[obj_idx]
 
@@ -346,22 +347,20 @@ def extract_spatial_unbound(obj_idx, obj_list, SR_KB):
 
                 SR_KB[(spatial_rel, (obj_pred, obj_synset),(sem_obj,obj_syn))] += 1
 
-
     return SR_KB
 
 
 def check_horizontal_unbound(y, h, img_res=(1280, 720)):
-    bar_y = y + h  # /2  #Replace bar_y with actual lower y
-    thresh = img_res[1] - img_res[1] / 3
+    bar_y = y + h  # lower y = base of bbox
+    thresh = img_res[1] - img_res[1]/4
 
-    if bar_y > thresh and bar_y <= img_res[1]:
+    if bar_y > thresh: #and bar_y <= img_res[1]:
 
         return "on "
 
     else:
 
         return "above"
-
 
 
 # While the piece of furniture is table.n.02

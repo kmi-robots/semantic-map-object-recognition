@@ -119,6 +119,8 @@ class ImageConverter:
                 #cv2.waitKey(10000)
                 #cv2.destroyAllWindows()
 
+
+
                 #processed_imgs = test(args.it, path_to_input, args, model, device, base_trans, camera_img=(self.timestamp,self.img))
 
                 data = OrderedDict()
@@ -176,6 +178,8 @@ class ImageConverter:
                                                               args.K, args.sem, args.Kvoting, self.VG_data, [], [], \
                                                                   self.embedding_space, SR_KB=self.SR_KB)
                 #,VQA= True)
+
+                # labs= list(zip(*processed_data[2]))[0]
 
 
                 res, stat_id = DH_status_send("Image analysed",status_id=stat_id)

@@ -377,7 +377,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
         # segment it
         
-        predicted_boxes, predicted_masks = segment(denoised, w_saliency=True,  depth_image= data_point["depth_image"])
+        predicted_boxes, predicted_masks = segment(denoised, w_saliency=False,  depth_image= data_point["depth_image"])
 
         try:
 
@@ -524,7 +524,6 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
                 print(df)
                 """
                 print("Took %f sec for Pythia to guess" % float(time.time() - vqastart))
-
 
 
         if extract_SR:

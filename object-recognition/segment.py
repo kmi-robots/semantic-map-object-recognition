@@ -35,7 +35,7 @@ with open(CLASSES, 'r') as f:
     classes = [line.strip() for line in f.readlines()] + ['N/A','saliency region']
 
 scale = 0.00392         # 1/255.  factor
-conf_threshold = 0.01 #0.01   #0.5
+conf_threshold = 0.1 #0.01   #0.5
 nms_threshold = 0.1     #0.4
 overlapThresh = 0.4
 low = 2000
@@ -544,10 +544,10 @@ def segment(img, YOLO=True, w_saliency=False, static=False, masks=None, depth_im
 
                 #assign conf value of box to all pixels in that box
                 #saliency_map[x:x+w,y:y+h] = confidences[i]*100
-                if area > int(tot_pix/20):
+                #if area > int(tot_pix/30):
 
-                    #draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
-                    all_boxes.append(([x,y,x+w,y+h], str(classes[class_ids[i]])))
+                #draw_bounding_box(temp, class_ids[i], confidences[i], x, y, x + w, y + h)
+                all_boxes.append(([x,y,x+w,y+h], str(classes[class_ids[i]])))
 
                 #tmp = img.copy()
                 #predictions.append((tmp[y:y+h, x:x+w],str(classes[class_ids[i]])))

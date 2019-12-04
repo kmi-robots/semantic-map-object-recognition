@@ -25,6 +25,7 @@ episode = "EPISODE12"
 #-----------------------------------------#
 
 
+
 def DH_img_send(img_obj):
 
     """
@@ -38,6 +39,8 @@ def DH_img_send(img_obj):
     img_id  = img_obj["filename"].replace(".",'_')
     pcl = img_obj["pcl"]
     xyz_img = img_obj["data"]
+
+    RGB_RES = xyz_img.shape  #e.g., 480x640x3
 
     results = []
 
@@ -60,25 +63,47 @@ def DH_img_send(img_obj):
             x,y,x2,y2 = coords[i]
             
             #our u,v in this case are the coords of the center of each bbox
-            u =int(x + (x2 - x) / 2)
+            u = int(x + (x2 - x) / 2)
             v = int(y + (y2 - y) / 2)
+
+            #and scale to depth image resolution (640*480)
+            # u = int(round(u/RGB_RES[0] * D_RES[0]))
+            # v = int(round(v/RGB_RES[1] * D_RES[1]))
 
             #Equivalent of center coords in pointcloud
             
-            map_x, map_y, map_z = pixelTo3DPoint(pcl, u, v)
-            
+            # map_x, map_y, map_z = pixelTo3DPoint(pcl, u, v)
+
+            #Handle overflowing boxes
+            bot_y = int(y2)
+
+            if y2 >= RGB_RES[0]:
+
+                bot_y = RGB_RES[0] - 5
+
+
+            (map_x, base_x), (map_y, base_y), (map_z, base_z) = list(zip(* point_cloud2.read_points_list(\
+
+                            pcl, field_names=("x","y","z"), skip_nans=False, uvs=[(u,v), (u,bot_y)])))
+
             if math.isnan(map_x):
-                map_x = None 
+                map_x = None
             if math.isnan(map_y):
-                map_y = None 
-            
+                map_y = None
+
             if math.isnan(map_z):
-                map_z = None 
-            
-            #map_x = 0.0
-            #map_y = 0.0  
-            #map_z = 0.0            
-            
+                map_z = None
+
+            # Same for position of base of bbox (later used wrt floor)
+
+            if math.isnan(base_x):
+                base_x = None
+            if math.isnan(base_y):
+                base_y = None
+            if math.isnan(base_z):
+                base_z = None
+
+
             ranking_list = [{'item': key, 'score': val} for key, val in ranks[i].items()]
 
             #adding colour coding
@@ -89,22 +114,27 @@ def DH_img_send(img_obj):
 
             # rgb2hex(colour_array)
 
+
             node = {'item': obj_label,
                     'score': scores[i],
                     'colour_code': colour_array,
                     'ranking': ranking_list,
-                    'box_top': (x,x2),
-                    'box_bottom': (y,y2),
+                    'box_top': (x,y),
+                    'box_bottom': (x2,y2),
                     'map_x': map_x,
                     'map_y': map_y,
-                    'map_z': map_z
+                    'map_z': map_z,
+                    'bbase_x': base_x,
+                    'bbase_y': base_y,
+                    'bbase_z': base_z
                     }
 
             results.append(node)
 
+            # print(node)
 
             # And draw center coords on img
-            # cv2.circle(xyz_img, (u,v), 5, img_obj["colours"][i], thickness=5, lineType=8, shift=0)
+            # cv2.circle(xyz_img, (u,bot_y), 5, img_obj["colours"][i], thickness=5, lineType=8, shift=0)
             #cv2.putText(xyz_img, "( "+str(map_x)+", "+str(map_y) + ", "+str(map_z)+" )", (u-10, v-10),cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour_array*255, 2)
 
     complete_url = os.path.join(url,"sciroc-episode12-image", img_id)
@@ -186,13 +216,13 @@ def pixelTo3DPoint(cloud, u, v):
     bytesY = [x for x in cloud.data[array_pos+4: array_pos+8]]
     bytesZ = [x for x in cloud.data[array_pos+8:array_pos+12]]
 
-    byte_format=struct.pack('4B', *bytesX)
+    byte_format = struct.pack('4B', *bytesX)
     X = struct.unpack('f', byte_format)[0]
 
-    byte_format=struct.pack('4B', *bytesY)
+    byte_format = struct.pack('4B', *bytesY)
     Y = struct.unpack('f', byte_format)[0]
 
-    byte_format=struct.pack('4B', *bytesZ)
+    byte_format = struct.pack('4B', *bytesZ)
     Z = struct.unpack('f', byte_format)[0]
 
     return float(X), float(Y), float(Z)

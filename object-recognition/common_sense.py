@@ -5,8 +5,7 @@ import requests
 import time
 from collections import Counter, OrderedDict
 import json
-from DH_integration import pixelTo3DPoint
-import math
+
 
 
 def compute_sem_sim(wemb1, wemb2):

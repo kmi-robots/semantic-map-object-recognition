@@ -19,6 +19,8 @@ This code has been tested for / requires
 
 - Pytorch +  Torchvision (CPU-only is enough to run the inference without retraining, for the training we tested the pipeline on CUDA 9) 
 
+- opencv, opencv-contrib, scikit-learn, matplotlib
+
 - numpy 1.14 or later. Make sure to remove links created to the python2 version of numpy by ROS or to keep only one version installed 
   after upgrading.
 

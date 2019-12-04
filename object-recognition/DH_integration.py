@@ -90,7 +90,6 @@ def DH_img_send(img_obj):
                 map_x = None
             if math.isnan(map_y):
                 map_y = None
-
             if math.isnan(map_z):
                 map_z = None
 

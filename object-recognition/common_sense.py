@@ -350,7 +350,7 @@ def extract_spatial_unbound(obj_idx, obj_list, SR_KB):
     return SR_KB
 
 
-def check_horizontal_unbound(y, h, img_res=(1280, 720)):
+def check_horizontal_unbound(y, h, img_res=(640, 480)):
     bar_y = y + h  # lower y = base of bbox
     thresh = img_res[1] - img_res[1]/4
 
@@ -366,7 +366,7 @@ def check_horizontal_unbound(y, h, img_res=(1280, 720)):
 # While the piece of furniture is table.n.02
 
 
-def check_horizontal(y, h, img_res=(1280, 720)):
+def check_horizontal(y, h, img_res=(640, 480)):
     bar_y = y + h  # /2  #Replace bar_y with actual lower y
     thresh = img_res[1] - img_res[1] / 3
 

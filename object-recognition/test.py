@@ -308,7 +308,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
     #batch of multiple images to process
     for data_point in data:  # reversed(img_collection.values()):
 
-        _, y_pred, y_true, run_eval, _ = run_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
+        _, y_pred, y_true, run_eval, _ = img_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
                                                            K, sem, voting, VG_data, y_true, y_pred, embedding_space)
 
 
@@ -325,7 +325,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
     return None
 
 
-def run_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
+def img_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
                                                            K, sem, voting, VG_data, y_true, y_pred, embedding_space, extract_SR=True, VQA=False, \
                                                            ):
     #print(type(data_point))

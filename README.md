@@ -26,6 +26,8 @@ This code has been tested for / requires
 
 - the pattern and requests packages 
 
+- [pyntcloud](https://pyntcloud.readthedocs.io) for easier pcl processing with Python 3
+
 - nltk and the Wordnet corpus specifically. We found that installing through pip was not successful so we suggest the following steps:
 
 ```

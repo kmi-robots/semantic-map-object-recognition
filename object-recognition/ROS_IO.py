@@ -16,10 +16,13 @@ from std_srvs.srv import SetBool,SetBoolResponse
 from collections import Counter
 import json
 import os
-from itertools import groupby
+from pyntcloud import PyntCloud
+from pyntcloud import scalar_fields
 
-from test import test, run_processing_pipeline
+
+from test import test, img_processing_pipeline
 from DH_integration import DH_img_send, DH_status_send
+from spatial import map_semantic, extract_SR
 
 
 class ImageConverter:
@@ -81,17 +84,13 @@ class ImageConverter:
             self.pcl_subscriber.unregister()
             self.d_subscriber.unregister()
 
-            grouped_view  = {}
 
-            if self.obs_counter == 1: #e.g., stop and reason on scouted area every 5 waypoints
+            if self.obs_counter >= 1: #e.g., stop and reason on scouted area every 5 waypoints
 
-                # Then check observations across those 5 waypoints by bin/sphere
-                for key, group in self.area_DB:
+                #Current semantic map
+                semantic_map_t0 = map_semantic(self.area_DB)
 
-                    print(group)
-                    print(key)
-                    pass
-
+                self.SR_KB = extract_SR(semantic_map_t0, self.SR_KB)
 
                 # Eventually, empty area DB and observation counter
                 self.obs_counter = 0
@@ -152,6 +151,11 @@ class ImageConverter:
                 data["pcl"] = self.pcl
                 data["depth_image"] = self.dimg
 
+                # TO-DO extract surfaces from PCL and locate them too
+
+                # cloud = PyntCloud(self.pcl)
+                # cloud.add_scalar_field(scalar_fields.PlaneFit())
+
                 self.img = None #to deal with unregistered subscriber
                 self.pcl = None
                 self.dimg = None
@@ -195,11 +199,14 @@ class ImageConverter:
 
                 #Then images are processed one by one by calling run_processing_pipeline directly
 
-                processed_data, _, _, _ = run_processing_pipeline(data, path_to_input, args, model,  device, base_trans \
+                processed_data, _, _, _ = img_processing_pipeline(data, path_to_input, args, model,  device, base_trans \
                                                                   , self.cardinalities,self.COLORS, self.all_classes, \
                                                               args.K, args.sem, args.Kvoting, self.VG_data, [], [], \
                                                                   self.embedding_space)
                 #,VQA= True)
+
+
+
                 # labs= list(zip(*processed_data[2]))[0]
 
                 res, stat_id = DH_status_send("Image analysed",status_id=stat_id)

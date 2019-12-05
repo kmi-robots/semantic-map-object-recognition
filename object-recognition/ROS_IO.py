@@ -35,8 +35,7 @@ class ImageConverter:
         self.im_subscriber = None
         self.tf_lis = tf.TransformListener()
         self.obs_counter = 0
-        self.area_DB = [] #OrderedDict()
-        self.cnt = -1
+        self.area_DB = {} #OrderedDict()
 
 
     def service_callback(self, msg):
@@ -86,24 +85,17 @@ class ImageConverter:
 
             if self.obs_counter == 1: #e.g., stop and reason on scouted area every 5 waypoints
 
+                # Then check observations across those 5 waypoints by bin/sphere
+                for key, group in self.area_DB:
 
-                # Then group observations across those 5 waypoints by location
-                for key, group in groupby(self.area_DB, lambda x: x['map_coords']):
-
-                    # Skip observations without location
-                    if key == (None, None, None):
-                        continue
-
-                    grouped_view[key] = [g for g in group]
-
-
-
-                # If location is not None
+                    print(group)
+                    print(key)
+                    pass
 
 
                 # Eventually, empty area DB and observation counter
                 self.obs_counter = 0
-                self.area_DB = None
+                self.area_DB = {}
 
 
             res, stat_id = DH_status_send("Stopping observation", first=True)
@@ -163,7 +155,6 @@ class ImageConverter:
                 self.img = None #to deal with unregistered subscriber
                 self.pcl = None
                 self.dimg = None
-                self.cnt +=1
 
                 try:
 
@@ -239,11 +230,11 @@ class ImageConverter:
                         print("Failed communication with Data Hub ")
                         print(res.content)
 
-                    res, xyz_img, nodes = DH_img_send(data)
+                    res, xyz_img, self.area_DB = DH_img_send(data, all_bins= self.area_DB)
 
                     #and also update local collection grouped by navigation area
                     #self.area_DB[self.cnt] = data    # Appended with incremental no.
-                    self.area_DB.extend(nodes)
+
 
                     if not res.ok:
                         print("Failed to send img to Data Hub ")

@@ -1,5 +1,7 @@
 import math
 from sensor_msgs import point_cloud2
+import struct
+
 
 def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=(480,640)):
 
@@ -27,14 +29,15 @@ def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=(480,640)):
                     pcl, field_names=("x","y","z"), skip_nans=False, uvs=[(u,v), (u,bot_y)])))
 
 
-    map_x = None if math.isnan(map_x) else round(map_x,2)
-    map_y = None if math.isnan(map_y) else round(map_y, 2)
-    map_z = None if math.isnan(map_z) else round(map_z, 2)
+    map_x = None if math.isnan(map_x) else map_x # round(map_x,2)
+    map_y = None if math.isnan(map_y) else map_y # round(map_y, 2)
+    map_z = None if math.isnan(map_z) else map_z # round(map_z, 2)
 
     # Same for position of base of bbox (later used wrt floor)
-    base_x = None if math.isnan(base_x) else round(base_x, 2)
-    base_y = None if math.isnan(base_y) else round(base_y, 2)
-    base_z = None if math.isnan(base_z) else round(base_z, 2)
+    base_x = None if math.isnan(base_x) else map_x #round(base_x, 2)
+    base_y = None if math.isnan(base_y) else map_y #round(base_y, 2)
+    base_z = None if math.isnan(base_z) else map_z # round(base_z, 2)
+
 
     return (map_x, base_x), (map_y, base_y), (map_z, base_z)
 

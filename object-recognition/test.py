@@ -366,7 +366,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
     frame_objs = []
     colour_seq = []
-    locations=[]
+    locations = []
 
     if data_point["regions"] is not None:
 
@@ -468,7 +468,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
             # y_pred.append(prediction)
 
             #Pinpoint object in "real world"
-            locations.append(find_real_xyz(x,y,x2,y2, pcl, img.shape))
+            locations.append(find_real_xyz(x,y,x2,y2, pcl, img.shape, ))
 
             # draw prediction
             color = COLORS[all_classes.index(prediction)]

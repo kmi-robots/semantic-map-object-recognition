@@ -6,7 +6,7 @@ import cv2
 import base64
 import os
 import json
-import struct
+
 # from matplotlib.colors import rgb2hex
 
 #---- Hardcoded DH API params ------------#
@@ -23,7 +23,9 @@ episode = "EPISODE12"
 
 
 
-def DH_img_send(img_obj):
+
+
+def DH_img_send(img_obj, all_bins={}):
 
     """
     :param img_obj:  expects a dictionary object with img + metadata
@@ -37,7 +39,7 @@ def DH_img_send(img_obj):
     xyz_img = img_obj["data"]
 
     results = []
-
+    r = 0.05  # 5 cm
 
     if img_obj["regions"] is not None and img_obj["regions"]!=[]:
 
@@ -59,7 +61,7 @@ def DH_img_send(img_obj):
 
             x,y,x2,y2 = coords[i]
 
-            (map_x, base_x), (map_y, base_y), (map_z, base_z) = locs[i]
+            (map_x, base_x), (map_y, base_y), (map_z, base_z)= locs[i]
 
             ranking_list = [{'item': key, 'score': val} for key, val in ranks[i].items()]
 
@@ -85,6 +87,36 @@ def DH_img_send(img_obj):
 
             # print(node)
 
+            # create a sphere for that point:
+            # of center (cx, cy, cz) and radius r
+
+            if map_x is not None: #non-empty location
+
+                if not all_bins: # if dict empty
+
+                    all_bins[(map_x, map_y, map_z, r)] = []
+                    all_bins[(map_x, map_y, map_z, r)].append(node)
+
+
+                elif len(all_bins.keys())>1:
+
+                    for i, (cx, cy, cz, r) in enumerate(all_bins.keys()):
+
+
+                        if (map_x - cx) **2 + (map_y - cy) **2 + (map_z - cz) **2 < r **2:
+                            # Check if object is already in existing bin
+                            all_bins[(cx, cy, cz, r)].append(node)
+
+                            break
+
+                        else:
+
+                             if i == len(all_bins.keys())-1: #if last iter
+
+                                # not present yet, create new bin and add point to it
+                                all_bins[(map_x, map_y, map_z, r)]= []
+                                all_bins[(map_x, map_y, map_z, r)].append(node)
+
             # And draw center coords on img
             # cv2.circle(xyz_img, (u,bot_y), 5, img_obj["colours"][i], thickness=5, lineType=8, shift=0)
             #cv2.putText(xyz_img, "( "+str(map_x)+", "+str(map_y) + ", "+str(map_z)+" )", (u-10, v-10),cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour_array*255, 2)
@@ -108,7 +140,7 @@ def DH_img_send(img_obj):
                 }
 
 
-    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, '')), xyz_img, results
+    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, '')), xyz_img, all_bins
 
 
 def DH_status_send(msg, status_id="", first=False):

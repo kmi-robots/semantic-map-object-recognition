@@ -1,16 +1,13 @@
 import rospy
 import requests
 from requests.auth import HTTPBasicAuth
-from sensor_msgs.msg import PointCloud2
 import datetime
 import cv2
 import base64
 import os
 import json
-from sensor_msgs import point_cloud2
 import struct
-import math
-from matplotlib.colors import rgb2hex
+# from matplotlib.colors import rgb2hex
 
 #---- Hardcoded DH API params ------------#
 teamid = "kmirobots"
@@ -37,10 +34,7 @@ def DH_img_send(img_obj):
     timestamp = t.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     img_id  = img_obj["filename"].replace(".",'_')
-    pcl = img_obj["pcl"]
     xyz_img = img_obj["data"]
-
-    RGB_RES = xyz_img.shape  #e.g., 480x640x3
 
     results = []
 
@@ -53,6 +47,9 @@ def DH_img_send(img_obj):
         #find the position of each object based on depth map
 
         labels, scores, coords, ranks = zip(*img_obj["regions"])
+
+        locs = img_obj["locations"]
+
         #center_coords = [(int(x+(x2-x)/2), int(y+ (y2-y)/2))  for x,x2,y,y2 in coords]
 
         #read all points in pointcloud
@@ -61,47 +58,8 @@ def DH_img_send(img_obj):
         for i, obj_label in enumerate(labels): #obj_label, score, coords, rank  in img_obj["regions"]:
 
             x,y,x2,y2 = coords[i]
-            
-            #our u,v in this case are the coords of the center of each bbox
-            u = int(x + (x2 - x) / 2)
-            v = int(y + (y2 - y) / 2)
 
-            #and scale to depth image resolution (640*480)
-            # u = int(round(u/RGB_RES[0] * D_RES[0]))
-            # v = int(round(v/RGB_RES[1] * D_RES[1]))
-
-            #Equivalent of center coords in pointcloud
-            
-            # map_x, map_y, map_z = pixelTo3DPoint(pcl, u, v)
-
-            #Handle overflowing boxes
-            bot_y = int(y2)
-
-            if y2 >= RGB_RES[0]:
-
-                bot_y = RGB_RES[0] - 5
-
-
-            (map_x, base_x), (map_y, base_y), (map_z, base_z) = list(zip(* point_cloud2.read_points_list(\
-
-                            pcl, field_names=("x","y","z"), skip_nans=False, uvs=[(u,v), (u,bot_y)])))
-
-            if math.isnan(map_x):
-                map_x = None
-            if math.isnan(map_y):
-                map_y = None
-            if math.isnan(map_z):
-                map_z = None
-
-            # Same for position of base of bbox (later used wrt floor)
-
-            if math.isnan(base_x):
-                base_x = None
-            if math.isnan(base_y):
-                base_y = None
-            if math.isnan(base_z):
-                base_z = None
-
+            (map_x, base_x), (map_y, base_y), (map_z, base_z) = locs[i]
 
             ranking_list = [{'item': key, 'score': val} for key, val in ranks[i].items()]
 
@@ -113,19 +71,14 @@ def DH_img_send(img_obj):
 
             # rgb2hex(colour_array)
 
-
-            node = {'item': obj_label,
-                    'score': scores[i],
-                    'colour_code': colour_array,
-                    'ranking': ranking_list,
-                    'box_top': (x,y),
-                    'box_bottom': (x2,y2),
-                    'map_x': map_x,
-                    'map_y': map_y,
-                    'map_z': map_z,
-                    'bbase_x': base_x,
-                    'bbase_y': base_y,
-                    'bbase_z': base_z
+            node = {"item": obj_label,
+                    "score": scores[i],
+                    "colour_code": colour_array,
+                    "ranking": ranking_list,
+                    "box_top": (x,y),
+                    "box_bottom": (x2,y2),
+                    "map_coords": (map_x, map_y, map_z),
+                    "bbase_coords": (base_x, base_y, base_z)
                     }
 
             results.append(node)
@@ -155,7 +108,7 @@ def DH_img_send(img_obj):
                 }
 
 
-    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, '')), xyz_img
+    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, '')), xyz_img, results
 
 
 def DH_status_send(msg, status_id="", first=False):
@@ -201,28 +154,4 @@ def arrayTo64(img_array):
     _, buffer = cv2.imencode('.jpg', img_array)
 
     return base64.b64encode(buffer).decode('utf-8')
-
-def pixelTo3DPoint(cloud, u, v):
-
-    width = cloud.width
-    height = cloud.height
-    point_step = cloud.point_step
-    row_step = cloud.row_step
-
-    array_pos = v*row_step + u*point_step
-
-    bytesX = [x for x in cloud.data[array_pos:array_pos+4]]
-    bytesY = [x for x in cloud.data[array_pos+4: array_pos+8]]
-    bytesZ = [x for x in cloud.data[array_pos+8:array_pos+12]]
-
-    byte_format = struct.pack('4B', *bytesX)
-    X = struct.unpack('f', byte_format)[0]
-
-    byte_format = struct.pack('4B', *bytesY)
-    Y = struct.unpack('f', byte_format)[0]
-
-    byte_format = struct.pack('4B', *bytesZ)
-    Z = struct.unpack('f', byte_format)[0]
-
-    return float(X), float(Y), float(Z)
 

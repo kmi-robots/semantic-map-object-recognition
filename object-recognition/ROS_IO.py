@@ -16,9 +16,11 @@ from std_srvs.srv import SetBool,SetBoolResponse
 from collections import Counter
 import json
 import os
+from itertools import groupby
 
 from test import test, run_processing_pipeline
 from DH_integration import DH_img_send, DH_status_send
+
 
 class ImageConverter:
 
@@ -32,6 +34,10 @@ class ImageConverter:
         self.s = rospy.Service("start_exploration", SetBool, self.service_callback)
         self.im_subscriber = None
         self.tf_lis = tf.TransformListener()
+        self.obs_counter = 0
+        self.area_DB = [] #OrderedDict()
+        self.cnt = -1
+
 
     def service_callback(self, msg):
 
@@ -66,6 +72,8 @@ class ImageConverter:
                 print("Failed communication with Data Hub ")
                 print(res.content)
 
+            self.obs_counter += 1
+
             return SetBoolResponse(True, "Image subscriber registered")
 
         else:
@@ -74,13 +82,37 @@ class ImageConverter:
             self.pcl_subscriber.unregister()
             self.d_subscriber.unregister()
 
+            grouped_view  = {}
+
+            if self.obs_counter == 1: #e.g., stop and reason on scouted area every 5 waypoints
+
+
+                # Then group observations across those 5 waypoints by location
+                for key, group in groupby(self.area_DB, lambda x: x['map_coords']):
+
+                    # Skip observations without location
+                    if key == (None, None, None):
+                        continue
+
+                    grouped_view[key] = [g for g in group]
+
+
+
+                # If location is not None
+
+
+                # Eventually, empty area DB and observation counter
+                self.obs_counter = 0
+                self.area_DB = None
+
+
             res, stat_id = DH_status_send("Stopping observation", first=True)
 
             if not res.ok:
                 print("Failed communication with Data Hub ")
                 print(res.content)
 
-            with open("./SR_KB.json", 'r') as jf:
+            with open("./SR_KB.json", 'w') as jf:
 
                 json.dump(self.SR_KB, jf)
 
@@ -119,8 +151,6 @@ class ImageConverter:
                 #cv2.waitKey(10000)
                 #cv2.destroyAllWindows()
 
-
-
                 #processed_imgs = test(args.it, path_to_input, args, model, device, base_trans, camera_img=(self.timestamp,self.img))
 
                 data = OrderedDict()
@@ -133,6 +163,7 @@ class ImageConverter:
                 self.img = None #to deal with unregistered subscriber
                 self.pcl = None
                 self.dimg = None
+                self.cnt +=1
 
                 try:
 
@@ -159,7 +190,7 @@ class ImageConverter:
                     print(res.content)
 
                 #send acquired img to Data Hub
-                res,_ = DH_img_send(data)
+                res,_, _ = DH_img_send(data)
 
                 if not res.ok:
                     print("Failed to send img to Data Hub ")
@@ -173,14 +204,12 @@ class ImageConverter:
 
                 #Then images are processed one by one by calling run_processing_pipeline directly
 
-                processed_data, _, _, _ , self.SR_KB = run_processing_pipeline(data, path_to_input, args, model,  device, base_trans \
+                processed_data, _, _, _ = run_processing_pipeline(data, path_to_input, args, model,  device, base_trans \
                                                                   , self.cardinalities,self.COLORS, self.all_classes, \
                                                               args.K, args.sem, args.Kvoting, self.VG_data, [], [], \
-                                                                  self.embedding_space, SR_KB=self.SR_KB)
+                                                                  self.embedding_space)
                 #,VQA= True)
-
                 # labs= list(zip(*processed_data[2]))[0]
-
 
                 res, stat_id = DH_status_send("Image analysed",status_id=stat_id)
 
@@ -200,8 +229,9 @@ class ImageConverter:
                     data["data"] = processed_data[0]
                     data["regions"] = processed_data[2]
                     data["colours"] = processed_data[3]
-                    #Send processed image to Data Hub
+                    data["locations"] = processed_data[4]
 
+                    #Send processed image to Data Hub
 
                     res, stat_id = DH_status_send("Sending processed image", status_id=stat_id)
                     if not res.ok:
@@ -209,7 +239,11 @@ class ImageConverter:
                         print("Failed communication with Data Hub ")
                         print(res.content)
 
-                    res, xyz_img = DH_img_send(data)
+                    res, xyz_img, nodes = DH_img_send(data)
+
+                    #and also update local collection grouped by navigation area
+                    #self.area_DB[self.cnt] = data    # Appended with incremental no.
+                    self.area_DB.extend(nodes)
 
                     if not res.ok:
                         print("Failed to send img to Data Hub ")
@@ -217,6 +251,7 @@ class ImageConverter:
 
                     self.im_publisher.publish(self.bridge.cv2_to_imgmsg(xyz_img,'bgr8'))
                     #Optional TO-DO: sends a third image after knowledge-based correction
+
 
                 except CvBridgeError as e:
                     print("The provided image could not be processed")

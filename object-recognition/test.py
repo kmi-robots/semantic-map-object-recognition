@@ -10,11 +10,12 @@ from collections import Counter, OrderedDict
 import time
 
 
-from common_sense import show_leastconf, correct_floating, extract_spatial, proxy_floor, reverse_map, extract_spatial_unbound
+from common_sense import show_leastconf, correct_floating, extract_spatial, proxy_floor, reverse_map
 from data_loaders import BGRtoRGB
 from sklearn.metrics import classification_report, accuracy_score
 from baseline_KNN import run_baseline
 from segment import white_balance
+from spatial import find_real_xyz
 
 
 #Set of labels to retain from segmentation
@@ -326,7 +327,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
 
 def run_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
                                                            K, sem, voting, VG_data, y_true, y_pred, embedding_space, extract_SR=True, VQA=False, \
-                                                            SR_KB=None):
+                                                           ):
     #print(type(data_point))
 
     try:
@@ -365,6 +366,8 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
     frame_objs = []
     colour_seq = []
+    locations=[]
+
     if data_point["regions"] is not None:
 
         # rely on ground truth boxes
@@ -464,6 +467,9 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
             frame_objs.append((prediction, conf, (x, y, x2, y2), rank_confs))
             # y_pred.append(prediction)
 
+            #Pinpoint object in "real world"
+            locations.append(find_real_xyz(x,y,x2,y2, pcl, img.shape))
+
             # draw prediction
             color = COLORS[all_classes.index(prediction)]
             colour_seq.append(color)
@@ -514,26 +520,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
                     print("Pythia says that object IS NOT a "+ prediction)
 
-                """
-                scores = [score * 100 for score in scores]
-                df = pd.DataFrame({
-                    "Prediction": predictions,
-                    "Confidence": scores
-                })
-
-                print(df)
-                """
                 print("Took %f sec for Pythia to guess" % float(time.time() - vqastart))
-
-
-        if extract_SR:
-
-            # Also extract spatial relations for each processed scene
-            # and update internal KB with extracted occurrences
-
-            for i in range(len(frame_objs)):
-
-                SR_KB = extract_spatial_unbound(i, frame_objs, SR_KB)
 
 
         # Correction via ConceptNet + VG -----------------------------------------------------------------------
@@ -579,7 +566,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
                         """
                         cv2.imwrite(os.path.join(out_imgs, 'Kground_ImprintedKNET', data_point["filename"]), out_VG)
                         """
-                        return [out_img, out_VG, frame_objs], y_pred, y_true, run_eval, SR_KB  # Continue to next image
+                        return [out_img, out_VG, frame_objs, colour_seq, locations], y_pred, y_true, run_eval  # Continue to next image
 
                 if len(frame_objs) <= 1:
 
@@ -589,7 +576,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
                     # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
 
-                    return [out_img, out_VG, frame_objs], y_pred, y_true, run_eval, SR_KB  #Continue to next image
+                    return [out_img, out_VG, frame_objs, colour_seq, locations], y_pred, y_true, run_eval #Continue to next image
 
                 new_preds = extract_spatial(weak_idx, frame_objs, VG_base=VG_data)
 
@@ -636,30 +623,7 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
             corr_preds, _, _, _ = zip(*frame_objs)
             y_pred.extend(corr_preds)
 
-            """
-            if data_type == 'camera':
-                # pass result to subscriber
-                # Currently supporting one image at a time
-                return [out_img, out_VG], y_pred, y_true, run_eval
 
-            """
-            # And show corrected image
-            """
-            for lb, cf, (x, y, w, h), rank in frame_objs:
-        
-                color = COLORS[all_classes.index(lb)]
-                cv2.rectangle(out_CP, (x, y), (x + w, y + h), color, 2)
-        
-                if y - 10 > 0:
-                    cv2.putText(out_CP, lb, (x - 10, y - 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-                else:
-                    cv2.putText(out_CP, lb, (x - 10, y + h + 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-        
-        
-            cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET_ConceptRel', data_point["filename"]), out_CP)
-            """
     else:
 
         print("No bboxes above threshold found by segmentation module")
@@ -671,4 +635,4 @@ def run_processing_pipeline(data_point, base_path, args, model, device, trans, c
     # cv2.destroyAllWindows()
 
     # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
-    return [out_img, out_VG, frame_objs, colour_seq], y_pred, y_true, run_eval, SR_KB
+    return [out_img, out_VG, frame_objs, colour_seq, locations], y_pred, y_true, run_eval

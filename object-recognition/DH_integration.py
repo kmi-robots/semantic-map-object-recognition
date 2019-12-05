@@ -40,6 +40,7 @@ def DH_img_send(img_obj, all_bins={}):
 
     results = []
     r = 0.05  # 5 cm
+    bin_iter = all_bins.copy() # copy to iterate over while updating the original one
 
     if img_obj["regions"] is not None and img_obj["regions"]!=[]:
 
@@ -85,7 +86,7 @@ def DH_img_send(img_obj, all_bins={}):
 
             results.append(node)
 
-            # print(node)
+            print(node)
 
             # create a sphere for that point:
             # of center (cx, cy, cz) and radius r
@@ -98,10 +99,9 @@ def DH_img_send(img_obj, all_bins={}):
                     all_bins[(map_x, map_y, map_z, r)].append(node)
 
 
-                elif len(all_bins.keys())>1:
+                else:
 
-                    for i, (cx, cy, cz, r) in enumerate(all_bins.keys()):
-
+                    for i, (cx, cy, cz, r) in enumerate(bin_iter.keys()):
 
                         if (map_x - cx) **2 + (map_y - cy) **2 + (map_z - cz) **2 < r **2:
                             # Check if object is already in existing bin
@@ -111,7 +111,7 @@ def DH_img_send(img_obj, all_bins={}):
 
                         else:
 
-                             if i == len(all_bins.keys())-1: #if last iter
+                             if i == len(bin_iter.keys())-1: #if last iter
 
                                 # not present yet, create new bin and add point to it
                                 all_bins[(map_x, map_y, map_z, r)]= []

@@ -23,6 +23,8 @@ import numpy as np
 import pandas as pd
 from pyntcloud import PyntCloud
 import open3d
+from open3d.open3d.geometry import voxel_down_sample, estimate_normals
+import pcl
 
 
 from test import test, img_processing_pipeline
@@ -180,21 +182,28 @@ class ImageConverter:
 
                 pc_list = point_cloud2.read_points_list(self.pcl, skip_nans=True, field_names=("x", "y", "z"))
 
+
                 points = pd.DataFrame(pc_list, columns=["x", "y", "z"])
                 cloud = PyntCloud(points)
 
+                # K_ = 100
+                # neigh_colors = np.random.uniform(0, 255, size=(K_, 3))
 
                 #save temporary for 3D viz/debugging
 
+                cloud.add_scalar_field("plane_fit", max_dist=1e-2, max_iterations=150)
 
-                cloud.add_scalar_field("plane_fit")
+                # pcl_knn = cloud.get_neighbors(k=K_)
 
                 binary_planes = cloud.points['is_plane'].to_numpy(copy=True)
+                #neighbours = np.zeros((pcl_knn.shape[0],3))
+
+                #for i in range(neigh_colors.shape[0]):
+                #    neighbours[pcl_knn == i] = neigh_colors[i]
 
                 plane_colors = np.zeros((binary_planes.shape[0], 3))
                 plane_colors[binary_planes == 0] = [255, 0, 127] # acquamarine if not planar
                 plane_colors[binary_planes == 1] = [0, 0, 0] #black if planar
-
 
 
                 if __debug__:
@@ -203,14 +212,24 @@ class ImageConverter:
 
                     cloud.to_file('./temp_pcl.ply')
 
+                    #import point_cloud_utils as pcu
+                    #v, _, _, _ = pcu.read_ply("my_model.ply")
+                    #n = pcu.estimate_normals(n, k=16)
+
                     open3d.utility.set_verbosity_level(open3d.utility.VerbosityLevel.Debug)
 
                     pcd = open3d.read_point_cloud("./temp_pcl.ply")  # temp_pcl.ply")  # Read the point cloud
 
+
                     pcd.colors = open3d.Vector3dVector(plane_colors) #binary_planes)
                     # pcd.colors open3d.utility.Vector3dVector
                     open3d.draw_geometries([pcd])
-                    os.remove('./temp_pcl.ply')
+
+                    # Then visualize by neighbourhood
+                    # pcd.colors = open3d.Vector3dVector(neighbours)
+                    #open3d.draw_geometries([pcd])
+
+                    #os.remove('./temp_pcl.ply')
 
                 """
                 

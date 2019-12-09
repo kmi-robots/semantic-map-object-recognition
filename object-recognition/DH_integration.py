@@ -44,7 +44,6 @@ def DH_img_send(img_obj, area_id, all_bins={}):
     bin_iter = all_bins.copy() # copy to iterate over while updating the original one
 
 
-
     if img_obj["regions"] is not None and img_obj["regions"]!=[]:
 
         #This is the captured original image, i.e., pre annotation
@@ -102,25 +101,29 @@ def DH_img_send(img_obj, area_id, all_bins={}):
                     all_bins[area_id][(map_x, map_y, map_z, r)] = []
                     all_bins[area_id][(map_x, map_y, map_z, r)].append(node)
 
-
                 else:
 
-                    for i, (cx, cy, cz, r) in enumerate(bin_iter.keys()):
+                    try:
+                        for i, (cx, cy, cz, r) in enumerate(bin_iter[area_id].keys()):
 
-                        if (map_x - cx) **2 + (map_y - cy) **2 + (map_z - cz) **2 < r **2:
-                            # Check if object is already in existing bin
-                            all_bins[area_id][(cx, cy, cz, r)].append(node)
+                            if (map_x - cx) **2 + (map_y - cy) **2 + (map_z - cz) **2 < r **2:
+                                # Check if object is already in existing bin
+                                all_bins[area_id][(cx, cy, cz, r)].append(node)
 
-                            break
+                                break
 
-                        else:
+                            else:
 
-                             if i == len(bin_iter.keys())-1: #if last iter
+                                 if i == len(bin_iter.keys())-1: #if last iter
 
-                                # not present yet, create new bin and add point to it
-                                all_bins[area_id][(map_x, map_y, map_z, r)]= []
-                                all_bins[area_id][(map_x, map_y, map_z, r)].append(node)
+                                    # not present yet, create new bin and add point to it
+                                    all_bins[area_id][(map_x, map_y, map_z, r)]= []
+                                    all_bins[area_id][(map_x, map_y, map_z, r)].append(node)
 
+                    except ValueError:
+
+                        print("There was a problem iterating through the provided area DB")
+                        print(bin_iter.keys())
             # And draw center coords on img
             # cv2.circle(xyz_img, (u,bot_y), 5, img_obj["colours"][i], thickness=5, lineType=8, shift=0)
             #cv2.putText(xyz_img, "( "+str(map_x)+", "+str(map_y) + ", "+str(map_z)+" )", (u-10, v-10),cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour_array*255, 2)

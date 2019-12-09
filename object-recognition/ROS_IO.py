@@ -18,7 +18,7 @@ from std_srvs.srv import SetBool,SetBoolResponse
 from collections import Counter
 import json
 import os
-# import numpy as np
+import numpy as np
 # import ros_numpy
 import pandas as pd
 from pyntcloud import PyntCloud
@@ -185,27 +185,35 @@ class ImageConverter:
 
 
                 #save temporary for 3D viz/debugging
+
+
+                cloud.add_scalar_field("plane_fit")
+
+                binary_planes = cloud.points['is_plane'].to_numpy(copy=True)
+
+                plane_colors = np.zeros((binary_planes.shape[0], 3))
+                plane_colors[binary_planes == 0] = [255, 0, 127] # acquamarine if not planar
+                plane_colors[binary_planes == 1] = [0, 0, 0] #black if planar
+
+
+
                 if __debug__:
+
+                    #Expensive I/O, active only in debug mode
 
                     cloud.to_file('./temp_pcl.ply')
 
-                    pcd = open3d.read_point_cloud("./temp_pcl.ply")    # temp_pcl.ply")  # Read the point cloud
+                    open3d.utility.set_verbosity_level(open3d.utility.VerbosityLevel.Debug)
 
+                    pcd = open3d.read_point_cloud("./temp_pcl.ply")  # temp_pcl.ply")  # Read the point cloud
+
+                    pcd.colors = open3d.Vector3dVector(plane_colors) #binary_planes)
+                    # pcd.colors open3d.utility.Vector3dVector
                     open3d.draw_geometries([pcd])
-
                     os.remove('./temp_pcl.ply')
 
-
-
-                is_planar= cloud.add_scalar_field("plane_fit")
-
-                if __debug__:
-
-                    cloud.plot(use_as_color=is_planar, cmap='cool')
-
-
-
                 """
+                
                 
                 
                 # cloud.plot()

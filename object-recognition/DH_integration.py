@@ -26,7 +26,7 @@ episode = "EPISODE12"
 
 
 
-def DH_img_send(img_obj, all_bins={}):
+def DH_img_send(img_obj, area_id, all_bins={}):
 
     """
     :param img_obj:  expects a dictionary object with img + metadata
@@ -42,6 +42,8 @@ def DH_img_send(img_obj, all_bins={}):
     results = []
     r = 0.05  # 5 cm
     bin_iter = all_bins.copy() # copy to iterate over while updating the original one
+
+
 
     if img_obj["regions"] is not None and img_obj["regions"]!=[]:
 
@@ -96,8 +98,9 @@ def DH_img_send(img_obj, all_bins={}):
 
                 if not all_bins: # if dict empty
 
-                    all_bins[(map_x, map_y, map_z, r)] = []
-                    all_bins[(map_x, map_y, map_z, r)].append(node)
+                    all_bins[area_id] = {}
+                    all_bins[area_id][(map_x, map_y, map_z, r)] = []
+                    all_bins[area_id][(map_x, map_y, map_z, r)].append(node)
 
 
                 else:
@@ -106,7 +109,7 @@ def DH_img_send(img_obj, all_bins={}):
 
                         if (map_x - cx) **2 + (map_y - cy) **2 + (map_z - cz) **2 < r **2:
                             # Check if object is already in existing bin
-                            all_bins[(cx, cy, cz, r)].append(node)
+                            all_bins[area_id][(cx, cy, cz, r)].append(node)
 
                             break
 
@@ -115,8 +118,8 @@ def DH_img_send(img_obj, all_bins={}):
                              if i == len(bin_iter.keys())-1: #if last iter
 
                                 # not present yet, create new bin and add point to it
-                                all_bins[(map_x, map_y, map_z, r)]= []
-                                all_bins[(map_x, map_y, map_z, r)].append(node)
+                                all_bins[area_id][(map_x, map_y, map_z, r)]= []
+                                all_bins[area_id][(map_x, map_y, map_z, r)].append(node)
 
             # And draw center coords on img
             # cv2.circle(xyz_img, (u,bot_y), 5, img_obj["colours"][i], thickness=5, lineType=8, shift=0)

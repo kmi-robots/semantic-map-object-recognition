@@ -4,6 +4,14 @@ import struct
 from collections import Counter
 import statistics as stat
 
+from common_sense import formatlabel
+
+###### All thresholds used for spatial reasoning####################
+
+wall_th = 0.05 # 5 cm
+wall_syn = "wall.n.01" # same synset used on VG (same case as table, avoid ambiguity)
+
+
 
 def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=(480,640)):
 
@@ -69,7 +77,7 @@ def pixelTo3DPoint(cloud, u, v):
     return float(X), float(Y), float(Z)
 
 
-def map_semantic(area_DB, semmap ={}):
+def map_semantic(area_DB, area_id, semmap ={}):
 
     """
     :param area_DB: dict where observations in scouted area are grouped by location bin
@@ -78,7 +86,7 @@ def map_semantic(area_DB, semmap ={}):
     """
 
     # Then check observations across those 5 waypoints by bin/sphere
-    for bin, group in area_DB.items():
+    for bin_, group in area_DB[area_id].items():
 
         votes = Counter([entry['item'] for entry in group])
         obj_pred, freq = votes.most_common(1)[0] # select most frequent one
@@ -86,20 +94,33 @@ def map_semantic(area_DB, semmap ={}):
         #Median of confidence score across all observations
         med_score = stat.median([entry['score'] for entry in group])
 
-        semmap[bin] = {
+        try:
+            semmap[area_id][bin_] = {
 
-            "prediction": obj_pred,
-            "abs_freq": freq,
-            "tot_obs": len(group),
-            "med_score": med_score,
-            "xyz": bin[:-1],
-            "bbase_coords": group[0]["bbase_coords"]
-        }
+                "prediction": obj_pred,
+                "abs_freq": freq,
+                "tot_obs": len(group),
+                "med_score": med_score,
+                "map_coords": bin_[:-1],
+                "bbase_coords": group[0]["bbase_coords"]
+            }
+        except KeyError:
+
+            semmap[area_id] = {}
+            semmap[area_id][bin_] = {
+
+                "prediction": obj_pred,
+                "abs_freq": freq,
+                "tot_obs": len(group),
+                "med_score": med_score,
+                "map_coords": bin_[:-1],
+                "bbase_coords": group[0]["bbase_coords"]
+            }
 
     return semmap
 
 
-def extract_SR(semmap, SR_KB):
+def extract_SR(semmap, area_ID, SR_KB):
 
     """
     :param semmap: semantic map at specific t
@@ -107,6 +128,42 @@ def extract_SR(semmap, SR_KB):
     :return: updated set of spatial relations between objects
     """
 
+    #Relationships wrt planar surfaces
+    try:
+
+        for entry in SR_KB[area_ID]["planar_surfaces"]:
+
+            #focus on ON(object, surface) type of relationships
+
+            if entry["surface_type"] == "wall":
+
+                wall_z = entry["coords"][-1]
+
+                for bin_ in semmap[area_ID].keys():
+
+                    if bin_[2] - wall_z <= wall_th:
+
+                        #All objects leaning against wall / hanging on wall
+                        obj_l, obj_syn = formatlabel (semmap[area_ID][bin_]["prediction"])
+
+                        SR_KB["global_rels"]["ON( ("+obj_l+","+obj_syn+"),(wall,"+wall_syn+")"] +=1
+
+
+            if entry["surface_type"] == "tabletop" or entry["surface_type"] == "floor":
+
+                sur_x = entry["coords"][0]
+
+
+    except KeyError:
+
+        #new area
+        pass
+
+    #object-object relationships
+
+    for bin_ in semmap[area_ID].keys():
+
+        continue
 
 
     return SR_KB

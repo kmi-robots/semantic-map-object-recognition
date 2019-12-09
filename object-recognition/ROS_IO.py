@@ -8,6 +8,8 @@ and back
 import rospy
 import message_filters
 from sensor_msgs.msg import Image, PointCloud2
+from sensor_msgs import point_cloud2
+import pcl
 from cv_bridge import CvBridge,CvBridgeError
 from collections import OrderedDict
 import tf
@@ -16,8 +18,11 @@ from std_srvs.srv import SetBool,SetBoolResponse
 from collections import Counter
 import json
 import os
+# import numpy as np
+# import ros_numpy
+import pandas as pd
 from pyntcloud import PyntCloud
-from pyntcloud import scalar_fields
+import open3d
 
 
 from test import test, img_processing_pipeline
@@ -39,6 +44,7 @@ class ImageConverter:
         self.tf_lis = tf.TransformListener()
         self.obs_counter = 0
         self.area_DB = {} #OrderedDict()
+        self.area_ID = "activity_0"
 
 
     def service_callback(self, msg):
@@ -60,9 +66,28 @@ class ImageConverter:
             if not os.path.isfile("./SR_KB.json"):
 
                 print("Initializing spatial rel KB")
-                self.SR_KB = Counter()
+                self.SR_KB = OrderedDict()
+                #Detect walls and surfaces and add them to permanent db
+                #Hardcoded for now
+
+                self.SR_KB[self.area_ID] = {}
+                self.SR_KB[self.area_ID]["planar_surfaces"] = []
+
+                self.SR_KB["global_rels"] = Counter()
+
+
+                self.SR_KB[self.area_ID]["planar_surfaces"].append({ "surface_type": "tabletop",
+
+                                                  "coords": (0.0,0.0, 0.61)
+                                                                })
+
+                self.SR_KB[self.area_ID]["planar_surfaces"].append({"surface_type": "wall",
+
+                                                 "coords": (0.30, 0.5, 2.5)
+                                                 })
 
             else:
+
                 print("Retrieving spatial rel KB")
                 with open("./SR_KB.json", 'r') as jf:
 
@@ -88,9 +113,9 @@ class ImageConverter:
             if self.obs_counter >= 1: #e.g., stop and reason on scouted area every 5 waypoints
 
                 #Current semantic map
-                semantic_map_t0 = map_semantic(self.area_DB)
+                semantic_map_t0 = map_semantic(self.area_DB, self.area_ID)
 
-                self.SR_KB = extract_SR(semantic_map_t0, self.SR_KB)
+                self.SR_KB = extract_SR(semantic_map_t0, self.area_ID, self.SR_KB)
 
                 # Eventually, empty area DB and observation counter
                 self.obs_counter = 0
@@ -153,9 +178,42 @@ class ImageConverter:
 
                 # TO-DO extract surfaces from PCL and locate them too
 
-                # cloud = PyntCloud(self.pcl)
-                # cloud.add_scalar_field(scalar_fields.PlaneFit())
+                pc_list = point_cloud2.read_points_list(self.pcl, skip_nans=True, field_names=("x", "y", "z"))
 
+                points = pd.DataFrame(pc_list, columns=["x", "y", "z"])
+                cloud = PyntCloud(points)
+
+
+                #save temporary for 3D viz/debugging
+                if __debug__:
+
+                    cloud.to_file('./temp_pcl.ply')
+
+                    pcd = open3d.read_point_cloud("./temp_pcl.ply")    # temp_pcl.ply")  # Read the point cloud
+
+                    open3d.draw_geometries([pcd])
+
+                    os.remove('./temp_pcl.ply')
+
+
+
+                is_planar= cloud.add_scalar_field("plane_fit")
+
+                if __debug__:
+
+                    cloud.plot(use_as_color=is_planar, cmap='cool')
+
+
+
+                """
+                
+                
+                # cloud.plot()
+                seg = cloud.make_segmenter()
+                seg.set_model_type(pcl.SACMODEL_PLANE)
+                seg.set_method_type(pcl.SAC_RANSAC)
+                inds, plane_model = seg.segment()
+                """
                 self.img = None #to deal with unregistered subscriber
                 self.pcl = None
                 self.dimg = None
@@ -168,6 +226,7 @@ class ImageConverter:
                     data["x"] = trans[0]
                     data["y"] = trans[1]
                     data["z"] = trans[2]
+                    # Find area ID based on robot location?
 
                 except:
 
@@ -175,6 +234,8 @@ class ImageConverter:
                     data["x"] = 0
                     data["y"] = 0
                     data["z"] = 0
+
+
 
                 #Send a status message
                 res,stat_id = DH_status_send("Sending new image from camera", first=True)
@@ -185,7 +246,7 @@ class ImageConverter:
                     print(res.content)
 
                 #send acquired img to Data Hub
-                res,_, _ = DH_img_send(data)
+                res,_, _ = DH_img_send(data, self.area_ID)
 
                 if not res.ok:
                     print("Failed to send img to Data Hub ")
@@ -237,7 +298,7 @@ class ImageConverter:
                         print("Failed communication with Data Hub ")
                         print(res.content)
 
-                    res, xyz_img, self.area_DB = DH_img_send(data, all_bins= self.area_DB)
+                    res, xyz_img, self.area_DB = DH_img_send(data, self.area_ID, all_bins= self.area_DB)
 
                     #and also update local collection grouped by navigation area
                     #self.area_DB[self.cnt] = data    # Appended with incremental no.
@@ -256,3 +317,7 @@ class ImageConverter:
                     print(e)
 
             rate.sleep() #to make sure it publishes at 1 Hz
+
+
+
+

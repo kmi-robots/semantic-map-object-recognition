@@ -18,7 +18,6 @@ wall_th = 0.05 # 5 cm
 wall_syn = "wall.n.01" # same synset used on VG (same case as table, avoid ambiguity)
 
 
-
 def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=(480,640)):
 
     #our u,v in this case are the coords of the center of each bbox
@@ -148,7 +147,7 @@ def map_semantic(area_DB, area_id, semmap ={}):
     return semmap
 
 
-def pcl_processing_pipeline(pointcloud, preproc_pointcloud, area_ID):
+def pcl_processing_pipeline(pointcloud, preproc_pointcloud, area_ID, cam_trans):
 
     pc_list = point_cloud2.read_points_list(pointcloud, skip_nans=True, field_names=("x", "y", "z"))
 
@@ -160,11 +159,24 @@ def pcl_processing_pipeline(pointcloud, preproc_pointcloud, area_ID):
     binary_planes = cloud.points['is_plane'].to_numpy(copy=True)
 
     xyz = cloud.points[['x', 'y', 'z']].to_numpy(copy=True)
-    for i in binary_planes[binary_planes == 1]:
-        pl_x, pl_y, pl_z = xyz[i, :]
+
+    for i in np.argwhere(binary_planes):   #find indices of non-zero values
+
+        pl_x = xyz[i, :][0][0]
+        pl_y = xyz[i, :][0][1]
+        pl_z = xyz[i, :][0][2]
+
         # Add plane annotation to pcl logged data as well
-        preproc_pointcloud[area_ID].append((pl_x, pl_x, pl_z))
-        # TODO: add difference between surface types / neighbourhoods
+
+        if pl_y <= cam_trans[1]: #camera height wrt to robot base
+            #"floor"
+            preproc_pointcloud[area_ID]["floor"].append((pl_x, pl_y, pl_z))
+
+        else:
+
+            # type 2 surface, i.e., "other"
+            preproc_pointcloud[area_ID]["other"].append((pl_x, pl_y, pl_z))
+
 
     if __debug__:
         # Expensive I/O, active only in debug mode
@@ -186,6 +198,7 @@ def pcl_processing_pipeline(pointcloud, preproc_pointcloud, area_ID):
         pcd.colors = open3d.Vector3dVector(plane_colors)  # binary_planes)
         # pcd.colors open3d.utility.Vector3dVector
         open3d.draw_geometries([pcd])
+        print(preproc_pointcloud[area_ID])
 
     return preproc_pointcloud
 

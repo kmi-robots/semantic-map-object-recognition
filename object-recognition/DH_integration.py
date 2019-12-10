@@ -125,7 +125,7 @@ def DH_img_send(img_obj, area_id, all_bins={}):
                     except ValueError:
 
                         print("There was a problem iterating through the provided area DB")
-                        print(bin_iter.keys())
+                        print(all_bins[area_id].keys())
             # And draw center coords on img
             # cv2.circle(xyz_img, (u,bot_y), 5, img_obj["colours"][i], thickness=5, lineType=8, shift=0)
             #cv2.putText(xyz_img, "( "+str(map_x)+", "+str(map_y) + ", "+str(map_z)+" )", (u-10, v-10),cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour_array*255, 2)

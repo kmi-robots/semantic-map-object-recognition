@@ -37,11 +37,15 @@ class ImageConverter:
         self.s = rospy.Service("start_exploration", SetBool, self.service_callback)
         self.im_subscriber = None
         self.tf_lis = tf.TransformListener()
+        self.tf_camlis = tf.TransformListener()
         self.obs_counter = 0
         self.area_DB = {} #OrderedDict()
         self.area_ID = "activity_0"
         self.pcl_processed = {}
-        self.pcl_processed[self.area_ID] = []
+        self.pcl_processed[self.area_ID] = {}
+        self.pcl_processed[self.area_ID]["floor"] = []
+        self.pcl_processed[self.area_ID]["other"] = []
+        self.cam_trans = []
 
     def service_callback(self, msg):
 
@@ -58,6 +62,9 @@ class ImageConverter:
 
             res, stat_id = DH_status_send("Starting to look around", first=True)
 
+            # get coordinates of camera wrt robot base
+            self.cam_trans, _ = self.tf_camlis.lookupTransform('/base_footprint', '/camera_link', rospy.Time(0))
+
             #Counter to keep track of spatial relations
             if not os.path.isfile("./SR_KB.json"):
 
@@ -72,23 +79,20 @@ class ImageConverter:
 
                     #There are some annotated surfaces
                     #TODO replace hardcoded planar surfaces with the extracted ones
-                    pass
+                    floor_points = set(self.pcl_processed[self.area_ID]["floor"])
 
+                    self.SR_KB[self.area_ID]["planar_surfaces"].append({"surface_type": "floor",
 
-                self.SR_KB[self.area_ID]["planar_surfaces"] = []
+                                                                        "coords": floor_points
+                                                                        })
+
+                else:
+                    #No planar surfaces could be detected for floor
+                    self.SR_KB[self.area_ID]["planar_surfaces"] = []
+
 
                 self.SR_KB["global_rels"] = Counter()
 
-
-                self.SR_KB[self.area_ID]["planar_surfaces"].append({ "surface_type": "tabletop",
-
-                                                  "coords": (0.0,0.0, 0.61)
-                                                                })
-
-                self.SR_KB[self.area_ID]["planar_surfaces"].append({"surface_type": "wall",
-
-                                                 "coords": (0.30, 0.5, 2.5)
-                                                 })
 
             else:
 
@@ -183,8 +187,7 @@ class ImageConverter:
 
                 # extract surfaces from PCL and locate them too
 
-                self.pcl_processed = pcl_processing_pipeline(self.pcl, self.pcl_processed, self.area_ID)
-
+                self.pcl_processed = pcl_processing_pipeline(self.pcl, self.pcl_processed, self.area_ID, self.cam_trans)
 
                 self.img = None #to deal with unregistered subscriber
                 self.pcl = None
@@ -206,6 +209,7 @@ class ImageConverter:
                     data["x"] = 0
                     data["y"] = 0
                     data["z"] = 0
+
 
 
 

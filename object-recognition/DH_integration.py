@@ -24,8 +24,6 @@ episode = "EPISODE12"
 
 
 
-
-
 def DH_img_send(img_obj, area_id, all_bins={}):
 
     """
@@ -41,7 +39,6 @@ def DH_img_send(img_obj, area_id, all_bins={}):
 
     results = []
     r = 0.05  # 5 cm
-
 
 
     if img_obj["regions"] is not None and img_obj["regions"]!=[]:
@@ -64,7 +61,9 @@ def DH_img_send(img_obj, area_id, all_bins={}):
 
             x,y,x2,y2 = coords[i]
 
-            (map_x, btm_x, tp_x), (map_y, btm_y, tp_y), (map_z, btm_z, tp_z)= locs[i]
+            vertices_x, vertices_y, vertices_z = locs[i]
+            vertices_coords = list(zip(vertices_x, vertices_y, vertices_z))
+            map_x, map_y, map_z = vertices_coords[0]
 
             ranking_list = [{'item': key, 'score': val} for key, val in ranks[i].items()]
 
@@ -74,17 +73,14 @@ def DH_img_send(img_obj, area_id, all_bins={}):
             
             colour_array = [bgr_array[2], bgr_array[1], bgr_array[0]] #/255
 
-            # rgb2hex(colour_array)
-
             node = {"item": obj_label,
                     "score": scores[i],
                     "colour_code": colour_array,
                     "ranking": ranking_list,
-                    "box_top": (x,y),
-                    "box_bottom": (x2,y2),
-                    "map_coords": (map_x, map_y, map_z),
-                    "top_coords": (tp_x, tp_y, tp_z),
-                    "bottom_coords": (btm_x, btm_y, btm_z)
+                    "box_tl": (x,y),
+                    "box_br": (x2,y2),
+                    "centre_coords": vertices_coords[0],
+                    "box_vertices_coords": vertices_coords[1:]
                     }
 
             results.append(node)

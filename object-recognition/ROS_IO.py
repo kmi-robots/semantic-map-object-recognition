@@ -3,7 +3,6 @@ Converts ROS messages to OpenCV images
 and back
 
 """
-
 #Added online link with camera sensor
 import rospy
 import message_filters
@@ -17,8 +16,6 @@ from std_srvs.srv import SetBool,SetBoolResponse
 from collections import Counter
 import json
 import os
-
-
 
 from test import test, img_processing_pipeline
 from DH_integration import DH_img_send, DH_status_send
@@ -47,6 +44,26 @@ class ImageConverter:
         self.pcl_processed[self.area_ID]["other"] = []
         self.cam_trans = []
 
+        if not os.path.isfile("./SR_KB.json"):
+
+            print("Initializing spatial rel KB")
+            self.SR_KB = OrderedDict()
+            # Detect walls and surfaces and add them to permanent db
+            # Hardcoded for now
+            self.SR_KB["global_rels"] = Counter()
+
+        else:
+
+            print("Retrieving spatial rel KB")
+            #prior global relations are loaded from local file instead
+            with open("./SR_KB.json", 'r') as jf:
+
+                self.SR_KB = json.load(jf)
+
+        self.SR_KB[self.area_ID] = {}
+        self.SR_KB[self.area_ID]["planar_surfaces"] = {}
+
+
     def service_callback(self, msg):
 
         if msg.data:
@@ -60,33 +77,10 @@ class ImageConverter:
             #one callback for both
             self.ts.registerCallback(self.callback)
 
-            res, stat_id = DH_status_send("Starting to look around", first=True)
-
             # get coordinates of camera wrt robot base
             self.cam_trans, _ = self.tf_camlis.lookupTransform('/base_footprint', '/camera_link', rospy.Time(0))
 
-            #Counter to keep track of spatial relations
-            if not os.path.isfile("./SR_KB.json"):
-
-                print("Initializing spatial rel KB")
-                self.SR_KB = OrderedDict()
-                #Detect walls and surfaces and add them to permanent db
-                #Hardcoded for now
-
-                self.SR_KB[self.area_ID] = {}
-
-                self.SR_KB[self.area_ID]["planar_surfaces"] = []
-
-                self.SR_KB["global_rels"] = Counter()
-
-
-            else:
-
-                print("Retrieving spatial rel KB")
-                with open("./SR_KB.json", 'r') as jf:
-
-                    self.SR_KB = json.load(jf)
-
+            res, stat_id = DH_status_send("Starting to look around", first=True)
 
             if not res.ok:
 
@@ -103,10 +97,9 @@ class ImageConverter:
             self.pcl_subscriber.unregister()
             self.d_subscriber.unregister()
 
-
             if self.obs_counter >= 1: #e.g., stop and reason on scouted area every 5 waypoints
 
-                #Current semantic map
+                #Aggregate observations by spatial bin
                 semantic_map_t0 = map_semantic(self.area_DB, self.area_ID)
 
                 self.SR_KB = extract_SR(semantic_map_t0, self.area_ID, self.SR_KB)
@@ -122,8 +115,8 @@ class ImageConverter:
                 print("Failed communication with Data Hub ")
                 print(res.content)
 
-            # empty the extracted floor points and just keep the more abstract relations in persistent copy
-            self.SR_KB[self.area_ID]["planar_surfaces"] = []
+            # empty all that was part of a specific area observed and just maintain more abstract/global relations
+            self.SR_KB[self.area_ID] = {}
 
             with open("./SR_KB.json", 'w') as jf:
 
@@ -143,7 +136,6 @@ class ImageConverter:
 
             self.dimg = self.bridge.imgmsg_to_cv2(depth_msg, "32FC1") #uint16 depth values in mm
 
-
             assert isinstance(pcl_msg, PointCloud2)
             self.pcl = pcl_msg
             #self.points = point_cloud2.read_points(pcl_msg, field_names=("x","y","z"), skip_nans=False)
@@ -158,13 +150,6 @@ class ImageConverter:
         while not rospy.is_shutdown():
 
             if self.img is not None:
-
-                #show subscribed image
-                #cv2.imshow('cam in',self.img)
-                #cv2.waitKey(10000)
-                #cv2.destroyAllWindows()
-
-                #processed_imgs = test(args.it, path_to_input, args, model, device, base_trans, camera_img=(self.timestamp,self.img))
 
                 data = OrderedDict()
                 data["filename"] = str(self.timestamp)
@@ -185,15 +170,16 @@ class ImageConverter:
                     floor_points = set(self.pcl_processed[self.area_ID]["floor"])
 
                     #Update spatial KB
-                    self.SR_KB[self.area_ID]["planar_surfaces"].append({"surface_type": "floor",
+                    self.SR_KB[self.area_ID]["planar_surfaces"]["floor"]= {
 
                                                                         "coords": floor_points
-                                                                        })
+                                                                        }
 
                 self.img = None #to deal with unregistered subscriber
                 self.pcl = None
                 self.dimg = None
-                self.pcl_processed[self.area_ID] = {}
+                self.pcl_processed[self.area_ID]["floor"]= []
+                self.pcl_processed[self.area_ID]["other"] = []
 
                 try:
 

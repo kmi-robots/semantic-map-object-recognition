@@ -14,16 +14,26 @@ from common_sense import formatlabel
 
 ###### All thresholds used for spatial reasoning####################
 
-wall_th = 0.05 # 5 cm
-wall_syn = "wall.n.01" # same synset used on VG (same case as table, avoid ambiguity)
+""" Vertices of bbox named as:
 
+           tl#-----tm#-----tr#
+             |               |
+           ml#      c#     mr#
+             |               |
+           bl#-----bm#-----br#
+
+"""
+
+wall_th = 0.05 # 5 cm
+cm_tol = 0.05
+wall_syn = "wall.n.01" # same synset used on VG (same case as table, avoid ambiguity)
+floor_syn = "floor.n.01"
 
 def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=(480,640)):
 
     #our u,v in this case are the coords of the center of each bbox
     u = int(xtop + (xbtm - xtop) / 2)
     v = int(ytop + (ybtm - ytop) / 2)
-
     #and scale to depth image resolution (640*480)
     # u = int(round(u/RGB_RES[1] * D_RES[1]))
     # v = int(round(v/RGB_RES[0] * D_RES[0]))
@@ -35,7 +45,6 @@ def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=(480,640)):
     top_y = int(ytop)
     top_x = int(xtop)
     bot_x = int(xbtm)
-
 
     """Handle overflowing bounding boxes"""
 
@@ -55,34 +64,24 @@ def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=(480,640)):
 
         bot_x = RGB_RES[1] - 5
 
+    #order: c, br, tl, ml, bl, bm, mr, tr, tm
+    vertices = [(u, v), (bot_x, bot_y), (top_x, top_y), (top_x, v), (top_x, bot_y), (u, bot_y),
+                (bot_x,v), (bot_x, top_y), (u,top_y)]
 
-    (map_x, btm_x, tp_x), (map_y, btm_y, tp_y), (map_z, btm_z, tp_z) = list(zip(* point_cloud2.read_points_list(\
+    vertices_x, vertices_y, vertices_z = list(zip(* point_cloud2.read_points_list(\
 
-                    pcl, field_names=("x","y","z"), skip_nans=False, uvs=[(u,v), (bot_x,bot_y), (top_x, top_y)])))
+                    pcl, field_names=("x","y","z"), skip_nans=False, uvs=vertices)))
 
+    vertices_x = [None if math.isnan(x_val) else x_val for x_val in vertices_x]
+    vertices_y = [None if math.isnan(y_val) else y_val for y_val in vertices_y]
+    vertices_z = [None if math.isnan(z_val) else z_val for z_val in vertices_z]
 
-    map_x = None if math.isnan(map_x) else map_x # round(map_x,2)
-    map_y = None if math.isnan(map_y) else map_y # round(map_y, 2)
-    map_z = None if math.isnan(map_z) else map_z # round(map_z, 2)
-
-    # Same for position of bottom-right corner of bbox (later used wrt floor)
-    btm_x = None if math.isnan(btm_x) else btm_x #round(base_x, 2)
-    btm_y = None if math.isnan(btm_y) else btm_y #round(base_y, 2)
-    btm_z = None if math.isnan(btm_z) else btm_z # round(base_z, 2)
-
-    # and for the top-left one
-    tp_x = None if math.isnan(tp_x) else tp_x
-    tp_y = None if math.isnan(tp_y) else tp_y
-    tp_z = None if math.isnan(tp_z) else tp_z
-
-
-    return (map_x, btm_x, tp_x), (map_y, btm_y, tp_y), (map_z, btm_z, tp_z)
+    return vertices_x, vertices_y, vertices_z
 
 
 def pixelTo3DPoint(cloud, u, v):
 
-    width = cloud.width
-    height = cloud.height
+    #Equivalent results as library read_points
     point_step = cloud.point_step
     row_step = cloud.row_step
 
@@ -128,9 +127,11 @@ def map_semantic(area_DB, area_id, semmap ={}):
                 "abs_freq": freq,
                 "tot_obs": len(group),
                 "med_score": med_score,
-                "map_coords": bin_[:-1],
-                "bbase_coords": group[0]["bbase_coords"]
+                "centre_coords": bin_[:-1],
+                "box_vertices_coords": group[0]["box_vertices_coords"]
+
             }
+
         except KeyError:
 
             semmap[area_id] = {}
@@ -140,8 +141,8 @@ def map_semantic(area_DB, area_id, semmap ={}):
                 "abs_freq": freq,
                 "tot_obs": len(group),
                 "med_score": med_score,
-                "map_coords": bin_[:-1],
-                "bbase_coords": group[0]["bbase_coords"]
+                "centre_coords": bin_[:-1],
+                "box_vertices_coords": group[0]["box_vertices_coords"]
             }
 
     return semmap
@@ -208,45 +209,91 @@ def extract_SR(semmap, area_ID, SR_KB):
     """
     :param semmap: semantic map at specific t
     :param Sr_KB: expects dictionary of prior spatial  found over time
+    also includes floor points, if any was found
+    :param area_ID: index of specific area under observation to subset data
     :return: updated set of spatial relations between objects
     """
 
-    #Relationships wrt planar surfaces
-    try:
+    fl_pset = set()
 
-        for entry in SR_KB[area_ID]["planar_surfaces"]:
+    if SR_KB[area_ID]["planar_surfaces"]:
 
-            #focus on ON(object, surface) type of relationships
+        fl_pset = SR_KB[area_ID]["planar_surfaces"]["floor"]["coords"]
 
-            if entry["surface_type"] == "wall":
+    obj_l = list(semmap[area_ID].keys())
 
-                wall_z = entry["coords"][-1]
+    #iterate in reverse order to not mess up as items are removed
+    for j, bin_ in reversed(list(enumerate(obj_l))):
 
-                for bin_ in semmap[area_ID].keys():
+        obj = semmap[area_ID][bin_]
+        lab, syn = formatlabel(obj["prediction"])
 
-                    if bin_[2] - wall_z <= wall_th:
-
-                        #All objects leaning against wall / hanging on wall
-                        obj_l, obj_syn = formatlabel (semmap[area_ID][bin_]["prediction"])
-
-                        SR_KB["global_rels"]["ON( ("+obj_l+","+obj_syn+"),(wall,"+wall_syn+")"] +=1
+        # order: c, br, tl, ml, bl, bm, mr, tr, tm
+        br_coords, tl_coords, ml_coords, bl_coords, bm_coords, mr_coords, tr_coords, tm_coords =obj["box_vertices_coords"]
 
 
-            if entry["surface_type"] == "tabletop" or entry["surface_type"] == "floor":
+        #object-floor relationship
+        if fl_pset:
 
-                sur_x = entry["coords"][0]
+            try:
+
+                #Estimate base plane
+                p1 = np.array(bl_coords)
+                p2 = np.array(bm_coords)
+                p3 = np.array(br_coords)
+
+                # These two vectors are in the plane
+                v1 = p3 - p1
+                v2 = p2 - p1
+                # the cross product is a vector normal to the plane
+                cp = np.cross(v1, v2)
+                a, b, c = cp
+                # This evaluates a * x3 + b * y3 + c * z3 which equals d
+                d = np.dot(cp, p3)
+
+                #print('The equation is {0}x + {1}y + {2}z = {3}'.format(a, b, c, d))
+                box_base = []
+                box_base.extend(br_coords)
+                box_base.extend(bl_coords)
+                box_base.extend(bm_coords)
+
+                # Add more random points belonging to that plane, with x,y in +5-5 cm from bl and br
+                br_x, br_y, _ = br_coords
+                bl_x, bl_y, _ = bl_coords
+                rand_x = np.random.uniform(low=float(bl_x - cm_tol), high= float(br_x + cm_tol), size=(50,) ).tolist()
+                rand_y = np.random.uniform(low=float(bl_y - cm_tol), high= float(br_y + cm_tol), size=(50,) ).tolist()
+
+                # ax + by + cz + d = 0
+                # z = (-d -ax - by)/c
+                box_base.extend([(rand_x, rand_y, float((-d -a*rand_x - b*rand_y)/c)) \
+                                 for rand_x, rand_y in list(zip(rand_x, rand_y)) ])
+
+                #Extract all xyz points in obj bbox base
+
+                #Find intersection with floor set
+                if list(set(box_base) & fl_pset):
+
+                    #If any point intersects, then estimate that object is on floor
+                    try:
+                        SR_KB["global_rels"]["ON("+syn+","+floor_syn+")"] +=1
+
+                    except KeyError:
+
+                        #first time this rel is found
+                        SR_KB["global_rels"]["ON(" + syn + "," + floor_syn + ")"] = 1
+
+            except TypeError:
+
+                #If any of the coord values is None we just skip it for now
+                #TODO find best estimate for points when one or more is None
+                continue
+
+        # object-object relationships
+        #Ring calculus as in Young et al. for now
 
 
-    except KeyError:
-
-        #new area
-        pass
-
-    #object-object relationships
-
-    for bin_ in semmap[area_ID].keys():
-
-        continue
+        #remove object from list to not repeat comparisons
+        obj_l.pop(j)
 
 
     return SR_KB

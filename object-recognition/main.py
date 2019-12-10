@@ -3,6 +3,7 @@ from torch import optim
 from torchvision import transforms
 import os
 import argparse
+import sys
 
 
 #custom classes and methods
@@ -254,18 +255,33 @@ def main(args):
 
         keep_embeddings = False
 
-        if args.it == 'camera': #Input data from sensor in real-time
+        if args.it == 'camera':
 
-            # Init & start ROS node including a subscriber and a publisher
-            import rospy
-            from ROS_IO import ImageConverter
+            if args.stage=="explore": #Input data from sensor in real-time
 
-            rospy.init_node('image_converter') #, anonymous=True)
-            rate = rospy.Rate(1)
-            io = ImageConverter(path_to_input, args, model, device, base_trans)
-            io.start(path_to_input,args, model, device, base_trans, rate)  #processing called inside the ROS node directly
+
+                    # Init & start ROS node including a subscriber and a publisher
+                    import rospy
+                    from ROS_IO import ImageConverter
+
+                    rospy.init_node('image_converter') #, anonymous=True)
+                    rate = rospy.Rate(1)
+                    io = ImageConverter(path_to_input, args, model, device, base_trans)
+                    io.start(path_to_input,args, model, device, base_trans, rate)  #processing called inside the ROS node directly
+
+            elif args.stage=="reason":
+
+                #TODO code for loading a dataset with annotated bboxes, correct based on last saved json and evaluate
+                print("Reason mode not supported yet - terminating")
+                sys.exit(0)
+
+            else:
+
+                print(str(args.stage)+" mode not supported for camera input, please choose other input time")
+                sys.exit(0)
 
         else:
+
             class_wise_res = test(input_type, path_to_input, args, model, device, base_trans, \
                                   path_to_train_embeds=path_to_train_embeds)
 
@@ -292,7 +308,7 @@ if __name__ == '__main__':
     parser.add_argument('it', choices=['reference', 'pickled', 'json', 'camera'],
                         help='Input type at test time: can be one between reference, pickled or json (if environment data have been tagged)'
                              'Choose camera option for online testing on robot - requires ROS melodic')
-    parser.add_argument('stage',choices=['train','test', 'baseline'],
+    parser.add_argument('stage',choices=['train','test', 'baseline', 'explore', 'reason'],
                         help='One between train, test or baseline (i.e., run baseline NN at test time)')
 
     parser.add_argument('path_to_train',

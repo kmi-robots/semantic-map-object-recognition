@@ -75,21 +75,7 @@ class ImageConverter:
 
                 self.SR_KB[self.area_ID] = {}
 
-                if self.pcl_processed[self.area_ID]:
-
-                    #There are some annotated surfaces
-                    #TODO replace hardcoded planar surfaces with the extracted ones
-                    floor_points = set(self.pcl_processed[self.area_ID]["floor"])
-
-                    self.SR_KB[self.area_ID]["planar_surfaces"].append({"surface_type": "floor",
-
-                                                                        "coords": floor_points
-                                                                        })
-
-                else:
-                    #No planar surfaces could be detected for floor
-                    self.SR_KB[self.area_ID]["planar_surfaces"] = []
-
+                self.SR_KB[self.area_ID]["planar_surfaces"] = []
 
                 self.SR_KB["global_rels"] = Counter()
 
@@ -189,9 +175,23 @@ class ImageConverter:
 
                 self.pcl_processed = pcl_processing_pipeline(self.pcl, self.pcl_processed, self.area_ID, self.cam_trans)
 
+
+                if self.pcl_processed[self.area_ID]:
+                    # There are some annotated points recognised as floor
+
+                    floor_points = set(self.pcl_processed[self.area_ID]["floor"])
+
+                    #Update spatial KB
+                    self.SR_KB[self.area_ID]["planar_surfaces"].append({"surface_type": "floor",
+
+                                                                        "coords": floor_points
+                                                                        })
+
+
                 self.img = None #to deal with unregistered subscriber
                 self.pcl = None
                 self.dimg = None
+                self.pcl_processed[self.area_ID] = {}
 
                 try:
 

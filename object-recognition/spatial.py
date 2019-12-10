@@ -28,6 +28,7 @@ wall_th = 0.05 # 5 cm
 cm_tol = 0.05
 wall_syn = "wall.n.01" # same synset used on VG (same case as table, avoid ambiguity)
 floor_syn = "floor.n.01"
+ring_r = 0.5 # 50 cm
 
 def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=(480,640)):
 
@@ -178,7 +179,7 @@ def pcl_processing_pipeline(pointcloud, preproc_pointcloud, area_ID, cam_trans):
             # type 2 surface, i.e., "other"
             preproc_pointcloud[area_ID]["other"].append((pl_x, pl_y, pl_z))
 
-
+    """
     if __debug__:
         # Expensive I/O, active only in debug mode
 
@@ -198,8 +199,10 @@ def pcl_processing_pipeline(pointcloud, preproc_pointcloud, area_ID, cam_trans):
 
         pcd.colors = open3d.Vector3dVector(plane_colors)  # binary_planes)
         # pcd.colors open3d.utility.Vector3dVector
+        
         open3d.draw_geometries([pcd])
-        print(preproc_pointcloud[area_ID])
+        #print(preproc_pointcloud[area_ID])
+    """
 
     return preproc_pointcloud
 
@@ -227,6 +230,7 @@ def extract_SR(semmap, area_ID, SR_KB):
 
         obj = semmap[area_ID][bin_]
         lab, syn = formatlabel(obj["prediction"])
+
 
         # order: c, br, tl, ml, bl, bm, mr, tr, tm
         br_coords, tl_coords, ml_coords, bl_coords, bm_coords, mr_coords, tr_coords, tm_coords =obj["box_vertices_coords"]
@@ -275,12 +279,12 @@ def extract_SR(semmap, area_ID, SR_KB):
 
                     #If any point intersects, then estimate that object is on floor
                     try:
-                        SR_KB["global_rels"]["ON("+syn+","+floor_syn+")"] +=1
+                        SR_KB["global_rels"]["ON(("+syn.name()+","+lab+"),("+floor_syn+","+"floor))"] +=1
 
                     except KeyError:
 
                         #first time this rel is found
-                        SR_KB["global_rels"]["ON(" + syn + "," + floor_syn + ")"] = 1
+                        SR_KB["global_rels"]["ON(" + syn.name() + "," + floor_syn + ")"] = 1
 
             except TypeError:
 
@@ -290,7 +294,30 @@ def extract_SR(semmap, area_ID, SR_KB):
 
         # object-object relationships
         #Ring calculus as in Young et al. for now
+        cx, cy, cz = obj["centre_coords"]
+        all_others = [bin_ for k, bin_ in reversed(list(enumerate(obj_l))) if k!=j]
 
+        for binn in all_others:
+
+            centre_x, centre_y, centre_z = binn[:-1]
+
+            if (centre_x - cx) ** 2 + (centre_y - cy) ** 2 + (centre_z - cz) ** 2 < ring_r ** 2:
+
+                obj2 = semmap[area_ID][bin_]
+                lab2, syn2 = formatlabel(obj2["prediction"])
+
+                try:
+
+                    SR_KB["global_rels"]["NEAR(("+syn.name()+","+lab+"),("+syn2.name()+","+lab2+"))"] +=1
+                    #add bi-directional
+                    SR_KB["global_rels"]["NEAR((" + syn2.name() + "," + lab2 + "),(" + syn.name() + "," + lab + "))"] += 1
+
+                except KeyError:
+                    SR_KB["global_rels"][
+                        "NEAR((" + syn.name() + "," + lab + "),(" + syn2.name() + "," + lab2 + "))"] = 1
+                    # add bi-directional
+                    SR_KB["global_rels"][
+                        "NEAR((" + syn2.name() + "," + lab2 + "),(" + syn.name() + "," + lab + "))"] = 1
 
         #remove object from list to not repeat comparisons
         obj_l.pop(j)

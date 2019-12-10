@@ -122,6 +122,9 @@ class ImageConverter:
                 print("Failed communication with Data Hub ")
                 print(res.content)
 
+            # empty the extracted floor points and just keep the more abstract relations in persistent copy
+            self.SR_KB[self.area_ID]["planar_surfaces"] = []
+
             with open("./SR_KB.json", 'w') as jf:
 
                 json.dump(self.SR_KB, jf)
@@ -187,7 +190,6 @@ class ImageConverter:
                                                                         "coords": floor_points
                                                                         })
 
-
                 self.img = None #to deal with unregistered subscriber
                 self.pcl = None
                 self.dimg = None
@@ -209,8 +211,6 @@ class ImageConverter:
                     data["x"] = 0
                     data["y"] = 0
                     data["z"] = 0
-
-
 
 
                 #Send a status message

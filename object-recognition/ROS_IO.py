@@ -8,8 +8,7 @@ and back
 import rospy
 import message_filters
 from sensor_msgs.msg import Image, PointCloud2
-from sensor_msgs import point_cloud2
-import pcl
+
 from cv_bridge import CvBridge,CvBridgeError
 from collections import OrderedDict
 import tf
@@ -18,18 +17,12 @@ from std_srvs.srv import SetBool,SetBoolResponse
 from collections import Counter
 import json
 import os
-import numpy as np
-# import ros_numpy
-import pandas as pd
-from pyntcloud import PyntCloud
-import open3d
-from open3d.open3d.geometry import voxel_down_sample, estimate_normals
-import pcl
+
 
 
 from test import test, img_processing_pipeline
 from DH_integration import DH_img_send, DH_status_send
-from spatial import map_semantic, extract_SR
+from spatial import map_semantic, extract_SR, pcl_processing_pipeline
 
 
 class ImageConverter:
@@ -47,7 +40,8 @@ class ImageConverter:
         self.obs_counter = 0
         self.area_DB = {} #OrderedDict()
         self.area_ID = "activity_0"
-
+        self.pcl_processed = {}
+        self.pcl_processed[self.area_ID] = []
 
     def service_callback(self, msg):
 
@@ -73,6 +67,14 @@ class ImageConverter:
                 #Hardcoded for now
 
                 self.SR_KB[self.area_ID] = {}
+
+                if self.pcl_processed[self.area_ID]:
+
+                    #There are some annotated surfaces
+                    #TODO replace hardcoded planar surfaces with the extracted ones
+                    pass
+
+
                 self.SR_KB[self.area_ID]["planar_surfaces"] = []
 
                 self.SR_KB["global_rels"] = Counter()
@@ -178,69 +180,12 @@ class ImageConverter:
                 data["pcl"] = self.pcl
                 data["depth_image"] = self.dimg
 
-                # TO-DO extract surfaces from PCL and locate them too
 
-                pc_list = point_cloud2.read_points_list(self.pcl, skip_nans=True, field_names=("x", "y", "z"))
+                # extract surfaces from PCL and locate them too
 
-
-                points = pd.DataFrame(pc_list, columns=["x", "y", "z"])
-                cloud = PyntCloud(points)
-
-                # K_ = 100
-                # neigh_colors = np.random.uniform(0, 255, size=(K_, 3))
-
-                #save temporary for 3D viz/debugging
-
-                cloud.add_scalar_field("plane_fit", max_dist=1e-2, max_iterations=150)
-
-                # pcl_knn = cloud.get_neighbors(k=K_)
-
-                binary_planes = cloud.points['is_plane'].to_numpy(copy=True)
-                #neighbours = np.zeros((pcl_knn.shape[0],3))
-
-                #for i in range(neigh_colors.shape[0]):
-                #    neighbours[pcl_knn == i] = neigh_colors[i]
-
-                plane_colors = np.zeros((binary_planes.shape[0], 3))
-                plane_colors[binary_planes == 0] = [255, 0, 127] # acquamarine if not planar
-                plane_colors[binary_planes == 1] = [0, 0, 0] #black if planar
+                self.pcl_processed = pcl_processing_pipeline(self.pcl, self.pcl_processed, self.area_ID)
 
 
-                if __debug__:
-
-                    #Expensive I/O, active only in debug mode
-
-                    cloud.to_file('./temp_pcl.ply')
-
-                    #import point_cloud_utils as pcu
-                    #v, _, _, _ = pcu.read_ply("my_model.ply")
-                    #n = pcu.estimate_normals(n, k=16)
-
-                    open3d.utility.set_verbosity_level(open3d.utility.VerbosityLevel.Debug)
-
-                    pcd = open3d.read_point_cloud("./temp_pcl.ply")  # temp_pcl.ply")  # Read the point cloud
-
-
-                    pcd.colors = open3d.Vector3dVector(plane_colors) #binary_planes)
-                    # pcd.colors open3d.utility.Vector3dVector
-                    open3d.draw_geometries([pcd])
-
-                    # Then visualize by neighbourhood
-                    # pcd.colors = open3d.Vector3dVector(neighbours)
-                    #open3d.draw_geometries([pcd])
-
-                    #os.remove('./temp_pcl.ply')
-
-                """
-                
-                
-                
-                # cloud.plot()
-                seg = cloud.make_segmenter()
-                seg.set_model_type(pcl.SACMODEL_PLANE)
-                seg.set_method_type(pcl.SAC_RANSAC)
-                inds, plane_model = seg.segment()
-                """
                 self.img = None #to deal with unregistered subscriber
                 self.pcl = None
                 self.dimg = None
@@ -292,7 +237,6 @@ class ImageConverter:
                                                               args.K, args.sem, args.Kvoting, self.VG_data, [], [], \
                                                                   self.embedding_space)
                 #,VQA= True)
-
 
 
                 # labs= list(zip(*processed_data[2]))[0]

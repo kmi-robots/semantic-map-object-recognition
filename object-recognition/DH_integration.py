@@ -64,7 +64,7 @@ def DH_img_send(img_obj, area_id, all_bins={}):
 
             x,y,x2,y2 = coords[i]
 
-            (map_x, base_x), (map_y, base_y), (map_z, base_z)= locs[i]
+            (map_x, btm_x, tp_x), (map_y, btm_y, tp_y), (map_z, btm_z, tp_z)= locs[i]
 
             ranking_list = [{'item': key, 'score': val} for key, val in ranks[i].items()]
 
@@ -83,7 +83,8 @@ def DH_img_send(img_obj, area_id, all_bins={}):
                     "box_top": (x,y),
                     "box_bottom": (x2,y2),
                     "map_coords": (map_x, map_y, map_z),
-                    "bbase_coords": (base_x, base_y, base_z)
+                    "top_coords": (tp_x, tp_y, tp_z),
+                    "bottom_coords": (btm_x, btm_y, btm_z)
                     }
 
             results.append(node)

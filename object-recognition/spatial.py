@@ -4,9 +4,9 @@ import struct
 from collections import Counter
 import statistics as stat
 
-import pandas as pd
-from pyntcloud import PyntCloud
-import open3d
+#import pandas as pd
+# from pyntcloud import PyntCloud
+# import open3d
 import numpy as np
 
 
@@ -29,8 +29,17 @@ cm_tol = 0.05
 wall_syn = "wall.n.01" # same synset used on VG (same case as table, avoid ambiguity)
 floor_syn = "floor.n.01"
 ring_r = 0.5 # 50 cm
+RGB_RES = 480,640
+R_PX = int(RGB_RES[1]/3) #pixels for radius search of near objects
 
-def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=(480,640)):
+IMG_AREA = RGB_RES[1]*RGB_RES[0] #e.g., 640*480
+
+TOP_TH = int(RGB_RES[0]/3) # top third of frame
+MIDDLE_TH = int(TOP_TH*2) # middle layer (2/3 height)
+BTM_TH = RGB_RES[0]      # lowest third
+
+
+def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=RGB_RES):
 
     #our u,v in this case are the coords of the center of each bbox
     u = int(xtop + (xbtm - xtop) / 2)
@@ -53,7 +62,7 @@ def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=(480,640)):
 
         bot_y = RGB_RES[0] - 5
 
-    if  top_y <= 0:
+    if top_y <= 0:
 
         top_y += 5
 
@@ -80,28 +89,90 @@ def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=(480,640)):
     return vertices_x, vertices_y, vertices_z
 
 
-def pixelTo3DPoint(cloud, u, v):
+def update_KB(rel_KB, frame_objs_DH, cam_pos, rgb_res=RGB_RES):
 
-    #Equivalent results as library read_points
-    point_step = cloud.point_step
-    row_step = cloud.row_step
+    """
+    :param rel_KB: frame array in SR_KB python dictionary defined as in ROS_IO.py
+    :param frame_objs_DH: list of annotations (same format as DH nodes, see DH_interaction.py)
+    to extract clauses from. Includes all annotations associated with the same image/frame.
+    :param cam_pos: camera coordinates wrt robot base
+    :return: updated version of input KB
+    """
 
-    array_pos = v*row_step + u*point_step
 
-    bytesX = [x for x in cloud.data[array_pos:array_pos+4]]
-    bytesY = [x for x in cloud.data[array_pos+4: array_pos+8]]
-    bytesZ = [x for x in cloud.data[array_pos+8:array_pos+12]]
+    for i,node in enumerate(frame_objs_DH): #j, node in reversed(list(enumerate(frame_objs_DH))):
 
-    byte_format = struct.pack('4B', *bytesX)
-    X = struct.unpack('f', byte_format)[0]
+        #size of object compared to total IMG_AREA
 
-    byte_format = struct.pack('4B', *bytesY)
-    Y = struct.unpack('f', byte_format)[0]
+        xtop, ytop = node["box_tl"]
+        xbtm, ybtm = node["box_br"]
 
-    byte_format = struct.pack('4B', *bytesZ)
-    Z = struct.unpack('f', byte_format)[0]
+        u = int(xtop + (xbtm - xtop) / 2)
+        v = int(ytop + (ybtm - ytop) / 2)
 
-    return float(X), float(Y), float(Z)
+        #discrete centroid position in 2d frame
+        if (v <= TOP_TH):
+            pos = "top"
+
+        elif v > TOP_TH <= MIDDLE_TH:
+
+            pos = "middle"
+
+        elif v > BTM_TH:
+
+            pos = "bottom"
+
+
+        #Add NEAR spatial relations to mix
+        near_objs = extract_near((u,v), [node for k, node in enumerate(frame_objs_DH) if k!=i])
+
+        rel_KB.append({
+
+            "label": node["item"],
+            "frame_location": pos,
+            "relative_size": float(node["box_area"]/IMG_AREA),
+            "near": near_objs
+        })
+
+
+
+
+    print("new KB content")
+    print(rel_KB)
+
+    return rel_KB
+
+
+def extract_near(anchor, annotation_list, r_px=R_PX):
+
+    """
+    Near objects are defined based on bounding boxes centroids
+    and a threshold on the distance
+    :param anchor: 2D point to define near wrt,
+    :param annotation_list: list of all other annotations excluding anchor (same format as DH nodes, see DH_interaction.py)
+    :return:  list of objects near anchor
+    """
+
+    near_objs=[]
+
+    cx, cy = anchor
+
+    for n_ in annotation_list:
+
+        xtop, ytop = n_["box_tl"]
+        xbtm, ybtm = n_["box_br"]
+
+        u_ = int(xtop + (xbtm - xtop) / 2)
+        v_ = int(ytop + (ybtm - ytop) / 2)
+
+        if (u_ - cx) ** 2 + (v_ - cy) ** 2 <= r_px **2:
+
+            near_objs.append(n_["item"])
+
+
+    return near_objs
+
+
 
 
 def map_semantic(area_DB, area_id, semmap ={}):
@@ -148,7 +219,7 @@ def map_semantic(area_DB, area_id, semmap ={}):
 
     return semmap
 
-
+"""
 def pcl_processing_pipeline(pointcloud, preproc_pointcloud, area_ID, cam_trans):
 
     pc_list = point_cloud2.read_points_list(pointcloud, skip_nans=True, field_names=("x", "y", "z"))
@@ -179,7 +250,7 @@ def pcl_processing_pipeline(pointcloud, preproc_pointcloud, area_ID, cam_trans):
             # type 2 surface, i.e., "other"
             preproc_pointcloud[area_ID]["other"].append((pl_x, pl_y, pl_z))
 
-    """
+
     if __debug__:
         # Expensive I/O, active only in debug mode
 
@@ -202,10 +273,11 @@ def pcl_processing_pipeline(pointcloud, preproc_pointcloud, area_ID, cam_trans):
         
         open3d.draw_geometries([pcd])
         #print(preproc_pointcloud[area_ID])
-    """
+
 
     return preproc_pointcloud
 
+"""
 
 def extract_SR(semmap, area_ID, SR_KB):
 
@@ -324,3 +396,28 @@ def extract_SR(semmap, area_ID, SR_KB):
 
 
     return SR_KB
+
+
+
+def pixelTo3DPoint(cloud, u, v):
+
+    #Equivalent results as library read_points
+    point_step = cloud.point_step
+    row_step = cloud.row_step
+
+    array_pos = v*row_step + u*point_step
+
+    bytesX = [x for x in cloud.data[array_pos:array_pos+4]]
+    bytesY = [x for x in cloud.data[array_pos+4: array_pos+8]]
+    bytesZ = [x for x in cloud.data[array_pos+8:array_pos+12]]
+
+    byte_format = struct.pack('4B', *bytesX)
+    X = struct.unpack('f', byte_format)[0]
+
+    byte_format = struct.pack('4B', *bytesY)
+    Y = struct.unpack('f', byte_format)[0]
+
+    byte_format = struct.pack('4B', *bytesZ)
+    Z = struct.unpack('f', byte_format)[0]
+
+    return float(X), float(Y), float(Z)

@@ -19,7 +19,8 @@ import os
 
 from test import test, img_processing_pipeline
 from DH_integration import DH_img_send, DH_status_send
-from spatial import map_semantic, extract_SR, pcl_processing_pipeline
+from spatial import update_KB
+# from spatial import map_semantic, extract_SR, pcl_processing_pipeline
 
 
 class ImageConverter:
@@ -50,7 +51,7 @@ class ImageConverter:
             self.SR_KB = OrderedDict()
             # Detect walls and surfaces and add them to permanent db
             # Hardcoded for now
-            self.SR_KB["global_rels"] = Counter()
+            self.SR_KB["global_rels"] = {} #Counter()
 
         else:
 
@@ -97,6 +98,9 @@ class ImageConverter:
             self.pcl_subscriber.unregister()
             self.d_subscriber.unregister()
 
+
+            """"Uncomment to aggregate across frames
+
             if self.obs_counter >= 1: #e.g., stop and reason on scouted area every 5 waypoints
 
                 #Aggregate observations by spatial bin
@@ -107,7 +111,7 @@ class ImageConverter:
                 # Eventually, empty area DB and observation counter
                 self.obs_counter = 0
                 self.area_DB = {}
-
+            """
 
             res, stat_id = DH_status_send("Stopping observation", first=True)
 
@@ -158,7 +162,9 @@ class ImageConverter:
                 data["pcl"] = self.pcl
                 data["depth_image"] = self.dimg
 
+                self.SR_KB["global_rels"][data["filename"]]= []
 
+                """Uncomment for planar surface extraction
                 # extract surfaces from PCL and locate them too
 
                 self.pcl_processed = pcl_processing_pipeline(self.pcl, self.pcl_processed, self.area_ID, self.cam_trans)
@@ -173,8 +179,8 @@ class ImageConverter:
                     self.SR_KB[self.area_ID]["planar_surfaces"]["floor"]= {
 
                                                                         "coords": floor_points
-                                                                        }
-
+                                                             }
+                """
                 self.img = None #to deal with unregistered subscriber
                 self.pcl = None
                 self.dimg = None
@@ -208,7 +214,7 @@ class ImageConverter:
                     print(res.content)
 
                 #send acquired img to Data Hub
-                res,_, _ = DH_img_send(data, self.area_ID)
+                res,_, _, _ = DH_img_send(data, self.area_ID)
 
                 if not res.ok:
                     print("Failed to send img to Data Hub ")
@@ -259,19 +265,19 @@ class ImageConverter:
                         print("Failed communication with Data Hub ")
                         print(res.content)
 
-                    res, xyz_img, self.area_DB = DH_img_send(data, self.area_ID, all_bins= self.area_DB)
+                    res, res_array, xyz_img, self.area_DB = DH_img_send(data, self.area_ID, all_bins= self.area_DB)
 
-                    #and also update local collection grouped by navigation area
-                    #self.area_DB[self.cnt] = data    # Appended with incremental no.
-
+                    #Given results formatted as in DH, update internal KB for that particular frame
+                    self.SR_KB["global_rels"][data["filename"]] = update_KB(self.SR_KB["global_rels"][data["filename"]], res_array, self.cam_trans)
 
                     if not res.ok:
                         print("Failed to send img to Data Hub ")
                         print(res.content)
 
                     self.im_publisher.publish(self.bridge.cv2_to_imgmsg(xyz_img,'bgr8'))
-                    #Optional TO-DO: sends a third image after knowledge-based correction
 
+                    #Optional TO-DO: sends a third image after knowledge-based correction
+                    pass
 
                 except CvBridgeError as e:
                     print("The provided image could not be processed")

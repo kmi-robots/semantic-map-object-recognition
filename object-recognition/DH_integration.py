@@ -63,7 +63,6 @@ def DH_img_send(img_obj, area_id, all_bins={}):
 
             vertices_x, vertices_y, vertices_z = locs[i]
             vertices_coords = list(zip(vertices_x, vertices_y, vertices_z))
-            map_x, map_y, map_z = vertices_coords[0]
 
             ranking_list = [{'item': key, 'score': val} for key, val in ranks[i].items()]
 
@@ -79,14 +78,19 @@ def DH_img_send(img_obj, area_id, all_bins={}):
                     "ranking": ranking_list,
                     "box_tl": (x,y),
                     "box_br": (x2,y2),
+                    "box_area": (x2-x)*(y2-y),
                     "centre_coords": vertices_coords[0],
                     "box_vertices_coords": vertices_coords[1:]
                     }
 
             results.append(node)
 
-            print(node)
+            # print(node)
 
+
+            """Uncomment to map observations to associated bin/grid
+            
+            map_x, map_y, map_z = vertices_coords[0]
             # create a sphere for that point:
             # of center (cx, cy, cz) and radius r
 
@@ -125,7 +129,7 @@ def DH_img_send(img_obj, area_id, all_bins={}):
             # And draw center coords on img
             # cv2.circle(xyz_img, (u,bot_y), 5, img_obj["colours"][i], thickness=5, lineType=8, shift=0)
             #cv2.putText(xyz_img, "( "+str(map_x)+", "+str(map_y) + ", "+str(map_z)+" )", (u-10, v-10),cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour_array*255, 2)
-
+            """
     complete_url = os.path.join(url,"sciroc-episode12-image", img_id)
 
     #Convert img array to base64
@@ -145,7 +149,7 @@ def DH_img_send(img_obj, area_id, all_bins={}):
                 }
 
 
-    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, '')), xyz_img, all_bins
+    return requests.request("POST", complete_url, data=json.dumps(json_body),auth=HTTPBasicAuth(teamkey, '')), results, xyz_img, all_bins
 
 
 def DH_status_send(msg, status_id="", first=False):

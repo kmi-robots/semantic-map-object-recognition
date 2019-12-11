@@ -99,7 +99,6 @@ def update_KB(rel_KB, frame_objs_DH, cam_pos, rgb_res=RGB_RES):
     :return: updated version of input KB
     """
 
-
     for i,node in enumerate(frame_objs_DH): #j, node in reversed(list(enumerate(frame_objs_DH))):
 
         #size of object compared to total IMG_AREA
@@ -126,19 +125,18 @@ def update_KB(rel_KB, frame_objs_DH, cam_pos, rgb_res=RGB_RES):
         #Add NEAR spatial relations to mix
         near_objs = extract_near((u,v), [node for k, node in enumerate(frame_objs_DH) if k!=i])
 
+        #relative distance is the z value wrt robot position
         rel_KB.append({
 
             "label": node["item"],
             "frame_location": pos,
             "relative_size": float(node["box_area"]/IMG_AREA),
-            "near": near_objs
+            "relative_distance": node["centre_coords"][-1],
+            "near": near_objs,
+            "colour_ranking": node["colour_mix"]
         })
 
 
-
-
-    print("new KB content")
-    print(rel_KB)
 
     return rel_KB
 

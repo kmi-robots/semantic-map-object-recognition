@@ -256,6 +256,7 @@ class ImageConverter:
                     data["regions"] = processed_data[2]
                     data["colours"] = processed_data[3]
                     data["locations"] = processed_data[4]
+                    data["hsv_colours"] = processed_data[5]
 
                     #Send processed image to Data Hub
 
@@ -276,6 +277,7 @@ class ImageConverter:
 
                     self.im_publisher.publish(self.bridge.cv2_to_imgmsg(xyz_img,'bgr8'))
 
+                    print(self.SR_KB)
                     #Optional TO-DO: sends a third image after knowledge-based correction
                     pass
 

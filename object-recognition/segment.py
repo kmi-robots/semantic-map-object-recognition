@@ -17,6 +17,7 @@ from PIL import Image
 from sklearn.cluster import KMeans
 from matplotlib import pyplot as plt
 
+from collections import Counter
 
 
 # 'path to yolo config file'
@@ -416,6 +417,78 @@ def white_balance(img):
     return cv2.cvtColor(result, cv2.COLOR_LAB2BGR)
 
 
+
+# define color ranges in HSV
+
+#primary & secondary colors
+low_R = np.array([0,50,50])
+up_R = np.array([29,255,255])
+
+low_Y = np.array([30,50,50])
+up_Y = np.array([59,255,255])
+
+low_G = np.array([60, 50, 50])
+up_G = np.array([89, 255, 255])
+
+low_C = np.array([90,50,50])
+up_C = np.array([119,255,255])
+
+low_B = np.array([120,50,50])
+up_B = np.array([149,255,255])
+
+low_M = np.array([149,50,50])
+up_M = np.array([179,255,255])
+
+
+def get_HSV(img):
+
+    #img = white_balance(img)
+    return cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+
+def segment_by_color(obj):
+
+    # import matplotlib.pyplot as plt
+    #plt.imshow(obj)
+    #plt.show()
+
+    obj_hsv = get_HSV(obj)
+    pixels = Counter()
+
+    # Threshold the HSV image to get only blue colors
+    G_mask = cv2.inRange(obj_hsv, low_G, up_G)
+    Y_mask = cv2.inRange(obj_hsv, low_Y, up_Y)
+    R_mask = cv2.inRange(obj_hsv, low_R, up_R)
+    C_mask = cv2.inRange(obj_hsv, low_C, up_C)
+    B_mask = cv2.inRange(obj_hsv, low_B, up_B)
+    M_mask = cv2.inRange(obj_hsv, low_M, up_M)
+
+    #no of pixels for each color
+
+    pixels["green"]= np.argwhere(G_mask!=0).shape[0]
+    pixels["yellow"] = np.argwhere(Y_mask != 0).shape[0]
+    pixels["red"] = np.argwhere(R_mask!=0).shape[0]
+    pixels["cyan"] = np.argwhere(C_mask != 0).shape[0]
+    pixels["blue"] = np.argwhere(B_mask!=0).shape[0]
+    pixels["magenta"] = np.argwhere(M_mask != 0).shape[0]
+
+
+
+    """
+    # Bitwise-AND mask and original image
+    res = cv2.bitwise_and(obj, obj.copy(), mask=G_mask)
+
+
+    res = cv2.bitwise_and(obj, obj.copy(), mask=R_mask)
+
+
+    res = cv2.bitwise_and(obj, obj.copy(), mask=B_mask)
+
+    #plt.imshow(res)
+    #plt.show()
+    """
+
+    return pixels
+
 def segment(img, YOLO=True, w_saliency=False, static=False, masks=None, depth_image= None):
 
     Width = img.shape[1]
@@ -424,31 +497,20 @@ def segment(img, YOLO=True, w_saliency=False, static=False, masks=None, depth_im
 
     temp = img.copy()
 
-
     # Denoise image
-    denoised = cv2.fastNlMeansDenoisingColored(temp, None, 10, 10, 7, 15)
-    denoised = white_balance(denoised)
+    denoised = img # Already done in upper method
+    # denoised = cv2.fastNlMeansDenoisingColored(temp, None, 10, 10, 7, 15)
+    # denoised = white_balance(denoised)
 
     #cv2.imshow("Whiter Image", denoised)
     #cv2.waitKey(1000)
 
-    #compute colour histogram
-    """
-    hist = cv2.calcHist([temp], [0,1,2], None, histSize=[32,32,32], ranges=[0, 256, 0,256, 0,256])
-
-    plt.figure()
-    plt.title("RGB Histogram")
-    plt.xlabel("Bins")
-    plt.ylabel("# of Pixels")
-    plt.plot(hist)
-    plt.xlim([0, 256])
-    plt.show()
-    """
 
     #Cluster pixels
     # from data_loaders import BGRtoRGB
-    # cluster_colours(BGRtoRGB(denoised))
-    for_mask = denoised.copy()
+    #cluster_colours(BGRtoRGB(denoised))
+
+    #for_mask = denoised.copy()
 
     if w_saliency and static:
 

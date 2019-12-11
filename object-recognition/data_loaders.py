@@ -438,7 +438,9 @@ def img_preproc(path_to_image, transform, ResNet=True, ros=False):
 
     else:
 
-        img = path_to_image
+
+        img = BGRtoRGB(path_to_image)
+
 
     """
     if ResNet:

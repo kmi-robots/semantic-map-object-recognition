@@ -348,8 +348,16 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
     # create copy to draw predictions on
 
+    #import matplotlib.pyplot as plt
+    #plt.imshow(img)
+    #plt.show()
+
     denoised = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 15)
-    denoised = white_balance(denoised)
+    denoised = BGRtoRGB(white_balance(denoised))
+
+
+    #plt.imshow(denoised)
+    #plt.show()
 
     out_img = denoised.copy()
     out_VG = denoised.copy()
@@ -367,6 +375,7 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
     frame_objs = []
     colour_seq = []
     locations = []
+    hsv_colors = []
 
     if data_point["regions"] is not None:
 
@@ -464,11 +473,19 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
             prediction, conf, rank_confs = KNN(input_emb, embedding_space, K, voting)
             # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
+            #Extract colour features too
+            from segment import segment_by_color
+
+
+            hsv_colors.append(segment_by_color(obj))
+
+
             frame_objs.append((prediction, conf, (x, y, x2, y2), rank_confs))
             # y_pred.append(prediction)
 
             #Pinpoint object in "real world"
             locations.append(find_real_xyz(x,y,x2,y2, pcl, img.shape, ))
+
 
             # draw prediction
             color = COLORS[all_classes.index(prediction)]
@@ -566,7 +583,7 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
                         """
                         cv2.imwrite(os.path.join(out_imgs, 'Kground_ImprintedKNET', data_point["filename"]), out_VG)
                         """
-                        return [out_img, out_VG, frame_objs, colour_seq, locations], y_pred, y_true, run_eval  # Continue to next image
+                        return [out_img, out_VG, frame_objs, colour_seq, locations, hsv_colors], y_pred, y_true, run_eval  # Continue to next image
 
                 if len(frame_objs) <= 1:
 
@@ -576,7 +593,7 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
                     # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
 
-                    return [out_img, out_VG, frame_objs, colour_seq, locations], y_pred, y_true, run_eval #Continue to next image
+                    return [out_img, out_VG, frame_objs, colour_seq, locations, hsv_colors], y_pred, y_true, run_eval #Continue to next image
 
                 new_preds = extract_spatial(weak_idx, frame_objs, VG_base=VG_data)
 
@@ -635,4 +652,4 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
     # cv2.destroyAllWindows()
 
     # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
-    return [out_img, out_VG, frame_objs, colour_seq, locations], y_pred, y_true, run_eval
+    return [out_img, out_VG, frame_objs, colour_seq, locations, hsv_colors], y_pred, y_true, run_eval

@@ -69,8 +69,16 @@ def DH_img_send(img_obj, area_id, all_bins={}):
             #adding colour coding
             #but swapping from open cv's default BGR back to RGB for DH web GUI
             bgr_array =img_obj["colours"][i].tolist()
-            
+
+            #colours for GUI viz only
             colour_array = [bgr_array[2], bgr_array[1], bgr_array[0]] #/255
+
+            #area in pixel
+            box_area= (x2-x)*(y2-y)
+
+            # colours detected in HSV space
+            box_colours = [ (cname, float(pix/box_area))  for cname, pix in img_obj["hsv_colours"][i].most_common()]
+
 
             node = {"item": obj_label,
                     "score": scores[i],
@@ -78,15 +86,15 @@ def DH_img_send(img_obj, area_id, all_bins={}):
                     "ranking": ranking_list,
                     "box_tl": (x,y),
                     "box_br": (x2,y2),
-                    "box_area": (x2-x)*(y2-y),
+                    "box_area": box_area,
                     "centre_coords": vertices_coords[0],
-                    "box_vertices_coords": vertices_coords[1:]
+                    "box_vertices_coords": vertices_coords[1:],
+                    "colour_mix": box_colours
                     }
 
             results.append(node)
 
             # print(node)
-
 
             """Uncomment to map observations to associated bin/grid
             

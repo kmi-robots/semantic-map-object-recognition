@@ -21,6 +21,18 @@ All the experimented NeuralNet-based architectures were implemented in Pytorch.
 
 We recommend to let Docker handle all the dependency installations, please refer to the dockerfile for a list of pre-requisites. 
 
+## Pre-trained models & data
+
+After cloning this repo, please download  
+our pre-trained models and parsed KBs (e.g., Visual Genome) through
+(this link)[https://www.mediafire.com/file/zjpwnm17cbd5og6/starter_kit.zip/file].
+
+All contents of starter_kit.zip will have to be extracted under ./object-recognition/data :
+
+```
+cd path_to_download_folder
+unzip starter_kit.zip -d your_path_to/semantic-map-object-recognition/object-recognition/data
+```
 
 ## Getting Started
 
@@ -122,18 +134,7 @@ optional arguments:
 
 Please note that automatic re-sizing for any number of classes is currently not supported, we currently support only N=10,15 and 25 (See also the [Data set Section](#data-sets))
 
-## Pre-trained models & data
 
-After cloning this repo, please download  
-our pre-trained models and parsed KBs (e.g., Visual Genome) through
-(this link)[https://www.mediafire.com/file/zjpwnm17cbd5og6/starter_kit.zip/file].
-
-All contents of starter_kit.zip will have to be extracted under ./object-recognition/data :
-
-```
-cd path_to_download_folder
-unzip starter_kit.zip -d your_path_to/semantic-map-object-recognition/object-recognition/data
-```
 
 
 ## Sample command combinations

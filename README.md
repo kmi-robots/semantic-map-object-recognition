@@ -49,7 +49,7 @@ This code has been tested for / requires
 
 After cloning this repo, please download  
 our pre-trained models and parsed KBs (e.g., Visual Genome) through
-(this link)[https://www.mediafire.com/file/zjpwnm17cbd5og6/starter_kit.zip/file].
+[this link](https://www.mediafire.com/file/zjpwnm17cbd5og6/starter_kit.zip/file).
 
 All contents of starter_kit.zip will have to be extracted under ./object-recognition/data :
 

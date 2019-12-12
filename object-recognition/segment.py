@@ -420,23 +420,41 @@ def white_balance(img):
 
 # define color ranges in HSV
 
+"""
 #primary & secondary colors
 low_R = np.array([0,50,50])
-up_R = np.array([29,255,255])
+up_R = np.array([29,255,255]) #29 #44
 
 low_Y = np.array([30,50,50])
 up_Y = np.array([59,255,255])
 
-low_G = np.array([60, 50, 50])
-up_G = np.array([89, 255, 255])
+low_G = np.array([60, 50, 50]) #60 #45
+up_G = np.array([89, 255, 255]) #89 #104
 
 low_C = np.array([90,50,50])
 up_C = np.array([119,255,255])
 
-low_B = np.array([120,50,50])
-up_B = np.array([149,255,255])
+low_B = np.array([120,50,50]) #120 #105
+up_B = np.array([149,255,255]) #149 #164
 
-low_M = np.array([149,50,50])
+low_M = np.array([149,50,50])  # add to red
+up_M = np.array([179,255,255])
+
+"""
+
+
+#only primary
+
+low_R = np.array([0,50,50])
+up_R = np.array([44,255,255])
+
+low_G = np.array([45, 50, 50])
+up_G = np.array([104, 255, 255])
+
+low_B = np.array([105,50,50])
+up_B = np.array([164,255,255])
+
+low_M = np.array([165,50,50])  # add to red
 up_M = np.array([179,255,255])
 
 
@@ -456,35 +474,50 @@ def segment_by_color(obj):
 
     # Threshold the HSV image to get only blue colors
     G_mask = cv2.inRange(obj_hsv, low_G, up_G)
-    Y_mask = cv2.inRange(obj_hsv, low_Y, up_Y)
+    #Y_mask = cv2.inRange(obj_hsv, low_Y, up_Y)
     R_mask = cv2.inRange(obj_hsv, low_R, up_R)
-    C_mask = cv2.inRange(obj_hsv, low_C, up_C)
+    #C_mask = cv2.inRange(obj_hsv, low_C, up_C)
     B_mask = cv2.inRange(obj_hsv, low_B, up_B)
     M_mask = cv2.inRange(obj_hsv, low_M, up_M)
 
     #no of pixels for each color
 
     pixels["green"]= np.argwhere(G_mask!=0).shape[0]
-    pixels["yellow"] = np.argwhere(Y_mask != 0).shape[0]
-    pixels["red"] = np.argwhere(R_mask!=0).shape[0]
-    pixels["cyan"] = np.argwhere(C_mask != 0).shape[0]
+    #pixels["yellow"] = np.argwhere(Y_mask != 0).shape[0]
+    pixels["red"] = np.argwhere(R_mask!=0).shape[0] + np.argwhere(M_mask != 0).shape[0]
+    #pixels["cyan"] = np.argwhere(C_mask != 0).shape[0]
     pixels["blue"] = np.argwhere(B_mask!=0).shape[0]
-    pixels["magenta"] = np.argwhere(M_mask != 0).shape[0]
+    #pixels["magenta"] = np.argwhere(M_mask != 0).shape[0]
 
 
-
-    """
     # Bitwise-AND mask and original image
-    res = cv2.bitwise_and(obj, obj.copy(), mask=G_mask)
-
-
+    """ ONLY FOR THE VIEWS (cit. Youtube)
+    #R_mask_double= np.any((M_mask==255) or (R_mask==255))
     res = cv2.bitwise_and(obj, obj.copy(), mask=R_mask)
+    plt.imshow(res)
+    plt.show()
 
+    #res = cv2.bitwise_and(obj, obj.copy(), mask=Y_mask)
+    #plt.imshow(res)
+    #plt.show()
+
+    res = cv2.bitwise_and(obj, obj.copy(), mask=G_mask)
+    plt.imshow(res)
+    plt.show()
+
+    #res = cv2.bitwise_and(obj, obj.copy(), mask=C_mask)
+    #plt.imshow(res)
+    #plt.show()
 
     res = cv2.bitwise_and(obj, obj.copy(), mask=B_mask)
 
-    #plt.imshow(res)
-    #plt.show()
+    plt.imshow(res)
+    plt.show()
+
+    res = cv2.bitwise_and(obj, obj.copy(), mask=M_mask)
+
+    plt.imshow(res)
+    plt.show()
     """
 
     return pixels

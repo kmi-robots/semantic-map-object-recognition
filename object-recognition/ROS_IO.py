@@ -98,6 +98,20 @@ class ImageConverter:
             self.pcl_subscriber.unregister()
             self.d_subscriber.unregister()
 
+            if self.obs_counter >= 1:  # stop and reason on scouted area every x waypoints
+
+                """
+                Association rule mining 
+                """
+                from rule_extractor import get_association_rules
+
+                # pass all observations indexed by frame id (i.e., timestamp)
+
+                self.SR_KB["rules"] = {}
+                self.SR_KB["rules"] = get_association_rules(self.SR_KB["global_rels"])
+
+
+
 
             """"Uncomment to aggregate across frames
 
@@ -119,8 +133,11 @@ class ImageConverter:
                 print("Failed communication with Data Hub ")
                 print(res.content)
 
-            # empty all that was part of a specific area observed and just maintain more abstract/global relations
+            # empty all that was part of a specific area observed
             self.SR_KB[self.area_ID] = {}
+            self.SR_KB["global_rels"] = {}
+
+            #Just keep a persistent copy of the mined rules
 
             with open("./SR_KB.json", 'w') as jf:
 
@@ -232,10 +249,6 @@ class ImageConverter:
                                                                   , self.cardinalities,self.COLORS, self.all_classes, \
                                                               args.K, args.sem, args.Kvoting, self.VG_data, [], [], \
                                                                   self.embedding_space)
-                #,VQA= True)
-
-
-                # labs= list(zip(*processed_data[2]))[0]
 
                 res, stat_id = DH_status_send("Image analysed",status_id=stat_id)
 
@@ -247,9 +260,7 @@ class ImageConverter:
                 #And publish results after processing the single image
 
                 try:
-
                     #self.im_publisher.publish(self.bridge.cv2_to_imgmsg(processed_data[0],'bgr8'))
-
                     #self.corrim_publisher.publish(self.bridge.cv2_to_imgmsg(processed_data[1], 'bgr8'))
                     
                     data["data"] = processed_data[0]
@@ -275,7 +286,7 @@ class ImageConverter:
                         print("Failed to send img to Data Hub ")
                         print(res.content)
 
-                    self.im_publisher.publish(self.bridge.cv2_to_imgmsg(xyz_img,'bgr8'))
+                    self.im_publisher.publish(self.bridge.cv2_to_imgmsg(xyz_img,'rgb8'))
 
                     print(self.SR_KB)
                     #Optional TO-DO: sends a third image after knowledge-based correction

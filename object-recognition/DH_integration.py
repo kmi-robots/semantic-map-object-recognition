@@ -76,7 +76,7 @@ def DH_img_send(img_obj, area_id, all_bins={}):
             #area in pixel
             box_area= (x2-x)*(y2-y)
 
-            # colours detected in HSV space
+            # colours detected in HSV space in decreasing frequency
             box_colours = [ (cname, float(pix/box_area))  for cname, pix in img_obj["hsv_colours"][i].most_common()]
 
 

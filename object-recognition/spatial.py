@@ -126,15 +126,59 @@ def update_KB(rel_KB, frame_objs_DH, cam_pos, rgb_res=RGB_RES):
         near_objs = extract_near((u,v), [node for k, node in enumerate(frame_objs_DH) if k!=i])
 
         #relative distance is the z value wrt robot position
-        rel_KB.append({
+        #could be None, in which case property/clause is not added to the bbox node
 
-            "label": node["item"],
-            "frame_location": pos,
-            "relative_size": float(node["box_area"]/IMG_AREA),
-            "relative_distance": node["centre_coords"][-1],
-            "near": near_objs,
-            "colour_ranking": node["colour_mix"]
-        })
+        """discretize relative size: range(0,1)"""
+        if float(node["box_area"]/IMG_AREA) <= 0.33:
+            size = 'small'
+
+        elif float(node["box_area"]/IMG_AREA) <= 0.66:
+            size = 'medium'
+
+        else:
+            size = "large"
+
+        """discretize colour: extract predominant one out of mix"""
+        cname, coeff = node["colour_mix"][0]
+
+        if node["centre_coords"][-1] is None:
+
+
+            rel_KB.append({
+
+                "label": node["item"],
+                "frame_location": pos,
+                "relative_size": size,
+
+                "dominant_colour": cname,
+                "near": near_objs
+            })
+
+        else:
+
+            """discretize relative distance: camera range(0.60,8.0) metres"""
+
+            if node["centre_coords"][-1] <= 3.06:
+
+                dis = "close"
+
+            elif node["centre_coords"][-1] <= 5.52:
+
+                dis = "distant"
+
+            else:
+
+                dis = "far"
+
+            rel_KB.append({
+
+                "label": node["item"],
+                "frame_location": pos,
+                "relative_size": size,
+                "relative_distance": dis,
+                "dominant_colour": cname,
+                "near": near_objs
+            })
 
 
 

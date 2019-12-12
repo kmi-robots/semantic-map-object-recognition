@@ -1,7 +1,7 @@
 # Code under development 
 
 
-Dependencies / Requirements
+## Dependencies / Requirements
 
 This code has been tested for / requires 
 
@@ -19,14 +19,13 @@ This code has been tested for / requires
 
 - Pytorch +  Torchvision (CPU-only is enough to run the inference without retraining, for the training we tested the pipeline on CUDA 9) 
 
-- opencv, opencv-contrib, scikit-learn, matplotlib
+- opencv, opencv-contrib, mlxtend, scikit-learn(v.0.21 recommended for compatibility with mlxtend), matplotlib
 
 - numpy 1.14 or later. Make sure to remove links created to the python2 version of numpy by ROS or to keep only one version installed 
   after upgrading.
 
 - the pattern and requests packages 
 
-- 
 
 - nltk and the Wordnet corpus specifically. We found that installing through pip was not successful so we suggest the following steps:
 
@@ -44,7 +43,24 @@ This code has been tested for / requires
   Please refer to their [official tutorial](https://colab.research.google.com/drive/1Z9fsh10rFtgWe4uy8nvU4mQmqdokdIRR) for the relevant installation steps and dependencies
   
   
-## Test commands
+## Getting started
+
+
+### Pre-trained models & data
+
+After cloning this repo, please download  
+our pre-trained models and parsed KBs (e.g., Visual Genome) through
+(this link)[https://www.mediafire.com/file/zjpwnm17cbd5og6/starter_kit.zip/file].
+
+All contents of starter_kit.zip will have to be extracted under ./object-recognition/data :
+
+```
+cd path_to_download_folder
+unzip starter_kit.zip -d your_path_to/semantic-map-object-recognition/object-recognition/data
+```
+
+
+### Test commands
 
 The inference pipeline can be tested with, e.g.:
 

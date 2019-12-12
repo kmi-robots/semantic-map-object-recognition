@@ -4,6 +4,7 @@ from torchvision import transforms
 import os
 import argparse
 import sys
+import pandas as pd
 
 
 #custom classes and methods
@@ -265,15 +266,21 @@ def main(args):
                     from ROS_IO import ImageConverter
 
                     rospy.init_node('image_converter') #, anonymous=True)
-                    rate = rospy.Rate(1)
+                    rate = rospy.Rate(10)
                     io = ImageConverter(path_to_input, args, model, device, base_trans)
                     io.start(path_to_input,args, model, device, base_trans, rate)  #processing called inside the ROS node directly
 
             elif args.stage=="reason":
 
-                #TODO code for loading a dataset with annotated bboxes, correct based on last saved json and evaluate
-                print("Reason mode not supported yet - terminating")
-                sys.exit(0)
+                #TODO code for loading a dataset with annotated bboxes, correct based on last saved rules and evaluate
+                try:
+                    rule_df = pd.read_pickle(os.getcwd()+'/data/extracted_rules.pkl')
+
+                except FileNotFoundError:
+
+                    print("Please re-run in explore mode first to generate a set of rules for reasoning")
+                    sys.exit(0)
+
 
             else:
 

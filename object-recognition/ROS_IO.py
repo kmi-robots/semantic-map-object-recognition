@@ -16,6 +16,7 @@ from std_srvs.srv import SetBool,SetBoolResponse
 from collections import Counter
 import json
 import os
+#import asyncio
 
 from test import test, img_processing_pipeline
 from DH_integration import DH_img_send, DH_status_send
@@ -44,6 +45,7 @@ class ImageConverter:
         self.pcl_processed[self.area_ID]["floor"] = []
         self.pcl_processed[self.area_ID]["other"] = []
         self.cam_trans = []
+        #self.lock = asyncio.Lock()
 
         if not os.path.isfile("./SR_KB.json"):
 
@@ -98,11 +100,17 @@ class ImageConverter:
             self.pcl_subscriber.unregister()
             self.d_subscriber.unregister()
 
-            if self.obs_counter >= 1:  # stop and reason on scouted area after x waypoints
+
+            if self.obs_counter >= 5:  # stop and reason on scouted area after x waypoints
+
+                #Wait for prior processing queue in start to be complete before proceeding
+                #yield from self.lock
+                #try:
 
                 """
                 Association rule mining 
                 """
+
                 from rule_extractor import get_association_rules
 
                 # pass all observations indexed by frame id (i.e., timestamp)
@@ -137,6 +145,9 @@ class ImageConverter:
                 self.obs_counter = 0
                 self.area_DB = {}
 
+                #finally:
+                #    self.lock.release()
+
             res, stat_id = DH_status_send("Stopping observation", first=True)
 
             if not res.ok:
@@ -155,7 +166,9 @@ class ImageConverter:
                 json.dump(self.SR_KB, jf)
 
             print("Saved updated SR KB locally")
+            
             """
+
             return SetBoolResponse(False,"Shutting down image subscriber")
 
 
@@ -181,6 +194,11 @@ class ImageConverter:
         while not rospy.is_shutdown():
 
             if self.img is not None:
+
+                #self.lock.acquire()
+                #yield from self.lock
+
+                #try:
 
                 data = OrderedDict()
                 data["filename"] = str(self.timestamp)
@@ -272,7 +290,7 @@ class ImageConverter:
                 try:
                     #self.im_publisher.publish(self.bridge.cv2_to_imgmsg(processed_data[0],'bgr8'))
                     #self.corrim_publisher.publish(self.bridge.cv2_to_imgmsg(processed_data[1], 'bgr8'))
-                    
+
                     data["data"] = processed_data[0]
                     data["regions"] = processed_data[2]
                     data["colours"] = processed_data[3]
@@ -306,7 +324,10 @@ class ImageConverter:
                     print("The provided image could not be processed")
                     print(e)
 
-            rate.sleep() #to make sure it publishes at 1 Hz
+                #finally:
+                #    self.lock.release()
+
+            rate.sleep() #to make sure it publishes at x Hz
 
 
 

@@ -98,7 +98,7 @@ class ImageConverter:
             self.pcl_subscriber.unregister()
             self.d_subscriber.unregister()
 
-            if self.obs_counter >= 1:  # stop and reason on scouted area every x waypoints
+            if self.obs_counter >= 1:  # stop and reason on scouted area after x waypoints
 
                 """
                 Association rule mining 
@@ -107,25 +107,35 @@ class ImageConverter:
 
                 # pass all observations indexed by frame id (i.e., timestamp)
 
-                self.SR_KB["rules"] = {}
-                self.SR_KB["rules"] = get_association_rules(self.SR_KB["global_rels"])
+                #self.SR_KB["rules"] = {}
+                #self.SR_KB["rules"] =get_association_rules(self.SR_KB["global_rels"])
+
+                #TODO decide how to handle updates over time
+
+                print("Starting rule mining from collected observations...")
+
+                rule_df = get_association_rules(self.SR_KB["global_rels"])
+
+                #save locally
+                print("Saving rules locally...")
+                rule_df.to_pickle(os.getcwd()+'/data/extracted_rules.pkl')
+                print("Pickled DataFrame saved under ../data/extracted_rules.pkl")
 
 
+                """"Uncomment to aggregate across frames
 
-
-            """"Uncomment to aggregate across frames
-
-            if self.obs_counter >= 1: #e.g., stop and reason on scouted area every 5 waypoints
-
+                
                 #Aggregate observations by spatial bin
                 semantic_map_t0 = map_semantic(self.area_DB, self.area_ID)
 
                 self.SR_KB = extract_SR(semantic_map_t0, self.area_ID, self.SR_KB)
 
+                
+                
+                """
                 # Eventually, empty area DB and observation counter
                 self.obs_counter = 0
                 self.area_DB = {}
-            """
 
             res, stat_id = DH_status_send("Stopping observation", first=True)
 
@@ -135,6 +145,7 @@ class ImageConverter:
 
             # empty all that was part of a specific area observed
             self.SR_KB[self.area_ID] = {}
+            """
             self.SR_KB["global_rels"] = {}
 
             #Just keep a persistent copy of the mined rules
@@ -144,7 +155,7 @@ class ImageConverter:
                 json.dump(self.SR_KB, jf)
 
             print("Saved updated SR KB locally")
-
+            """
             return SetBoolResponse(False,"Shutting down image subscriber")
 
 
@@ -154,7 +165,6 @@ class ImageConverter:
 
             self.timestamp = img_msg.header.stamp.to_sec()
             self.img = self.bridge.imgmsg_to_cv2(img_msg, 'bgr8')
-
             self.dimg = self.bridge.imgmsg_to_cv2(depth_msg, "32FC1") #uint16 depth values in mm
 
             assert isinstance(pcl_msg, PointCloud2)
@@ -179,7 +189,7 @@ class ImageConverter:
                 data["pcl"] = self.pcl
                 data["depth_image"] = self.dimg
 
-                self.SR_KB["global_rels"][data["filename"]]= []
+                self.SR_KB["global_rels"][data["filename"]] = []
 
                 """Uncomment for planar surface extraction
                 # extract surfaces from PCL and locate them too

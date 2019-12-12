@@ -164,7 +164,7 @@ def KNN(input_e, all_embs, K, voting):
 
 
 
-def test(data_type, path_to_input,  args, model, device, trans, camera_img = None, path_to_train_embeds=None):
+def test(data_type, path_to_input,  args, model, device, trans, camera_img = None, path_to_train_embeds=None, KBrules=None):
 
     K = args.K
     N = args.N
@@ -196,7 +196,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
     cardinalities = Counter()
 
 
-    sem = args.sem if args.sem != 'none' else None
+    # sem = args.sem if args.sem != 'none' else None
 
     voting = args.Kvoting
 
@@ -233,7 +233,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
 
     VG_data = None
 
-    if sem is not None and os.path.isfile(path_to_VG):
+    if args.sem!='none' and os.path.isfile(path_to_VG):
 
         start = time.time()
         print("Loading Visual Genome spatial relations...")
@@ -308,8 +308,8 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
     #batch of multiple images to process
     for data_point in data:  # reversed(img_collection.values()):
 
-        _, y_pred, y_true, run_eval, _ = img_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
-                                                           K, sem, voting, VG_data, y_true, y_pred, embedding_space)
+        _, y_pred, y_true, run_eval= img_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
+                                                           K, args.sem, voting, VG_data, y_true, y_pred, embedding_space)
 
 
     #Evaluation------------------------------------------------------------------------------------------------
@@ -370,7 +370,12 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
     whole_start = time.time()
 
     #Extract foreground from pcl
-    pcl = data_point["pcl"]
+    try:
+        pcl = data_point["pcl"]
+
+    except KeyError:
+        #method not accessed from camera input
+        pcl=None
 
     frame_objs = []
     colour_seq = []
@@ -411,7 +416,6 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
             obj = denoised.copy() #change img to denoised to see effect of denoising and white balancing on predictions
             segm_label = ''
-
 
             if args.bboxes == 'true':
 
@@ -484,8 +488,12 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
             # y_pred.append(prediction)
 
             #Pinpoint object in "real world"
-            locations.append(find_real_xyz(x,y,x2,y2, pcl, img.shape, ))
+            try:
+                locations.append(find_real_xyz(x,y,x2,y2, pcl, img.shape, ))
+            except AssertionError:
 
+                #Data not coming from robot, location not available
+                locations.append([None,None,None])
 
             # draw prediction
             color = COLORS[all_classes.index(prediction)]
@@ -519,7 +527,6 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
             if VQA:
                 # Also ask Pythia about this object
                 from pythia_demo import PythiaDemo
-                import pandas as pd
 
                 demo = PythiaDemo()
 

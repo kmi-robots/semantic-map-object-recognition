@@ -255,6 +255,7 @@ def main(args):
         model.eval()
 
         keep_embeddings = False
+        class_wise_res = None
 
         if args.it == 'camera':
 
@@ -281,6 +282,18 @@ def main(args):
                     print("Please re-run in explore mode first to generate a set of rules for reasoning")
                     sys.exit(0)
 
+                try:
+                    #under the hood same case as evaluating on ground truth but with validation against KB rules as only difference
+                    input_type="json"
+                    args.bboxes ="true"
+                    class_wise_res = test(input_type, path_to_input, args, model, device, base_trans, \
+                                          path_to_train_embeds=path_to_train_embeds, KBrules=rule_df)\
+
+
+                except FileNotFoundError:
+
+                    print("Please provide a valid path to VIA-annotated JSON file for test images")
+                    sys.exit(0)
 
             else:
 

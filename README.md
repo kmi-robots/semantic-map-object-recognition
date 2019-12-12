@@ -47,8 +47,7 @@ This code has been tested for / requires
 
 ### Pre-trained models & data
 
-After cloning this repo, please download  
-our pre-trained models and parsed KBs (e.g., Visual Genome) through
+After cloning this repo, please download  our pre-trained models and parsed KBs (e.g., Visual Genome) through
 [this link](https://www.mediafire.com/file/zjpwnm17cbd5og6/starter_kit.zip/file).
 
 All contents of starter_kit.zip will have to be extracted under ./object-recognition/data :
@@ -64,14 +63,14 @@ unzip starter_kit.zip -d your_path_to/semantic-map-object-recognition/object-rec
 The inference pipeline can be tested with, e.g.:
 
 ```
-python3 main.py camera test ./data/KMi_collection/train ./data/KMi_collection/test/tagged_KMi.json ./pt_results/kmish25/embeddings_imprKNET_1prod.dat --bboxes segmented --sem none
+python3 main.py camera explore ./data/KMi_collection/train ./data/KMi_collection/test/tagged_KMi.json ./pt_results/kmish25/embeddings_imprKNET_1prod.dat --bboxes segmented --sem none
 ```
 
 In this case the scene will be also segmented (--boxes segmented) and no common-sense based correction
 will be applied (--sem none). You can run ```python3 main.py --help``` for more options:
 
 
-It will launch the pipeline and be in the lookout for a service call
+This command will launch the pipeline and be in the lookout for a service call
 to start the exploration (i.e., object recognition/image analysis). 
 You can send this call through the following command for testing/debugging
 

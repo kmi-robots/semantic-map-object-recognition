@@ -39,8 +39,7 @@ def get_association_rules(input_dict):
 
     df = pd.DataFrame(te_ary, columns=te.columns_)
 
-    frequent_itemsets = apriori(df, min_support=0.1, use_colnames=True)
-
+    frequent_itemsets = apriori(df, min_support=0.0, use_colnames=True)
     rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=0.0)
 
     #TODO convert df back to dictionary

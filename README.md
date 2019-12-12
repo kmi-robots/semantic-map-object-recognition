@@ -45,7 +45,6 @@ This code has been tested for / requires
   
 ## Getting started
 
-
 ### Pre-trained models & data
 
 After cloning this repo, please download  

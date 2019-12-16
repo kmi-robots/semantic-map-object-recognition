@@ -245,6 +245,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
     img_collection = OrderedDict()
 
     if data_type == 'camera':
+
         # Data acquired from camera online
         # Initialises and returns loaded data spaces only once
 
@@ -301,15 +302,28 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
 
                     img_collection.update(node)
 
+    norm_coeff = 0
+
+    if voting == "discounted":
+
+        for k in range(1, K+1):
+
+            norm_coeff += 1/k
+
+    else:
+
+        norm_coeff = K
+
+
     #Image Processing------------------------------------------------------------------------------------------
     #if data_type !='camera':
 
     data = img_collection.values()
     #batch of multiple images to process
-    for data_point in data:  # reversed(img_collection.values()):
+    for data_point in list(reversed(data)):  # list(reversed(data))[:15]:
 
         _, y_pred, y_true, run_eval= img_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
-                                                           K, args.sem, voting, VG_data, y_true, y_pred, embedding_space)
+                                                           K, args.sem, voting, VG_data, y_true, y_pred, embedding_space, KBrules=KBrules, norm_coeff=norm_coeff)
 
 
     #Evaluation------------------------------------------------------------------------------------------------
@@ -327,7 +341,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
 
 def img_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
                                                            K, sem, voting, VG_data, y_true, y_pred, embedding_space, extract_SR=True, VQA=False, \
-                                                           ):
+                                                           KBrules =None, norm_coeff=None):
     #print(type(data_point))
 
     try:
@@ -381,6 +395,7 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
     colour_seq = []
     locations = []
     hsv_colors = []
+    add_properties = []
 
     if data_point["regions"] is not None:
 
@@ -434,7 +449,10 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
                 y = region[1]
                 y2 = region[3]
 
+            box_area = (x2-x)*(y2-y)
+
             obj = obj[y:y2, x:x2]
+
 
             input_emb = array_embedding(model, obj, device, transforms=trans)
 
@@ -480,20 +498,26 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
             #Extract colour features too
             from segment import segment_by_color
 
+            pix_counter = segment_by_color(obj)
 
-            hsv_colors.append(segment_by_color(obj))
-
+            hsv_colors.append(pix_counter)
 
             frame_objs.append((prediction, conf, (x, y, x2, y2), rank_confs))
-            # y_pred.append(prediction)
+
 
             #Pinpoint object in "real world"
             try:
-                locations.append(find_real_xyz(x,y,x2,y2, pcl, img.shape, ))
+
+                vertices_x, vertices_y, vertices_z = find_real_xyz(x,y,x2,y2, pcl, img.shape, )
+                locations.append((vertices_x, vertices_y, vertices_z))
+                vertices_coords = list(zip(vertices_x, vertices_y, vertices_z))
+                has_loc= True
+
             except AssertionError:
 
                 #Data not coming from robot, location not available
                 locations.append([None,None,None])
+                has_loc = False
 
             # draw prediction
             color = COLORS[all_classes.index(prediction)]
@@ -523,6 +547,68 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
             # cv2.waitKey(10000)
             # cv2.destroyAllWindows()
 
+
+            #### Extract other properties and discretize if in reason mode#####
+            if args.stage == "reason":
+
+                import spatial
+
+                u = int(x + (x2 - x) / 2)
+                v = int(y + (y2 - y) / 2)
+
+                # discrete centroid position in 2d frame
+                if (v <= spatial.TOP_TH):
+                    pos = "top"
+
+                elif v > spatial.TOP_TH <= spatial.MIDDLE_TH:
+
+                    pos = "middle"
+
+                elif v > spatial.BTM_TH:
+
+                    pos = "bottom"
+
+                if has_loc:
+
+                    IMG_AREA = spatial.IMG_AREA
+                    """discretize relative distance: camera range(0.60,8.0) metres"""
+
+                    uv_z = vertices_coords[0][-1]
+
+                    if uv_z <= 3.06:
+
+                        dis = "close"
+
+                    elif uv_z <= 5.52:
+
+                        dis = "distant"
+
+                    else:
+
+                        dis = "far"
+
+                else:
+                    # This property will not be avialble for KMiSet 25 pre-annotated
+                    # as it is based on depth data
+                    IMG_AREA = 1280 * 720
+
+                    dis = None
+
+
+                if float(box_area/IMG_AREA) <= 0.33:
+                    size = 'small'
+
+                elif float(box_area/IMG_AREA) <= 0.66:
+                    size = 'medium'
+
+                else:
+                    size = "large"
+
+                dom_colour, colour_val = pix_counter.most_common()[0]
+
+                add_properties.append([(u,v), pos, size, dom_colour, dis])
+
+
             vqastart = time.time()
             if VQA:
                 # Also ask Pythia about this object
@@ -545,6 +631,63 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
                     print("Pythia says that object IS NOT a "+ prediction)
 
                 print("Took %f sec for Pythia to guess" % float(time.time() - vqastart))
+
+
+
+        # Correction via internal KB ---------------------------------------------------------------------------
+
+        if args.stage == "reason":
+
+            # Find near objects in scene
+            import spatial
+            from spatial import extract_near_list
+
+            for i, (prediction, conf, coords, rank_confs) in enumerate(frame_objs):
+
+                (u,v), pos, size, dom_colour, dis = add_properties[i]
+
+                near_obj_labels = extract_near_list((u,v), [box_prop for k, box_prop in enumerate(frame_objs) if k!=i])
+
+                add_properties[i] = [(u,v), pos, size, dom_colour, dis, near_obj_labels]
+
+                mod_rank = Counter()
+
+                for class_name, cum_score in rank_confs.most_common():
+
+                    norm_score = cum_score/norm_coeff
+
+                    #Modify confidence ranking given the rules available in KBrules
+                    subset = KBrules[KBrules["consequents"] == {class_name}]
+
+                    if not subset.empty: # if any rule is found for that object (as consequent)
+
+                        if subset.shape[0]> 1: # if more then one rule is found
+                        #pick the best one (e.g., highest leverage)
+
+                            mod_score = norm_score * subset.loc[subset["leverage"].idxmax()].confidence
+
+                        else:
+
+                            mod_score = norm_score * subset.confidence
+
+                    else:
+
+                        #keep normalised version of old (Vision-based) score otherwise
+                        mod_score = norm_score
+
+                    # it's a counter so it will be a unique set of classes, we can add value for key only once
+                    mod_rank[class_name] = mod_score
+
+                win_l, win_score = mod_rank.most_common()[0]
+
+                #new predictions based on modified scores
+                if win_l == prediction:
+
+                    print("Prediction kept as %s" % win_l)
+                else:
+                    print("Corrected with %s instead based on KB rules" % win_l)
+                y_pred.append(win_l)
+
 
 
         # Correction via ConceptNet + VG -----------------------------------------------------------------------

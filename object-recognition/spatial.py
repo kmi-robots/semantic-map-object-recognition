@@ -215,6 +215,32 @@ def extract_near(anchor, annotation_list, r_px=R_PX):
     return near_objs
 
 
+def extract_near_list(anchor, frame_objs, r_px=R_PX):
+
+    """
+    Near objects are defined based on bounding boxes centroids
+    and a threshold on the distance
+    :param anchor: 2D point to define near wrt,
+    :param annotation_list: list of all other annotations excluding anchor (formatted as frame_objs in test.py)
+    :return:  list of objects near anchor
+    """
+
+    near_objs=[]
+
+    cx, cy = anchor
+
+    for prediction, conf, (xtop, ytop, xbtm, ybtm), rank_confs in frame_objs:
+
+        u_ = int(xtop + (xbtm - xtop) / 2)
+        v_ = int(ytop + (ybtm - ytop) / 2)
+
+        if (u_ - cx) ** 2 + (v_ - cy) ** 2 <= r_px **2:
+
+            near_objs.append(prediction)
+
+
+    return near_objs
+
 
 
 def map_semantic(area_DB, area_id, semmap ={}):

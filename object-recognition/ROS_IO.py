@@ -101,7 +101,7 @@ class ImageConverter:
             self.d_subscriber.unregister()
 
 
-            if self.obs_counter >= 5:  # stop and reason on scouted area after x waypoints
+            if self.obs_counter >= 1:  # stop and reason on scouted area after x waypoints
 
                 #Wait for prior processing queue in start to be complete before proceeding
                 #yield from self.lock

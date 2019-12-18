@@ -259,17 +259,59 @@ def main(args):
 
         if args.it == 'camera':
 
-            if args.stage=="explore": #Input data from sensor in real-time
+            if args.stage=="explore" or args.stage == "only-segment": #Input data from sensor in real-time
 
 
                     # Init & start ROS node including a subscriber and a publisher
                     import rospy
                     from ROS_IO import ImageConverter
 
-                    rospy.init_node('image_converter') #, anonymous=True)
+                    try:
+                        rospy.init_node('image_converter') #, anonymous=True)
+
+                    except Exception as e:
+                        print(str(e))
+                        sys.exit(0)
+
                     rate = rospy.Rate(10)
-                    io = ImageConverter(path_to_input, args, model, device, base_trans)
-                    io.start(path_to_input,args, model, device, base_trans, rate)  #processing called inside the ROS node directly
+
+
+                    if args.stage=="only-segment":
+
+                        via_project = {}
+                        local_img_path = os.path.join(os.getcwd(), "object-recognition/data/KMi_collection/NW_activity_test")
+
+                        if not os.path.isdir(local_img_path):
+
+                            os.mkdir(local_img_path)
+                            print("Created local image folder")
+
+                        print("annotated test imgs will be saved under %s" % local_img_path)
+                        project_name = "KMi_NW_activity_test"
+
+                        via_project["_via_settings"]["core"]: {
+                            "buffer_size": "18",
+                            "filepath": {},
+                            "default_filepath": local_img_path
+                        }
+
+                        via_project["_via_settings"]["project"] = {
+
+                            "name": project_name
+
+                        }
+
+                        via_project["_via_img_metadata"] = {}
+
+                        io = ImageConverter(path_to_input, args, model, device, base_trans,via_data=via_project )
+                        io.start(path_to_input,args, model, device, base_trans, rate  )  #processing called inside the ROS node directly
+
+                    else:
+                        io = ImageConverter(path_to_input, args, model, device, base_trans)
+                        io.start(path_to_input, args, model, device, base_trans, \
+                                 rate)  # processing called inside the ROS node directly
+                        #start with service data constantly true
+
 
             elif args.stage=="reason":
 
@@ -294,6 +336,8 @@ def main(args):
 
                     print("Please provide a valid path to VIA-annotated JSON file for test images")
                     sys.exit(0)
+
+                pass
 
             else:
 
@@ -328,7 +372,7 @@ if __name__ == '__main__':
     parser.add_argument('it', choices=['reference', 'pickled', 'json', 'camera'],
                         help='Input type at test time: can be one between reference, pickled or json (if environment data have been tagged)'
                              'Choose camera option for online testing on robot - requires ROS melodic')
-    parser.add_argument('stage',choices=['train','test', 'baseline', 'explore', 'reason'],
+    parser.add_argument('stage',choices=['train','test', 'baseline', 'explore', 'reason', 'only-segment'],
                         help='One between train, test or baseline (i.e., run baseline NN at test time)')
 
     parser.add_argument('path_to_train',

@@ -9,7 +9,6 @@ import json
 from collections import Counter, OrderedDict
 import time
 
-
 from common_sense import show_leastconf, correct_floating, extract_spatial, proxy_floor, reverse_map
 from data_loaders import BGRtoRGB
 from sklearn.metrics import classification_report, accuracy_score
@@ -17,12 +16,12 @@ from baseline_KNN import run_baseline
 from segment import white_balance
 from spatial import find_real_xyz
 
-
-#Set of labels to retain from segmentation
-keepers= ['person','chair','potted plant']
+# Set of labels to retain from segmentation
+keepers = ['person', 'chair', 'potted plant']
 
 KNOWN = ['chairs', 'bottles', 'papers', 'books', 'desks', 'boxes', 'windows', 'exit-signs', 'coat-racks', 'radiators']
-NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'power-cables', 'monitors', 'people', 'plants', 'bins', 'doors' ]
+NOVEL = ['fire-extinguishers', 'desktop-pcs', 'electric-heaters', 'lamps', 'power-cables', 'monitors', 'people',
+         'plants', 'bins', 'doors']
 
 n_support = 10
 
@@ -41,8 +40,8 @@ def compute_similarity(qembedding, train_embeds):
 
     return ranking
 
-def load_jsondata(path_to_json):
 
+def load_jsondata(path_to_json):
     """
     Assumes that the JSON is formatted as the output returned
     by the VGG Image Annotator (VIA)
@@ -53,13 +52,12 @@ def load_jsondata(path_to_json):
     """
 
     with open(path_to_json, 'r') as jf:
-
         test_data = json.load(jf)
 
     return test_data["_via_settings"]["core"]["default_filepath"], OrderedDict(test_data['_via_img_metadata'])
 
-def extract_base_embeddings(img_path, transforms, device, path_to_output):
 
+def extract_base_embeddings(img_path, transforms, device, path_to_output):
     emb_space = {}
 
     for root, dirs, files in os.walk(img_path):
@@ -69,19 +67,18 @@ def extract_base_embeddings(img_path, transforms, device, path_to_output):
             classname = str(root.split('/')[-1])
 
             for file in files:
-
                 filename = str(file.split('/')[-1])
 
-                emb_space[classname+'_'+filename] = base_embedding(os.path.join(root, file), device, transforms)
+                emb_space[classname + '_' + filename] = base_embedding(os.path.join(root, file), device, transforms)
 
-    with open(path_to_output,mode='wb') as outj:
+    with open(path_to_output, mode='wb') as outj:
 
         torch.save(obj=emb_space, f=outj)
 
     return emb_space
 
-def KNN(input_e, all_embs, K, voting):
 
+def KNN(input_e, all_embs, K, voting):
     ranking = compute_similarity(input_e, all_embs)
 
     if K == 1:
@@ -95,49 +92,46 @@ def KNN(input_e, all_embs, K, voting):
 
         print("Score: %f" % val)
 
-        #For a proxy of confidence, we look at the top 5 in that ranking
+        # For a proxy of confidence, we look at the top 5 in that ranking
         confs = Counter()
 
         for key, v in ranking[:5]:
-
             l = key.split("_")[0]
-            #We sum the similarity scores obtained for that label
+            # We sum the similarity scores obtained for that label
             confs[l] += val
 
-
-        return label,confs[label], confs
+        return label, confs[label], confs
 
     else:
-        #print("The %i most similar objects to the provided image are: \n")
-        #logfile.write("The %i most similar objects to the provided image are: \n" % K)
+        # print("The %i most similar objects to the provided image are: \n")
+        # logfile.write("The %i most similar objects to the provided image are: \n" % K)
 
         votes = Counter()
         ids = {}
-
 
         # Majority voting with discounts by distance from top position
         for k, (key, val) in enumerate(ranking[:K]):
 
             label = key.split("_")[0]  # [:-1]
 
-            if voting =='discounted':
+            if voting == 'discounted':
 
-                votes[label] += val/(k + 1)
+                votes[label] += val / (k + 1)
 
             else:
-                #Just picking the class that gets the majority of votes
-                votes[label] += 1 #/ (k + 1)
+                # Just picking the class that gets the majority of votes
+                votes[label] += 1  # / (k + 1)
 
             ids[label] = key
 
-            #print(label + ": " + str(val) + "\n")
-            #logfile.write(label + ": " + str(val) + "\n")
-            #print("With unique ID %s \n" % key)
-            #logfile.write("With unique ID %s \n" % key)
+            # print(label + ": " + str(val) + "\n")
+            # logfile.write(label + ": " + str(val) + "\n")
+            # print("With unique ID %s \n" % key)
+            # logfile.write("With unique ID %s \n" % key)
 
-        #print(str(ranking[:K]))
-        #print("RANKING Discounted majority voting")
-        #print(str(votes))
+        # print(str(ranking[:K]))
+        # print("RANKING Discounted majority voting")
+        # print(str(votes))
 
         win_label, win_score = max(votes.items(), key=lambda x: x[1])
 
@@ -163,17 +157,15 @@ def KNN(input_e, all_embs, K, voting):
         return win_label, win_score, votes
 
 
-
-def test(data_type, path_to_input,  args, model, device, trans, camera_img = None, path_to_train_embeds=None, KBrules=None):
-
+def test(data_type, path_to_input, args, model, device, trans, camera_img=None, path_to_train_embeds=None,
+         KBrules=None):
     K = args.K
     N = args.N
 
     baseline = True if args.stage == 'baseline' else False
 
-    #baseline KNN?
+    # baseline KNN?
     if baseline:
-
         run_baseline(device, trans, K, N, n_support, KNOWN, path_to_train_embeds)
 
         return None
@@ -183,9 +175,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
 
     out_imgs = os.path.join(path_to_input.split('test')[0], 'output_predictions')
 
-
     if not os.path.isdir(out_imgs):
-
         os.mkdir(out_imgs)
 
         # For drawing the predictions
@@ -194,7 +184,6 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
     y_pred = []
 
     cardinalities = Counter()
-
 
     # sem = args.sem if args.sem != 'none' else None
 
@@ -233,8 +222,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
 
     VG_data = None
 
-    if args.sem!='none' and os.path.isfile(path_to_VG):
-
+    if args.sem != 'none' and os.path.isfile(path_to_VG):
         start = time.time()
         print("Loading Visual Genome spatial relations...")
         with open(path_to_VG, 'r') as jin:
@@ -249,14 +237,14 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
         # Data acquired from camera online
         # Initialises and returns loaded data spaces only once
 
-        return VG_data, embedding_space, cardinalities,COLORS, all_classes
+        return VG_data, embedding_space, cardinalities, COLORS, all_classes
 
 
     elif data_type == 'json':
 
-        #Path points to a VIA Annotated JSON file
+        # Path points to a VIA Annotated JSON file
         base_path, img_collection = load_jsondata(path_to_input)
-        #data = list(reversed(img_collection.values()))#[16:]
+        # data = list(reversed(img_collection.values()))#[16:]
 
 
     elif data_type == 'pickled':
@@ -275,9 +263,8 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
             print(str(e))
             return
 
-        #create list of data records from img_mat
+        # create list of data records from img_mat
         for img, timestamp in img_mat:
-
             node = OrderedDict()
             node["filename"] = timestamp
             node["regions"] = None
@@ -297,7 +284,7 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
                 for file in files:  # For each example in that class
 
                     node = OrderedDict()
-                    node["filename"] = os.path.join(root,file)
+                    node["filename"] = os.path.join(root, file)
                     node["regions"] = None
 
                     img_collection.update(node)
@@ -306,43 +293,40 @@ def test(data_type, path_to_input,  args, model, device, trans, camera_img = Non
 
     if voting == "discounted":
 
-        for k in range(1, K+1):
-
-            norm_coeff += 1/k
+        for k in range(1, K + 1):
+            norm_coeff += 1 / k
 
     else:
 
         norm_coeff = K
 
-
-    #Image Processing------------------------------------------------------------------------------------------
-    #if data_type !='camera':
+    # Image Processing------------------------------------------------------------------------------------------
+    # if data_type !='camera':
 
     data = img_collection.values()
-    #batch of multiple images to process
+    # batch of multiple images to process
     for data_point in list(reversed(data)):  # list(reversed(data))[:15]:
 
-        _, y_pred, y_true, run_eval= img_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
-                                                           K, args.sem, voting, VG_data, y_true, y_pred, embedding_space, KBrules=KBrules, norm_coeff=norm_coeff)
+        _, y_pred, y_true, run_eval = img_processing_pipeline(data_point, base_path, args, model, device, trans,
+                                                              cardinalities, COLORS, all_classes, \
+                                                              K, args.sem, voting, VG_data, y_true, y_pred,
+                                                              embedding_space, KBrules=KBrules, norm_coeff=norm_coeff)
 
+    # Evaluation------------------------------------------------------------------------------------------------
 
-    #Evaluation------------------------------------------------------------------------------------------------
-
-    #Only if annotated ground truth is available
+    # Only if annotated ground truth is available
     if run_eval:
-
         print("Class-wise test results \n")
         print(classification_report(y_true, y_pred))  # , target_names=all_classes))
         print(accuracy_score(y_true, y_pred))
-
 
     return None
 
 
 def img_processing_pipeline(data_point, base_path, args, model, device, trans, cardinalities, COLORS, all_classes, \
-                                                           K, sem, voting, VG_data, y_true, y_pred, embedding_space, extract_SR=True, VQA=False, \
-                                                           KBrules =None, norm_coeff=None):
-    #print(type(data_point))
+                            K, sem, voting, VG_data, y_true, y_pred, embedding_space, extract_SR=True, VQA=False, \
+                            KBrules=None, norm_coeff=None, via_data=None):
+    # print(type(data_point))
 
     try:
 
@@ -352,9 +336,9 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
         print(e)
         img = cv2.imread(os.path.join(base_path, data_point["filename"]))
 
-    #cv2.imshow('union', img)
-    #cv2.waitKey(10000)
-    #cv2.destroyAllWindows()
+    # cv2.imshow('union', img)
+    # cv2.waitKey(10000)
+    # cv2.destroyAllWindows()
 
     # if ".bag" in data_point["filename"]:
     if ".bag" in data_point["filename"]:
@@ -362,40 +346,39 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
     # create copy to draw predictions on
 
-    #import matplotlib.pyplot as plt
-    #plt.imshow(img)
-    #plt.show()
+    # import matplotlib.pyplot as plt
+    # plt.imshow(img)
+    # plt.show()
 
     denoised = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 15)
     denoised = BGRtoRGB(white_balance(denoised))
 
-
-    #plt.imshow(denoised)
-    #plt.show()
+    # plt.imshow(denoised)
+    # plt.show()
 
     out_img = denoised.copy()
     out_VG = denoised.copy()
-    #out_CP = img.copy()
+    # out_CP = img.copy()
 
-    
     print("%-----------------------------------------------------------------------% \n")
     print("Analyzing frame %s" % data_point["filename"])
 
     whole_start = time.time()
 
-    #Extract foreground from pcl
+    # Extract foreground from pcl
     try:
         pcl = data_point["pcl"]
 
     except KeyError:
-        #method not accessed from camera input
-        pcl=None
+        # method not accessed from camera input
+        pcl = None
 
     frame_objs = []
     colour_seq = []
     locations = []
     hsv_colors = []
     add_properties = []
+    img_node = {}
 
     if data_point["regions"] is not None:
 
@@ -408,19 +391,26 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
     else:
 
         # segment it
-        
-        predicted_boxes, predicted_masks = segment(denoised, w_saliency=False,  depth_image= data_point["depth_image"])
+
+        predicted_boxes, predicted_masks = segment(denoised, w_saliency=False, depth_image=data_point["depth_image"])
 
         try:
 
             bboxes, yolo_labels = zip(*predicted_boxes)
 
         except ValueError:
-            #no bboxes returned
-            bboxes= None
+            # no bboxes returned
+            bboxes = None
             yolo_labels = None
 
         run_eval = False
+
+    if args.stage == "only-segmented":
+        # output VIA-formatted json
+        img_node["filename"] = data_point["filename"].replace('.', '_') + ".png"
+        img_node["size"] = None
+        img_node["regions"] = []
+        img_node["file_attributes"] = {}
 
     if bboxes is not None:
 
@@ -429,7 +419,7 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
             # create a copy, crop it to region and store ground truth label
 
-            obj = denoised.copy() #change img to denoised to see effect of denoising and white balancing on predictions
+            obj = denoised.copy()  # change img to denoised to see effect of denoising and white balancing on predictions
             segm_label = ''
 
             if args.bboxes == 'true':
@@ -440,6 +430,24 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
                 x2 = x + box_data["width"]
                 y2 = y + box_data["height"]
 
+            elif args.stage == "only-segmented":
+
+                box_node = {}
+                box_node["shape_attributes"] = {
+                    "name": "rect",
+                    "x": x,
+                    "y": y,
+                    "width": x2 - x,
+                    "height": y2 - y
+                }
+                box_node["region_attributes"]= {
+						"class": "unlabeled",
+					}
+
+                img_node["regions"].append(box_node)
+
+                continue
+
             else:
 
                 segm_label = yolo_labels[idx]
@@ -449,19 +457,17 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
                 y = region[1]
                 y2 = region[3]
 
-            box_area = (x2-x)*(y2-y)
+            box_area = (x2 - x) * (y2 - y)
 
             obj = obj[y:y2, x:x2]
-
 
             input_emb = array_embedding(model, obj, device, transforms=trans)
 
             if input_emb is None:
-
                 # Image could not be processed/ embedding could not be generated for some reason, skip obj
                 continue
 
-                #return [out_img, out_VG, None], y_pred, y_true, run_eval, SR_KB
+                # return [out_img, out_VG, None], y_pred, y_true, run_eval, SR_KB
 
             """
             cv2.imwrite('./temp.png', obj)
@@ -495,7 +501,7 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
             prediction, conf, rank_confs = KNN(input_emb, embedding_space, K, voting)
             # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
-            #Extract colour features too
+            # Extract colour features too
             from segment import segment_by_color
 
             pix_counter = segment_by_color(obj)
@@ -504,19 +510,18 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
             frame_objs.append((prediction, conf, (x, y, x2, y2), rank_confs))
 
-
-            #Pinpoint object in "real world"
+            # Pinpoint object in "real world"
             try:
 
-                vertices_x, vertices_y, vertices_z = find_real_xyz(x,y,x2,y2, pcl, img.shape, )
+                vertices_x, vertices_y, vertices_z = find_real_xyz(x, y, x2, y2, pcl, img.shape, )
                 locations.append((vertices_x, vertices_y, vertices_z))
                 vertices_coords = list(zip(vertices_x, vertices_y, vertices_z))
-                has_loc= True
+                has_loc = True
 
             except AssertionError:
 
-                #Data not coming from robot, location not available
-                locations.append([None,None,None])
+                # Data not coming from robot, location not available
+                locations.append([None, None, None])
                 has_loc = False
 
             # draw prediction
@@ -526,12 +531,12 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
             if y - 10 > 0:
 
-                cv2.putText(out_img, prediction + "  " + segm_label + "  "+str(round(conf, 2)), (x - 10, y - 10),
+                cv2.putText(out_img, prediction + "  " + segm_label + "  " + str(round(conf, 2)), (x - 10, y - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
             else:
 
-                cv2.putText(out_img, prediction + "  " + segm_label + "  "+str(round(conf, 2)), (x - 10, y2 + 10),
+                cv2.putText(out_img, prediction + "  " + segm_label + "  " + str(round(conf, 2)), (x - 10, y2 + 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
             # draw semantic masks if any (supports pytorch masks only for now)
@@ -546,7 +551,6 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
             # cv2.imshow('union', obj)
             # cv2.waitKey(10000)
             # cv2.destroyAllWindows()
-
 
             #### Extract other properties and discretize if in reason mode#####
             if args.stage == "reason":
@@ -594,11 +598,10 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
                     dis = None
 
-
-                if float(box_area/IMG_AREA) <= 0.33:
+                if float(box_area / IMG_AREA) <= 0.33:
                     size = 'small'
 
-                elif float(box_area/IMG_AREA) <= 0.66:
+                elif float(box_area / IMG_AREA) <= 0.66:
                     size = 'medium'
 
                 else:
@@ -606,8 +609,7 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
                 dom_colour, colour_val = pix_counter.most_common()[0]
 
-                add_properties.append([(u,v), pos, size, dom_colour, dis])
-
+                add_properties.append([(u, v), pos, size, dom_colour, dis])
 
             vqastart = time.time()
             if VQA:
@@ -616,27 +618,31 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
                 demo = PythiaDemo()
 
-                question_text = "is this a "+prediction
+                question_text = "is this a " + prediction
 
                 scores, predictions = demo.predict(obj, question_text)
 
                 winner, w_score = (predictions[0], scores[0])
 
-                if winner =="yes":
+                if winner == "yes":
 
-                    print("Pythia says that object IS a "+ prediction)
+                    print("Pythia says that object IS a " + prediction)
 
                 else:
 
-                    print("Pythia says that object IS NOT a "+ prediction)
+                    print("Pythia says that object IS NOT a " + prediction)
 
                 print("Took %f sec for Pythia to guess" % float(time.time() - vqastart))
 
+        # create for json output
+        if args.stage == "only-segment":
 
+            via_data["_via_img_metadata"][data_point["filename"]] = img_node
+            return via_data
 
         # Correction via internal KB ---------------------------------------------------------------------------
 
-        if args.stage == "reason":
+        elif args.stage == "reason":
 
             # Find near objects in scene
             import spatial
@@ -644,25 +650,26 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
             for i, (prediction, conf, coords, rank_confs) in enumerate(frame_objs):
 
-                (u,v), pos, size, dom_colour, dis = add_properties[i]
+                (u, v), pos, size, dom_colour, dis = add_properties[i]
 
-                near_obj_labels = extract_near_list((u,v), [box_prop for k, box_prop in enumerate(frame_objs) if k!=i])
+                near_obj_labels = extract_near_list((u, v),
+                                                    [box_prop for k, box_prop in enumerate(frame_objs) if k != i])
 
-                add_properties[i] = [(u,v), pos, size, dom_colour, dis, near_obj_labels]
+                add_properties[i] = [(u, v), pos, size, dom_colour, dis, near_obj_labels]
 
                 mod_rank = Counter()
 
                 for class_name, cum_score in rank_confs.most_common():
 
-                    norm_score = cum_score/norm_coeff
+                    norm_score = cum_score / norm_coeff
 
-                    #Modify confidence ranking given the rules available in KBrules
+                    # Modify confidence ranking given the rules available in KBrules
                     subset = KBrules[KBrules["consequents"] == {class_name}]
 
-                    if not subset.empty: # if any rule is found for that object (as consequent)
+                    if not subset.empty:  # if any rule is found for that object (as consequent)
 
-                        if subset.shape[0]> 1: # if more then one rule is found
-                        #pick the best one (e.g., highest leverage)
+                        if subset.shape[0] > 1:  # if more then one rule is found
+                            # pick the best one (e.g., highest leverage)
 
                             mod_score = norm_score * subset.loc[subset["leverage"].idxmax()].confidence
 
@@ -672,7 +679,7 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
                     else:
 
-                        #keep normalised version of old (Vision-based) score otherwise
+                        # keep normalised version of old (Vision-based) score otherwise
                         mod_score = norm_score
 
                     # it's a counter so it will be a unique set of classes, we can add value for key only once
@@ -680,7 +687,7 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
 
                 win_l, win_score = mod_rank.most_common()[0]
 
-                #new predictions based on modified scores
+                # new predictions based on modified scores
                 if win_l == prediction:
 
                     print("Prediction kept as %s" % win_l)
@@ -688,11 +695,9 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
                     print("Corrected with %s instead based on KB rules" % win_l)
                 y_pred.append(win_l)
 
-
-
         # Correction via ConceptNet + VG -----------------------------------------------------------------------
         """Correcting least confident predictions by querying external knowledge"""
-        if sem !='none':# Only if semantic modules are to be included
+        if sem != 'none':  # Only if semantic modules are to be included
 
             weak_idx = show_leastconf(frame_objs)
 
@@ -717,8 +722,8 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
                         print("Ranking for weakest object changed into")
                         print(str(modified_rank))
 
-                        #And show corrected image
-                        for lb,cf,(x,y,w,h), rank in frame_objs:
+                        # And show corrected image
+                        for lb, cf, (x, y, w, h), rank in frame_objs:
 
                             color = COLORS[all_classes.index(lb)]
                             cv2.rectangle(out_VG, (x, y), (x + w, y + h), color, 2)
@@ -733,17 +738,18 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
                         """
                         cv2.imwrite(os.path.join(out_imgs, 'Kground_ImprintedKNET', data_point["filename"]), out_VG)
                         """
-                        return [out_img, out_VG, frame_objs, colour_seq, locations, hsv_colors], y_pred, y_true, run_eval  # Continue to next image
+                        return [out_img, out_VG, frame_objs, colour_seq, locations,
+                                hsv_colors], y_pred, y_true, run_eval  # Continue to next image
 
                 if len(frame_objs) <= 1:
-
                     print("Only one object found in this scene...skipping contextual reasoning")
                     corr_preds, _, _, _ = zip(*frame_objs)
                     y_pred.extend(corr_preds)
 
                     # cv2.imwrite(os.path.join(out_imgs, 'ImprintedKNET', data_point["filename"]), out_img)
 
-                    return [out_img, out_VG, frame_objs, colour_seq, locations, hsv_colors], y_pred, y_true, run_eval #Continue to next image
+                    return [out_img, out_VG, frame_objs, colour_seq, locations,
+                            hsv_colors], y_pred, y_true, run_eval  # Continue to next image
 
                 new_preds = extract_spatial(weak_idx, frame_objs, VG_base=VG_data)
 
@@ -771,7 +777,6 @@ def img_processing_pipeline(data_point, base_path, args, model, device, trans, c
                         else:
 
                             print("Rejecting suggested correction: replacement does not make sense w.r.t floor")
-
 
                     for lb, cf, (x, y, w, h), rank in frame_objs:
 

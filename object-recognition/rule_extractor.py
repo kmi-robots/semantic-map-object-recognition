@@ -9,9 +9,10 @@ def get_association_rules(input_dict):
     #also flatten the list of near objet to atomic values, i.e., from near: [a, b] to near-a, near-b
 
     all_boxes=[]
-    for _, box_array in input_dict.items():
+    for node in input_dict: #.items():
 
-        all_boxes.extend(box_array)
+        for filekey, box_array in node.items():
+            all_boxes.extend(box_array)
 
     data = []
 

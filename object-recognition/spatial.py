@@ -89,7 +89,7 @@ def find_real_xyz(xtop, ytop, xbtm, ybtm, pcl, RGB_RES=RGB_RES):
     return vertices_x, vertices_y, vertices_z
 
 
-def update_KB(rel_KB, frame_objs_DH, cam_pos, rgb_res=RGB_RES):
+def update_KB(filename, rel_KB, frame_objs_DH, cam_pos, rgb_res=RGB_RES):
 
     """
     :param rel_KB: frame array in SR_KB python dictionary defined as in ROS_IO.py
@@ -98,6 +98,8 @@ def update_KB(rel_KB, frame_objs_DH, cam_pos, rgb_res=RGB_RES):
     :param cam_pos: camera coordinates wrt robot base
     :return: updated version of input KB
     """
+    img_node = {}
+    img_node[filename] = []
 
     for i,node in enumerate(frame_objs_DH): #j, node in reversed(list(enumerate(frame_objs_DH))):
 
@@ -144,7 +146,7 @@ def update_KB(rel_KB, frame_objs_DH, cam_pos, rgb_res=RGB_RES):
         if node["centre_coords"][-1] is None:
 
 
-            rel_KB.append({
+            img_node[filename].append({
 
                 "label": node["item"],
                 "frame_location": pos,
@@ -170,7 +172,7 @@ def update_KB(rel_KB, frame_objs_DH, cam_pos, rgb_res=RGB_RES):
 
                 dis = "far"
 
-            rel_KB.append({
+            img_node[filename].append({
 
                 "label": node["item"],
                 "frame_location": pos,
@@ -180,8 +182,7 @@ def update_KB(rel_KB, frame_objs_DH, cam_pos, rgb_res=RGB_RES):
                 "near": near_objs
             })
 
-
-
+    rel_KB["global_rels"].append(img_node)
     return rel_KB
 
 

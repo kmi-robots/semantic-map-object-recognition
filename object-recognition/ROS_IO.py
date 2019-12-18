@@ -12,7 +12,7 @@ from cv_bridge import CvBridge,CvBridgeError
 from collections import OrderedDict
 import tf
 from std_srvs.srv import SetBool,SetBoolResponse
-#import cv2
+import cv2
 from collections import Counter
 import json
 import os
@@ -21,12 +21,14 @@ import os
 from test import test, img_processing_pipeline
 from DH_integration import DH_img_send, DH_status_send
 from spatial import update_KB
+from data_loaders import BGRtoRGB
+from segment import white_balance
 # from spatial import map_semantic, extract_SR, pcl_processing_pipeline
 
 
 class ImageConverter:
 
-    def __init__(self, path_to_input, args, model, device, base_trans):
+    def __init__(self, path_to_input, args, model, device, base_trans, via_data=None):
 
         self.img = None
         self.VG_data, self.embedding_space, self.cardinalities,self.COLORS, self.all_classes = test(args.it, path_to_input, args, model, device, base_trans)
@@ -45,6 +47,9 @@ class ImageConverter:
         self.pcl_processed[self.area_ID]["floor"] = []
         self.pcl_processed[self.area_ID]["other"] = []
         self.cam_trans = []
+        self.args = args
+        self.via_data = via_data
+
         #self.lock = asyncio.Lock()
 
         if not os.path.isfile("./SR_KB.json"):
@@ -53,7 +58,7 @@ class ImageConverter:
             self.SR_KB = OrderedDict()
             # Detect walls and surfaces and add them to permanent db
             # Hardcoded for now
-            self.SR_KB["global_rels"] = {} #Counter()
+            self.SR_KB["global_rels"] = [] #{} #Counter()
 
         else:
 
@@ -63,8 +68,8 @@ class ImageConverter:
 
                 self.SR_KB = json.load(jf)
 
-        self.SR_KB[self.area_ID] = {}
-        self.SR_KB[self.area_ID]["planar_surfaces"] = {}
+        #self.SR_KB[self.area_ID] = {}
+        #self.SR_KB[self.area_ID]["planar_surfaces"] = {}
 
 
     def service_callback(self, msg):
@@ -100,16 +105,25 @@ class ImageConverter:
             self.pcl_subscriber.unregister()
             self.d_subscriber.unregister()
 
+            if self.args.stage == "only-segment":
 
-            if self.obs_counter >= 10:  # stop and reason on scouted area after x waypoints
+                #save VIA-formatted annotated JSON for all segmented images
+                with open("./"+self.via_data["_via_settings"]["project"]["name"]+".json", 'w') as jf:
+                    json.dump(self.via_data, jf)
 
-                #Wait for prior processing queue in start to be complete before proceeding
-                #yield from self.lock
-                #try:
+
+            if self.obs_counter % 2 == 0:  # Every x waypoints, e.g., x=2
+
+                print("Saving observations locally...")
+
+                with open("./SR_KB.json", 'a') as jf:
+                    json.dump(self.SR_KB, jf)
+
+                print("Saved as ./SR_KB.json")
 
                 """
                 Association rule mining 
-                """
+                
 
                 from rule_extractor import get_association_rules
 
@@ -128,7 +142,7 @@ class ImageConverter:
                 print("Saving rules locally...")
                 rule_df.to_pickle(os.getcwd()+'/data/extracted_rules.pkl')
                 print("Pickled DataFrame saved under ../data/extracted_rules.pkl")
-
+                """
 
                 """"Uncomment to aggregate across frames
 
@@ -145,8 +159,6 @@ class ImageConverter:
                 self.obs_counter = 0
                 self.area_DB = {}
 
-                #finally:
-                #    self.lock.release()
 
             res, stat_id = DH_status_send("Stopping observation", first=True)
 
@@ -155,19 +167,8 @@ class ImageConverter:
                 print(res.content)
 
             # empty all that was part of a specific area observed
-            self.SR_KB[self.area_ID] = {}
-            """
-            self.SR_KB["global_rels"] = {}
-
-            #Just keep a persistent copy of the mined rules
-
-            with open("./SR_KB.json", 'w') as jf:
-
-                json.dump(self.SR_KB, jf)
-
-            print("Saved updated SR KB locally")
-            
-            """
+            #self.SR_KB[self.area_ID] = {}
+            #self.SR_KB["global_rels"] = {}
 
             return SetBoolResponse(False,"Shutting down image subscriber")
 
@@ -207,7 +208,9 @@ class ImageConverter:
                 data["pcl"] = self.pcl
                 data["depth_image"] = self.dimg
 
-                self.SR_KB["global_rels"][data["filename"]] = []
+                #self.SR_KB["global_rels"]
+
+                #self.SR_KB[data["filename"]] = []
 
                 """Uncomment for planar surface extraction
                 # extract surfaces from PCL and locate them too
@@ -271,12 +274,28 @@ class ImageConverter:
                     print("Failed communication with Data Hub ")
                     print(res.content)
 
+                if args.stage=="only-segment":
+
+                    #save img locally
+                    save_img_path = self.via_data["_via_settings"]["core"]["default_filepath"]
+                    cv2.imwrite(os.path.join(save_img_path, data["filename"].replace('.','_')+ ".png"),BGRtoRGB(white_balance(self.img)))
+
+                    #process with segmentation only (without classifying)
+                    self.via_data = img_processing_pipeline(data, path_to_input, args, model, device,\
+                                                                      base_trans, self.cardinalities, self.COLORS,\
+                                                                      self.all_classes, \
+                                                                      args.K, args.sem, args.Kvoting, self.VG_data, [],\
+                                                                      [], self.embedding_space, via_data= self.via_data)
+                    #skip the remainder
+                    continue
+
                 #Then images are processed one by one by calling run_processing_pipeline directly
 
                 processed_data, _, _, _ = img_processing_pipeline(data, path_to_input, args, model,  device, base_trans \
                                                                   , self.cardinalities,self.COLORS, self.all_classes, \
                                                               args.K, args.sem, args.Kvoting, self.VG_data, [], [], \
                                                                   self.embedding_space)
+
 
                 res, stat_id = DH_status_send("Image analysed",status_id=stat_id)
 
@@ -308,7 +327,10 @@ class ImageConverter:
                     res, res_array, xyz_img, self.area_DB = DH_img_send(data, self.area_ID, all_bins= self.area_DB)
 
                     #Given results formatted as in DH, update internal KB for that particular frame
-                    self.SR_KB["global_rels"][data["filename"]] = update_KB(self.SR_KB["global_rels"][data["filename"]], res_array, self.cam_trans)
+                    #self.SR_KB["global_rels"][data["filename"]] = update_KB(self.SR_KB["global_rels"][data["filename"]], res_array, self.cam_trans)
+
+                    self.SR_KB = update_KB(data["filename"],self.SR_KB, res_array, self.cam_trans)
+
 
                     if not res.ok:
                         print("Failed to send img to Data Hub ")
@@ -316,9 +338,10 @@ class ImageConverter:
 
                     self.im_publisher.publish(self.bridge.cv2_to_imgmsg(xyz_img,'rgb8'))
 
-                    print(self.SR_KB)
+                    print("Dictionary contains %i processed frames now" % len(self.SR_KB["global_rels"]))#.keys()))
+                    # print(self.SR_KB)
                     #Optional TO-DO: sends a third image after knowledge-based correction
-                    pass
+
 
                 except CvBridgeError as e:
                     print("The provided image could not be processed")

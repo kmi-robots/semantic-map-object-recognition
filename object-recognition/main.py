@@ -303,15 +303,11 @@ def main(args):
 
                         via_project["_via_img_metadata"] = {}
 
-                        io = ImageConverter(path_to_input, args, model, device, base_trans,via_data=via_project )
-                        io.start(path_to_input,args, model, device, base_trans, rate  )  #processing called inside the ROS node directly
-
+                        io = ImageConverter(path_to_input, args, model, device, base_trans, via_data=via_project)
                     else:
                         io = ImageConverter(path_to_input, args, model, device, base_trans)
-                        io.start(path_to_input, args, model, device, base_trans, \
-                                 rate)  # processing called inside the ROS node directly
-                        #start with service data constantly true
 
+                    io.start(rate)
 
             elif args.stage=="reason":
 

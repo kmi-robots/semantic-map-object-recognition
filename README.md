@@ -183,7 +183,7 @@ python siamese_main.py {reference, pickled, json} baseline path_to_train path_to
 Some released data are available under `semantic-map-docker/data`. The relevant sets documented here are:
 
 *  the **ShapeNet + Google (SNG) sets** are saved under `shapenet10`, `shapenet20` and `shapenet25` respectively, depending on the number of object classes examined.
-*  `KMi_collection` is for the reference images collected in KMi, but excludes the test image set as that one records sensitive information 
+*  `KMi_collection` is for the reference images collected in KMi, but excludes the test image set.
 *  ` yolo` contains all files for using the pre-trained YOLO version embedded in OpenCV. These files are referenced by the `segment.py` methods 
 
 
